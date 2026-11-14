@@ -1,0 +1,43 @@
+/* Adaptación moderna y optimizada para móviles de EN-VIA */
+:root {
+    color-scheme: light;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #f1f5f9;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+}
+
+/* Evitar zoom automático en inputs en iOS al enfocar */
+input, select, textarea, button {
+    font-size: 16px !important;
+}
+
+/* Sombras y transiciones suaves para tarjetas */
+.card-transition {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-transition:active {
+    transform: scale(0.99);
+}
+
+/* Contenedor responsivo fluido para pantallas pequeñas y grandes */
+.app-container {
+    width: 100%;
+    max-width: 600px; /* Ancho ideal optimizado para visualización móvil en escritorio */
+    margin: 0 auto;
+    padding: 12px;
+}
+
+@media (min-width: 768px) {
+    .app-container {
+        max-width: 768px;
+        padding: 24px;
+    }
+}

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EN-VIA - Gestión de Conductores</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ruta adaptada subiendo un nivel -->
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-slate-100 min-h-screen">
+
+    <!-- Cabecera -->
+    <header class="bg-slate-900 text-white shadow-sm sticky top-0 z-50 py-3 px-4">
+        <div class="app-container flex justify-between items-center !p-0">
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                <span>👤</span> Registro de Conductores
+            </h1>
+            <a href="../index.html" class="text-xs bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition">
+                ← Volver al Panel
+            </a>
+        </div>
+    </header>
+
+    <main class="app-container pb-16 pt-4">
+        
+        <!-- Formulario Capturador de Datos de Conductores -->
+        <section class="bg-white rounded-2xl shadow-sm p-5 mb-6 border border-slate-200">
+            <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                <span>Nuevo Conductor</span>
+                <span class="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md font-medium">Administración</span>
+            </h2>
+            
+            <form id="formConductor" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Nombre Completo</label>
+                    <input type="text" id="nombreConductor" required placeholder="Ej. Carlos Pérez" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Teléfono / Móvil</label>
+                    <input type="tel" id="telefonoConductor" required placeholder="Ej. +57 300 1234567" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold py-3.5 px-4 rounded-xl transition shadow-sm mt-2">
+                    Guardar Conductor
+                </button>
+            </form>
+        </section>
+
+        <!-- Listado de Conductores Registrados -->
+        <section>
+            <div class="flex items-center justify-between mb-3 px-1">
+                <h2 class="text-base font-bold text-slate-900">Conductores Activos</h2>
+                <span id="contadorConductores" class="text-xs font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">0</span>
+            </div>
+            
+            <div id="listaConductores" class="space-y-3">
+                <p class="text-slate-400 text-center py-10 bg-white rounded-2xl border border-slate-200 text-sm">Cargando conductores...</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Supabase JS UMD y Lógica (Rutas adaptadas con ../) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabaseClient.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const formConductor = document.getElementById('formConductor');
+            const listaConductores = document.getElementById('listaConductores');
+            const contadorConductores = document.getElementById('contadorConductores');
+
+            // 1. Cargar la lista de conductores desde Supabase
+            async function cargarConductores() {
+                const { data, error } = await supabaseClient
+                    .from('conductores')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Error al cargar conductores:', error);
+                    return;
+                }
+
+                renderizarConductores(data);
+            }
+
+            // 2. Renderizar los conductores en pantalla
+            function renderizarConductores(conductores) {
+                contadorConductores.textContent = conductores.length;
+
+                if (conductores.length === 0) {
+                    listaConductores.innerHTML = `<p class="text-slate-400 text-center py-10 bg-white rounded-2xl border border-slate-200 text-sm">No hay conductores registrados.</p>`;
+                    return;
+                }
+
+                listaConductores.innerHTML = '';
+                conductores.forEach(conductor => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-2xl shadow-sm p-4 border border-slate-200 flex justify-between items-center gap-4';
+                    
+                    card.innerHTML = `
+                        <div>
+                            <p class="text-slate-900 font-bold text-sm">🚗 ${conductor.nombre}</p>
+                            <p class="text-slate-500 text-xs mt-0.5">📞 ${conductor.telefono || 'Sin teléfono'}</p>
+                        </div>
+                        <span class="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg font-medium">Activo</span>
+                    `;
+                    listaConductores.appendChild(card);
+                });
+            }
+
+            // 3. Capturar y guardar nuevo conductor
+            formConductor.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const nuevoConductor = {
+                    nombre: document.getElementById('nombreConductor').value.trim(),
+                    telefono: document.getElementById('telefonoConductor').value.trim(),
+                    activo: true
+                };
+
+                const { error } = await supabaseClient
+                    .from('conductores')
+                    .insert([nuevoConductor]);
+
+                if (error) {
+                    alert('Error al registrar conductor: ' + error.message);
+                    console.error(error);
+                } else {
+                    formConductor.reset();
+                    alert('¡Conductor registrado con éxito!');
+                    cargarConductores();
+                }
+            });
+
+            // Carga inicial
+            cargarConductores();
+        });
+    </script>
+</body>
+</html>

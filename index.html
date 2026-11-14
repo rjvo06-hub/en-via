@@ -6,8 +6,8 @@
     <title>Test Maps</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API con la nueva clave de producción -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places"></script>
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places" async defer></script>
 </head>
 <body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
 
@@ -23,19 +23,42 @@
     </div>
 
     <script>
+        // Función nativa que dispara Google Maps si la API Key es rechazada
+        window.gm_authFailure = function() {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = "Error: Clave rechazada o sin permisos de API";
+            statusEl.className = "text-xs text-center text-red-600 font-bold";
+            console.error("⚠️ Google Maps Auth Failure: La API Key fue rechazada por restricciones, facturación o APIs faltantes en Google Cloud.");
+        };
+
         window.addEventListener('load', () => {
             const statusEl = document.getElementById('status');
             
-            if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-                statusEl.textContent = "Google Maps cargado correctamente";
-                statusEl.className = "text-xs text-center text-emerald-600 font-bold";
+            // Verificación periódica de carga de la API
+            const interval = setInterval(() => {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                    clearInterval(interval);
+                    statusEl.textContent = "Google Maps cargado correctamente";
+                    statusEl.className = "text-xs text-center text-emerald-600 font-bold";
 
-                const inputOrigen = document.getElementById('origen');
-                new google.maps.places.Autocomplete(inputOrigen, { types: ['geocode', 'establishment'] });
-            } else {
-                statusEl.textContent = "Error al cargar Google Maps";
-                statusEl.className = "text-xs text-center text-red-600 font-bold";
-            }
+                    try {
+                        const inputOrigen = document.getElementById('origen');
+                        new google.maps.places.Autocomplete(inputOrigen, { types: ['geocode', 'establishment'] });
+                        console.log("✅ Autocomplete inicializado con éxito.");
+                    } catch (error) {
+                        console.error("❌ Error al inicializar Autocomplete:", error);
+                    }
+                }
+            }, 500);
+
+            // Temporizador por si la API nunca responde
+            setTimeout(() => {
+                if (statusEl.textContent === "Cargando Maps...") {
+                    statusEl.textContent = "Error: Tiempo de espera agotado (posible bloqueo de red)";
+                    statusEl.className = "text-xs text-center text-red-600 font-bold";
+                    console.error("⚠️ Timeout: El script de Google Maps no terminó de cargar. Revisa tu conexión o bloqueadores de anuncios (AdBlock).");
+                }
+            }, 6000);
         });
     </script>
 </body>

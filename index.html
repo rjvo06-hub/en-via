@@ -3,62 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Maps</title>
+    <title>Test Maps - New Places API</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places" async defer></script>
+    <!-- Google Maps API con las librerías para componentes web -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,marker" async defer></script>
 </head>
 <body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
 
     <div class="bg-white p-6 rounded-2xl shadow-sm w-full max-w-sm space-y-4">
-        <h1 class="text-base font-bold text-slate-800 text-center">Prueba de Autocompletado</h1>
+        <h1 class="text-base font-bold text-slate-800 text-center">Prueba de Autocompletado (New)</h1>
         
         <div>
             <label class="block text-xs font-semibold text-slate-500 mb-1">Dirección de Origen</label>
-            <input type="text" id="origen" placeholder="Escribe una dirección..." class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <!-- Nuevo elemento web estándar de Google Maps para Autocomplete -->
+            <gmp-place-autocomplete id="origen-autocomplete" class="w-full">
+                <input type="text" id="origen" placeholder="Escribe una dirección..." class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </gmp-place-autocomplete>
         </div>
 
         <div id="status" class="text-xs text-center text-slate-400 font-medium">Cargando Maps...</div>
     </div>
 
     <script>
-        // Función nativa que dispara Google Maps si la API Key es rechazada
         window.gm_authFailure = function() {
             const statusEl = document.getElementById('status');
-            statusEl.textContent = "Error: Clave rechazada o sin permisos de API";
+            statusEl.textContent = "Error de Autenticación en Google Maps";
             statusEl.className = "text-xs text-center text-red-600 font-bold";
-            console.error("⚠️ Google Maps Auth Failure: La API Key fue rechazada por restricciones, facturación o APIs faltantes en Google Cloud.");
         };
 
         window.addEventListener('load', () => {
             const statusEl = document.getElementById('status');
             
-            // Verificación periódica de carga de la API
-            const interval = setInterval(() => {
+            const checkMaps = setInterval(() => {
                 if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-                    clearInterval(interval);
+                    clearInterval(checkMaps);
                     statusEl.textContent = "Google Maps cargado correctamente";
                     statusEl.className = "text-xs text-center text-emerald-600 font-bold";
 
-                    try {
-                        const inputOrigen = document.getElementById('origen');
-                        new google.maps.places.Autocomplete(inputOrigen, { types: ['geocode', 'establishment'] });
-                        console.log("✅ Autocomplete inicializado con éxito.");
-                    } catch (error) {
-                        console.error("❌ Error al inicializar Autocomplete:", error);
-                    }
+                    // Escuchar la selección de una dirección en el nuevo componente
+                    const placeAutocomplete = document.getElementById('origen-autocomplete');
+                    placeAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                        const place = event.detail.place;
+                        await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] });
+                        console.log("Dirección seleccionada:", place.formattedAddress);
+                    });
                 }
             }, 500);
-
-            // Temporizador por si la API nunca responde
-            setTimeout(() => {
-                if (statusEl.textContent === "Cargando Maps...") {
-                    statusEl.textContent = "Error: Tiempo de espera agotado (posible bloqueo de red)";
-                    statusEl.className = "text-xs text-center text-red-600 font-bold";
-                    console.error("⚠️ Timeout: El script de Google Maps no terminó de cargar. Revisa tu conexión o bloqueadores de anuncios (AdBlock).");
-                }
-            }, 6000);
         });
     </script>
 </body>

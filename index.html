@@ -7,6 +7,8 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css">
+    <!-- Google Maps API con Autocomplete -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ&libraries=places"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
 
@@ -52,12 +54,12 @@
 
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
-                    <input type="text" id="origen" required placeholder="Calle y número de recogida" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <input type="text" id="origen" required placeholder="Ej. Centro comercial, dirección..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
-                    <input type="text" id="destino" required placeholder="Lugar de llegada" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <input type="text" id="destino" required placeholder="Ej. Aeropuerto, hotel..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -105,5 +107,24 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
+
+    <!-- Script para inicializar Google Places Autocomplete -->
+    <script>
+        window.addEventListener('load', () => {
+            const inputOrigen = document.getElementById('origen');
+            const inputDestino = document.getElementById('destino');
+
+            if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                const opciones = {
+                    fields: ["formatted_address", "name", "geometry"]
+                };
+
+                new google.maps.places.Autocomplete(inputOrigen, opciones);
+                new google.maps.places.Autocomplete(inputDestino, opciones);
+            } else {
+                console.warn("Google Maps Places API no se pudo cargar correctamente.");
+            }
+        });
+    </script>
 </body>
 </html>

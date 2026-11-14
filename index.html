@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Google Maps API con Autocomplete (Actualizada con la nueva clave) -->
+    <!-- Google Maps API con Autocomplete (Usando la nueva clave) -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAAHveFriP_VQfvjTskY16o6iEQ_mWz8Ew&libraries=places"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -116,11 +116,11 @@
 
             if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                 const opciones = {
-                    fields: ["formatted_address", "name", "geometry"]
+                    types: ['geocode', 'establishment']
                 };
 
-                new google.maps.places.Autocomplete(inputOrigen, opciones);
-                new google.maps.places.Autocomplete(inputDestino, opciones);
+                if (inputOrigen) new google.maps.places.Autocomplete(inputOrigen, opciones);
+                if (inputDestino) new google.maps.places.Autocomplete(inputDestino, opciones);
             } else {
                 console.warn("Google Maps Places API no se pudo cargar correctamente.");
             }

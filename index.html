@@ -114,7 +114,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script con Autocompletado en Maracaibo, Distancia y Tarifa de $1/km (Mínimo 3.00) -->
+    <!-- Script Corregido para Capturar el Input y Calcular Distancia/Tarifa -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -125,16 +125,12 @@
                 if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                     clearInterval(checkMapsInterval);
 
-                    // Límites geográficos de Maracaibo, Zulia
                     const maracaiboBounds = {
                         north: 10.7500,
                         south: 10.5800,
                         east: -71.5500,
                         west: -71.7200
                     };
-
-                    let origenSeleccionado = null;
-                    let destinoSeleccionado = null;
 
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
@@ -143,34 +139,35 @@
                     const inputDistancia = document.getElementById('distancia');
                     const inputPrecio = document.getElementById('precio');
 
-                    // Aplicar sesgo geográfico hacia Maracaibo
                     if (origenAutocomplete) origenAutocomplete.locationBias = maracaiboBounds;
                     if (destinoAutocomplete) destinoAutocomplete.locationBias = maracaiboBounds;
 
-                    // Función para calcular distancia en vehículo y aplicar tarifa automática ($1/km, mínimo 3.00)
                     function calcularRutaYPrecio() {
-                        if (origenSeleccionado && destinoSeleccionado) {
+                        const origenTexto = inputOrigen.value.trim();
+                        const destinoTexto = inputDestino.value.trim();
+
+                        // Solo calcular si ambos campos tienen texto escrito/seleccionado
+                        if (origenTexto.length > 3 && destinoTexto.length > 3) {
                             inputDistancia.value = "Calculando...";
                             inputPrecio.value = "Calculando...";
                             
                             const service = new google.maps.DistanceMatrixService();
                             service.getDistanceMatrix({
-                                origins: [origenSeleccionado],
-                                destinations: [destinoSeleccionado],
+                                origins: [origenTexto],
+                                destinations: [destinoTexto],
                                 travelMode: google.maps.TravelMode.DRIVING,
                                 unitSystem: google.maps.UnitSystem.METRIC
                             }, (response, status) => {
                                 if (status === "OK") {
                                     const results = response.rows[0].elements;
                                     if (results[0].status === "OK") {
-                                        const distanciaTexto = results[0].distance.text; // Ej: "8.5 km"
-                                        const distanciaMetros = results[0].distance.value; // En metros
+                                        const distanciaTexto = results[0].distance.text; 
+                                        const distanciaMetros = results[0].distance.value; 
                                         const kilometros = distanciaMetros / 1000;
 
-                                        // Mostrar distancia
                                         inputDistancia.value = distanciaTexto;
 
-                                        // Calcular tarifa: $1 por km, con un mínimo de 3.00
+                                        // $1 por kilómetro, mínimo 3.00
                                         const precioCalculado = Math.max(3.00, kilometros * 1.00);
                                         inputPrecio.value = precioCalculado.toFixed(2);
                                     } else {
@@ -178,7 +175,7 @@
                                         inputPrecio.value = "3.00";
                                     }
                                 } else {
-                                    inputDistancia.value = "Error";
+                                    inputDistancia.value = "Error al calcular";
                                     inputPrecio.value = "3.00";
                                     console.error("Error en DistanceMatrix:", status);
                                 }
@@ -186,33 +183,32 @@
                         }
                     }
 
-                    // Evento Origen
+                    // Escuchar la selección o cambios directos en los inputs
                     if (origenAutocomplete) {
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
-                            await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
-                            if (inputOrigen) {
-                                inputOrigen.value = place.formattedAddress || place.displayName || '';
+                            if (place && place.location) {
+                                inputOrigen.value = place.formattedAddress || inputOrigen.value;
                             }
-                            origenSeleccionado = place.formattedAddress || place.displayName;
                             calcularRutaYPrecio();
                         });
                     }
 
-                    // Evento Destino
                     if (destinoAutocomplete) {
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
-                            await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
-                            if (inputDestino) {
-                                inputDestino.value = place.formattedAddress || place.displayName || '';
+                            if (place && place.location) {
+                                inputDestino.value = place.formattedAddress || inputDestino.value;
                             }
-                            destinoSeleccionado = place.formattedAddress || place.displayName;
                             calcularRutaYPrecio();
                         });
                     }
 
-                    console.log("✅ Autocompletado, cálculo de distancia y tarifa automática ($1/km, mínimo 3.00) configurados.");
+                    // También permitir disparar el cálculo si el usuario selecciona de la lista o presiona enter/pierde el foco
+                    inputOrigen.addEventListener('blur', calcularRutaYPrecio);
+                    inputDestino.addEventListener('blur', calcularRutaYPrecio);
+
+                    console.log("✅ Sistema de cálculo de ruta por texto directo configurado.");
                 }
             }, 300);
 

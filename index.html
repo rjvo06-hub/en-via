@@ -114,7 +114,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script Corregido para Capturar el Input y Calcular Distancia/Tarifa -->
+    <!-- Script con Autocompletado en Maracaibo, Distancia y Tarifa de $1/km (Mínimo 3.00) -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -146,7 +146,6 @@
                         const origenTexto = inputOrigen.value.trim();
                         const destinoTexto = inputDestino.value.trim();
 
-                        // Solo calcular si ambos campos tienen texto escrito/seleccionado
                         if (origenTexto.length > 3 && destinoTexto.length > 3) {
                             inputDistancia.value = "Calculando...";
                             inputPrecio.value = "Calculando...";
@@ -183,11 +182,10 @@
                         }
                     }
 
-                    // Escuchar la selección o cambios directos en los inputs
                     if (origenAutocomplete) {
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
-                            if (place && place.location) {
+                            if (place) {
                                 inputOrigen.value = place.formattedAddress || inputOrigen.value;
                             }
                             calcularRutaYPrecio();
@@ -197,18 +195,17 @@
                     if (destinoAutocomplete) {
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
-                            if (place && place.location) {
+                            if (place) {
                                 inputDestino.value = place.formattedAddress || inputDestino.value;
                             }
                             calcularRutaYPrecio();
                         });
                     }
 
-                    // También permitir disparar el cálculo si el usuario selecciona de la lista o presiona enter/pierde el foco
                     inputOrigen.addEventListener('blur', calcularRutaYPrecio);
                     inputDestino.addEventListener('blur', calcularRutaYPrecio);
 
-                    console.log("✅ Sistema de cálculo de ruta por texto directo configurado.");
+                    console.log("✅ Sistema de cálculo de ruta y tarifa automática configurado correctamente.");
                 }
             }, 300);
 

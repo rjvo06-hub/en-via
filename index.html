@@ -114,13 +114,12 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script de Captura de Coordenadas y Cálculo de Ruta -->
+    <!-- Script de Captura Directa de Coordenadas y Cálculo de Distancia -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
         };
 
-        // Variables globales para almacenar las coordenadas y servicios
         let origenCoords = null;
         let destinoCoords = null;
         let directionsService;
@@ -132,7 +131,6 @@
 
                     directionsService = new google.maps.DirectionsService();
 
-                    // Delimitador geográfico para Maracaibo, Zulia
                     const maracaiboBounds = {
                         north: 10.7500,
                         south: 10.5800,
@@ -140,7 +138,7 @@
                         west: -71.7200
                     };
 
-                    // 1. Configurar Autocompletado de Origen
+                    // 1. Origen Autocomplete
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const inputOrigen = document.getElementById('origen');
                     if (origenAutocomplete) {
@@ -150,22 +148,22 @@
                             await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
                             
                             if (place.location) {
-                                // Guardar latitud y longitud del origen
                                 origenCoords = {
                                     lat: place.location.lat(),
                                     lng: place.location.lng()
                                 };
-                                console.log("📍 [Origen Guardado]", origenCoords);
+                                console.log("📍 Origen capturado (Lat/Lng):", origenCoords);
                             }
 
                             if (inputOrigen) {
                                 inputOrigen.value = place.formattedAddress || place.displayName || '';
-                                intentarCalcularRuta();
                             }
+
+                            verificarYCalcularRuta();
                         });
                     }
 
-                    // 2. Configurar Autocompletado de Destino
+                    // 2. Destino Autocomplete
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
                     const inputDestino = document.getElementById('destino');
                     if (destinoAutocomplete) {
@@ -175,18 +173,18 @@
                             await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
                             
                             if (place.location) {
-                                // Guardar latitud y longitud del destino
                                 destinoCoords = {
                                     lat: place.location.lat(),
                                     lng: place.location.lng()
                                 };
-                                console.log("📍 [Destino Guardado]", destinoCoords);
+                                console.log("📍 Destino capturado (Lat/Lng):", destinoCoords);
                             }
 
                             if (inputDestino) {
                                 inputDestino.value = place.formattedAddress || place.displayName || '';
-                                intentarCalcularRuta();
                             }
+
+                            verificarYCalcularRuta();
                         });
                     }
 
@@ -197,7 +195,7 @@
                     const inputHora = document.getElementById('hora');
                     if (inputHora) inputHora.value = `${hours}:${minutes}`;
 
-                    console.log("✅ Sistema de captura de coordenadas listo en Maracaibo.");
+                    console.log("✅ Componentes de autocompletado y coordenadas listos.");
                 }
             }, 300);
 
@@ -206,44 +204,42 @@
             }, 8000);
         });
 
-        // 3. Función para trazar la ruta usando las coordenadas guardadas de origen y destino
-        function intentarCalcularRuta() {
-            // Si el usuario escribe manualmente sin seleccionar del autocompletado, podemos usar los textos directamente
-            const origenVal = document.getElementById('origen').value;
-            const destinoVal = document.getElementById('destino').value;
+        // 3. Evalúa si ya tenemos ambos puntos y calcula la ruta usando Lat/Lng exactos
+        function verificarYCalcularRuta() {
+            // Si por alguna razón el usuario escribió texto plano y no usó el componente web, usamos el texto como respaldo
+            const origenVal = origenCoords ? new google.maps.LatLng(origenCoords.lat, origenCoords.lng) : document.getElementById('origen').value;
+            const destinoVal = destinoCoords ? new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng) : document.getElementById('destino').value;
 
-            if (!origenVal || !destinoVal || origenVal.length < 3 || destinoVal.length < 3) return;
+            if (!origenCoords && document.getElementById('origen').value.length < 3) return;
+            if (!destinoCoords && document.getElementById('destino').value.length < 3) return;
 
-            // Usamos las coordenadas guardadas si están disponibles, o el texto ingresado como respaldo
-            const origenParam = origenCoords ? new google.maps.LatLng(origenCoords.lat, origenCoords.lng) : origenVal;
-            const destinoParam = destinoCoords ? new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng) : destinoVal;
+            console.log("🚀 Calculando ruta usando:", origenVal, destinoVal);
 
             directionsService.route(
                 {
-                    origin: origenParam,
-                    destination: destinoParam,
+                    origin: origenVal,
+                    destination: destinoVal,
                     travelMode: google.maps.TravelMode.DRIVING
                 },
                 (response, status) => {
                     if (status === 'OK') {
                         const route = response.routes[0].legs[0];
                         
-                        // Extraer distancia en kilómetros
                         const distanciaMetros = route.distance.value;
                         const kmValor = distanciaMetros / 1000;
                         
                         document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
 
-                        // Calcular precio automático ($1 por km, mínimo $3)
+                        // Regla de cobro: $1 por kilómetro, mínimo $3
                         let precioCalculado = kmValor * 1.0; 
                         if (precioCalculado < 3) {
                             precioCalculado = 3.00;
                         }
 
                         document.getElementById('precio').value = precioCalculado.toFixed(2);
-                        console.log(`🛣️ Ruta calculada con éxito. Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
+                        console.log(`✅ Distancia calculada: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
                     } else {
-                        console.warn("No se pudo calcular la ruta con las coordenadas:", status);
+                        console.warn("⚠️ No se pudo calcular la ruta:", status);
                     }
                 }
             );

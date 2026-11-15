@@ -45,7 +45,7 @@
                     <gmp-place-autocomplete id="origen-autocomplete">
                         <input type="text" id="origen" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     </gmp-place-autocomplete>
-                    <button onclick="enviarAlExtractor('origen')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5">
+                    <button onclick="enviarAlExtractor('origen')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Origen
                     </button>
                     
@@ -64,7 +64,7 @@
                     <gmp-place-autocomplete id="destino-autocomplete">
                         <input type="text" id="destino" placeholder="Ej. Vereda del Lago..." autocomplete="off">
                     </gmp-place-autocomplete>
-                    <button onclick="enviarAlExtractor('destino')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5">
+                    <button onclick="enviarAlExtractor('destino')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Destino
                     </button>
                     
@@ -97,13 +97,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Escribe la dirección, selecciónala del menú y haz clic en el botón de extraer.
+                    Escribe la dirección, selecciónala del menú y haz clic en extraer.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script de control y retorno -->
+    <!-- Script con captura directa en tiempo real -->
     <script>
         let map;
         let directionsService;
@@ -112,6 +112,10 @@
         let destMarker = null;
         let origenCoords = null;
         let destCoords = null;
+
+        // Variables globales para almacenar el texto exacto capturado
+        let textoOrigenCapturado = "";
+        let textoDestinoCapturado = "";
 
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
@@ -122,6 +126,7 @@
                 const res = JSON.parse(datosRegresados);
                 if (res && res.tipo === 'origen') {
                     document.getElementById('origen').value = res.direccion;
+                    textoOrigenCapturado = res.direccion;
                     document.getElementById('origin-lat').textContent = res.lat;
                     document.getElementById('origin-lon').textContent = res.lng;
                     document.getElementById('btn-copy-origin').classList.remove('hidden');
@@ -129,6 +134,7 @@
                     updateMarker('origin', origenCoords);
                 } else if (res && res.tipo === 'destino') {
                     document.getElementById('destino').value = res.direccion;
+                    textoDestinoCapturado = res.direccion;
                     document.getElementById('dest-lat').textContent = res.lat;
                     document.getElementById('dest-lon').textContent = res.lng;
                     document.getElementById('btn-copy-dest').classList.remove('hidden');
@@ -152,14 +158,32 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
+
+                    // 2. Escuchar en tiempo real cualquier escritura o selección en los inputs internos
+                    const inputOrigen = document.getElementById('origen');
+                    const inputDestino = document.getElementById('destino');
+
+                    if (inputOrigen) {
+                        inputOrigen.addEventListener('input', (e) => { textoOrigenCapturado = e.target.value; });
+                        inputOrigen.addEventListener('change', (e) => { textoOrigenCapturado = e.target.value; });
+                    }
+                    if (inputDestino) {
+                        inputDestino.addEventListener('input', (e) => { textoDestinoCapturado = e.target.value; });
+                        inputDestino.addEventListener('change', (e) => { textoDestinoCapturado = e.target.value; });
+                    }
                 }
             }, 300);
         });
 
-        // 2. Función que toma el texto actual del input y viaja al extractor
+        // 3. Función blindada que envía el texto guardado directamente al extractor
         function enviarAlExtractor(tipo) {
-            const inputEl = document.getElementById(tipo === 'origen' ? 'origen' : 'destino');
-            const direccion = inputEl.value.trim();
+            let direccion = (tipo === 'origen') ? textoOrigenCapturado : textoDestinoCapturado;
+
+            // Respaldo de lectura directa si la variable global estuviera vacía
+            if (!direccion) {
+                const inputEl = document.getElementById(tipo === 'origen' ? 'origen' : 'destino');
+                if (inputEl) direccion = inputEl.value.trim();
+            }
 
             if (!direccion) {
                 alert("Por favor escribe o selecciona una dirección primero.");

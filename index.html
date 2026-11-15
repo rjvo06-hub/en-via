@@ -103,7 +103,7 @@
         </div>
     </div>
 
-    <!-- Script principal unificado -->
+    <!-- Script principal corregido -->
     <script>
         let map;
         let directionsService;
@@ -141,12 +141,12 @@
             const autocompleteEl = document.getElementById(autocompleteId);
 
             if (autocompleteEl) {
-                autocompleteEl.addEventListener('gmp-select', async ({ placePrediction }) => {
-                    if (!placePrediction) return;
+                // Escuchamos el evento correcto de la API de Google Places Component
+                autocompleteEl.addEventListener('gmp-placeselect', async (event) => {
+                    const place = event.place;
+                    if (!place) return;
 
-                    const place = placePrediction.toPlace();
-                    await place.fetchFields({ fields: ['location'] });
-
+                    await place.fetchFields({ fields: ['location', 'formattedAddress'] });
                     const location = place.location;
 
                     if (location) {
@@ -163,7 +163,7 @@
                             destCoords = coords;
                         }
 
-                        // Si ya tenemos ambos puntos, mostramos el botón de Navegar
+                        // Si ambos puntos ya tienen coordenadas, habilitamos el botón de Navegar
                         if (origenCoords && destCoords) {
                             document.getElementById('btn-navegar').classList.remove('hidden');
                         }
@@ -175,11 +175,11 @@
         function iniciarNavegacion() {
             if (!origenCoords || !destCoords) return;
 
-            // 1. Mostrar el contenedor del mapa y el resumen
+            // 1. Mostrar contenedores ocultos
             document.getElementById('map-container').classList.remove('hidden');
             document.getElementById('route-summary').classList.remove('hidden');
             
-            // 2. CRUCIAL: Forzar al mapa a actualizar su renderizado ahora que ya es visible
+            // 2. Forzar redibujado del mapa
             google.maps.event.trigger(map, 'resize');
 
             document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
@@ -190,7 +190,7 @@
             const request = {
                 origin: p1,
                 destination: p2,
-                travelMode: google.maps.TravelMode.DRIVING // Ruta en vehículo utilizando Routes API / Directions Service
+                travelMode: google.maps.TravelMode.DRIVING
             };
 
             directionsService.route(request, (response, status) => {

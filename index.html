@@ -74,14 +74,16 @@
                         <input type="text" id="hora" required placeholder="Ej. 14:30" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Distancia</label>
-                        <input type="text" id="distancia" required placeholder="Ej. 8.5 km" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Distancia (Automática)</label>
+                        <!-- Campo bloqueado -->
+                        <input type="text" id="distancia" readonly placeholder="Calculando..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-slate-600 font-medium cursor-not-allowed">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Precio Acordado ($)</label>
-                    <input type="text" id="precio" required placeholder="Ej. 25.00" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition font-bold text-emerald-600">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Precio Acordado ($ - Automático)</label>
+                    <!-- Campo bloqueado -->
+                    <input type="text" id="precio" readonly placeholder="Calculando..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-emerald-700 font-bold cursor-not-allowed">
                 </div>
 
                 <div>
@@ -114,7 +116,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script de Captura Directa de Coordenadas y Cálculo de Distancia -->
+    <!-- Script de Captura Directa y Cálculo Automático de Distancia -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -138,64 +140,59 @@
                         west: -71.7200
                     };
 
-                    // 1. Origen Autocomplete
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const inputOrigen = document.getElementById('origen');
+                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
+                    const inputDestino = document.getElementById('destino');
+
+                    // 1. Capturar Origen por Autocompletado
                     if (origenAutocomplete) {
                         origenAutocomplete.locationRestriction = maracaiboBounds;
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
                             await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
-                            
                             if (place.location) {
-                                origenCoords = {
-                                    lat: place.location.lat(),
-                                    lng: place.location.lng()
-                                };
-                                console.log("📍 Origen capturado (Lat/Lng):", origenCoords);
+                                origenCoords = { lat: place.location.lat(), lng: place.location.lng() };
                             }
-
                             if (inputOrigen) {
                                 inputOrigen.value = place.formattedAddress || place.displayName || '';
                             }
-
                             verificarYCalcularRuta();
                         });
                     }
 
-                    // 2. Destino Autocomplete
-                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
-                    const inputDestino = document.getElementById('destino');
+                    // 2. Capturar Destino por Autocompletado
                     if (destinoAutocomplete) {
                         destinoAutocomplete.locationRestriction = maracaiboBounds;
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
                             await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
-                            
                             if (place.location) {
-                                destinoCoords = {
-                                    lat: place.location.lat(),
-                                    lng: place.location.lng()
-                                };
-                                console.log("📍 Destino capturado (Lat/Lng):", destinoCoords);
+                                destinoCoords = { lat: place.location.lat(), lng: place.location.lng() };
                             }
-
                             if (inputDestino) {
                                 inputDestino.value = place.formattedAddress || place.displayName || '';
                             }
-
                             verificarYCalcularRuta();
                         });
                     }
 
-                    // Establecer hora actual por defecto
+                    // Eventos de respaldo (blur / change) por si escriben y salen del campo
+                    if (inputOrigen) {
+                        inputOrigen.addEventListener('blur', verificarYCalcularRuta);
+                    }
+                    if (inputDestino) {
+                        inputDestino.addEventListener('blur', verificarYCalcularRuta);
+                    }
+
+                    // Hora actual por defecto
                     const now = new Date();
                     const hours = String(now.getHours()).padStart(2, '0');
                     const minutes = String(now.getMinutes()).padStart(2, '0');
                     const inputHora = document.getElementById('hora');
                     if (inputHora) inputHora.value = `${hours}:${minutes}`;
 
-                    console.log("✅ Componentes de autocompletado y coordenadas listos.");
+                    console.log("✅ Sistema de cálculo automático bloqueado listo.");
                 }
             }, 300);
 
@@ -204,21 +201,26 @@
             }, 8000);
         });
 
-        // 3. Evalúa si ya tenemos ambos puntos y calcula la ruta usando Lat/Lng exactos
+        // Función central para calcular la distancia y bloquear/llenar los campos
         function verificarYCalcularRuta() {
-            // Si por alguna razón el usuario escribió texto plano y no usó el componente web, usamos el texto como respaldo
-            const origenVal = origenCoords ? new google.maps.LatLng(origenCoords.lat, origenCoords.lng) : document.getElementById('origen').value;
-            const destinoVal = destinoCoords ? new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng) : document.getElementById('destino').value;
+            const origenVal = document.getElementById('origen').value.trim();
+            const destinoVal = document.getElementById('destino').value.trim();
 
-            if (!origenCoords && document.getElementById('origen').value.length < 3) return;
-            if (!destinoCoords && document.getElementById('destino').value.length < 3) return;
+            // Si falta alguno de los dos campos, limpiar y salir
+            if (!origenVal || !destinoVal || origenVal.length < 3 || destinoVal.length < 3) {
+                return;
+            }
 
-            console.log("🚀 Calculando ruta usando:", origenVal, destinoVal);
+            // Usar coordenadas exactas si están disponibles, de lo contrario usar el texto de los inputs
+            const origenParam = origenCoords ? new google.maps.LatLng(origenCoords.lat, origenCoords.lng) : origenVal;
+            const destinoParam = destinoCoords ? new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng) : destinoVal;
+
+            console.log("🚀 Solicitando cálculo de ruta entre:", origenVal, "y", destinoVal);
 
             directionsService.route(
                 {
-                    origin: origenVal,
-                    destination: destinoVal,
+                    origin: origenParam,
+                    destination: destinoParam,
                     travelMode: google.maps.TravelMode.DRIVING
                 },
                 (response, status) => {
@@ -228,6 +230,7 @@
                         const distanciaMetros = route.distance.value;
                         const kmValor = distanciaMetros / 1000;
                         
+                        // Rellenar campo de distancia bloqueado
                         document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
 
                         // Regla de cobro: $1 por kilómetro, mínimo $3
@@ -236,10 +239,11 @@
                             precioCalculado = 3.00;
                         }
 
-                        document.getElementById('precio').value = precioCalculado.toFixed(2);
-                        console.log(`✅ Distancia calculada: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
+                        // Rellenar campo de precio bloqueado
+                        document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
+                        console.log(`✅ Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
                     } else {
-                        console.warn("⚠️ No se pudo calcular la ruta:", status);
+                        console.warn("⚠️ No se pudo calcular la ruta con DirectionsService:", status);
                     }
                 }
             );

@@ -10,6 +10,22 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
+        /* Estilos limpios para el menú desplegable de Google */
+        .pac-container {
+            z-index: 999999;
+            border-radius: 0.75rem;
+            margin-top: 4px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #cbd5e1;
+            font-family: inherit;
+        }
+        .pac-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .pac-item:hover {
+            background-color: #f1f5f9;
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
@@ -17,7 +33,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Escribe o pega la dirección, haz clic en extraer y mira el resultado duplicado abajo.</p>
+            <p class="text-slate-600 mt-1">Escribe, selecciona tu opción del menú y haz clic en extraer coordenadas.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -28,16 +44,15 @@
                 <div class="space-y-2">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
                     
-                    <!-- Campo de texto normal y transparente -->
-                    <input type="text" id="input-origen" placeholder="Escribe o pega la dirección aquí..." autocomplete="off" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm">
+                    <!-- Campo de texto normal con sugerencias activas -->
+                    <input type="text" id="input-origen" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm">
                     
                     <button onclick="enviarAlExtractor('origen')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Origen
                     </button>
                     
-                    <!-- Visualización duplicada y coordenadas -->
                     <div class="p-3 bg-slate-100 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
-                        <div><span class="font-bold">Texto leído:</span> <span id="duplicado-origen" class="italic text-slate-500">Ninguno</span></div>
+                        <div><span class="font-bold">Seleccionado:</span> <span id="duplicado-origen" class="italic text-slate-500">Ninguno</span></div>
                         <div><span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | <span class="font-bold">Lon:</span> <span id="origin-lon">-</span></div>
                     </div>
                 </div>
@@ -46,16 +61,15 @@
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
                     
-                    <!-- Campo de texto normal y transparente -->
-                    <input type="text" id="input-destino" placeholder="Escribe o pega la dirección aquí..." autocomplete="off" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm">
+                    <!-- Campo de texto normal con sugerencias activas -->
+                    <input type="text" id="input-destino" placeholder="Ej. Vereda del Lago..." autocomplete="off" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm">
                     
                     <button onclick="enviarAlExtractor('destino')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Destino
                     </button>
                     
-                    <!-- Visualización duplicada y coordenadas -->
                     <div class="p-3 bg-slate-100 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
-                        <div><span class="font-bold">Texto leído:</span> <span id="duplicado-destino" class="italic text-slate-500">Ninguno</span></div>
+                        <div><span class="font-bold">Seleccionado:</span> <span id="duplicado-destino" class="italic text-slate-500">Ninguno</span></div>
                         <div><span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | <span class="font-bold">Lon:</span> <span id="dest-lon">-</span></div>
                     </div>
                 </div>
@@ -80,13 +94,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Escribe o pega la dirección y haz clic en extraer.
+                    Escribe, selecciona tu opción del menú desplegable y haz clic en extraer.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script de control transparente y duplicación -->
+    <!-- Script de control -->
     <script>
         let map;
         let directionsService;
@@ -125,7 +139,7 @@
             }
 
             const checkMapsInterval = setInterval(() => {
-                if (typeof google !== 'undefined' && google.maps) {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                     clearInterval(checkMapsInterval);
 
                     map = new google.maps.Map(document.getElementById('map'), {
@@ -137,11 +151,38 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
+
+                    // 2. Activar el autocompletado clásico de Google en los inputs normales
+                    const inputOrigen = document.getElementById('input-origen');
+                    const inputDestino = document.getElementById('input-destino');
+
+                    const options = {
+                        componentRestrictions: { country: "ve" },
+                        fields: ["formatted_address", "geometry", "name"]
+                    };
+
+                    const autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, options);
+                    const autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, options);
+
+                    // Opcional: Actualizar el duplicado al seleccionar del menú desplegable automáticamente
+                    autocompleteOrigen.addListener('place_changed', () => {
+                        const place = autocompleteOrigen.getPlace();
+                        if (place && place.formatted_address) {
+                            inputOrigen.value = place.formatted_address;
+                        }
+                    });
+
+                    autocompleteDestino.addListener('place_changed', () => {
+                        const place = autocompleteDestino.getPlace();
+                        if (place && place.formatted_address) {
+                            inputDestino.value = place.formatted_address;
+                        }
+                    });
                 }
             }, 300);
         });
 
-        // 2. Función que lee el campo transparente, lo duplica abajo y viaja al extractor
+        // 3. Función limpia para enviar al extractor
         function enviarAlExtractor(tipo) {
             const inputId = tipo === 'origen' ? 'input-origen' : 'input-destino';
             const duplicadoId = tipo === 'origen' ? 'duplicado-origen' : 'duplicado-destino';
@@ -150,11 +191,11 @@
             const direccion = inputEl ? inputEl.value.trim() : '';
 
             if (!direccion) {
-                alert("Por favor escribe o pega una dirección primero.");
+                alert("Por favor escribe o selecciona una dirección primero.");
                 return;
             }
 
-            // Mostrar el texto duplicado inmediatamente
+            // Mostrar el texto seleccionado
             const dupEl = document.getElementById(duplicadoId);
             dupEl.textContent = direccion;
             dupEl.className = "font-medium text-slate-900";

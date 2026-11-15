@@ -85,7 +85,7 @@
         </div>
     </div>
 
-    <!-- Script sencillo y directo para capturar coordenadas -->
+    <!-- Script reforzado para captura inmediata de coordenadas -->
     <script>
         let map;
         let originMarker = null;
@@ -97,7 +97,6 @@
                 if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                     clearInterval(checkMapsInterval);
 
-                    // Inicializar mapa
                     map = new google.maps.Map(document.getElementById('map'), {
                         center: maracaiboCenter,
                         zoom: 13,
@@ -108,41 +107,51 @@
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
 
-                    // 1. Capturar Origen con el componente web nativo
+                    // Función auxiliar para procesar la selección del lugar
+                    async function procesarLugar(place, type) {
+                        if (!place) return;
+                        
+                        // Si el objeto place es un Place object moderno, obtenemos los campos
+                        if (typeof place.fetchFields === 'function') {
+                            await place.fetchFields({ fields: ['location', 'displayName', 'formattedAddress'] });
+                        }
+
+                        const location = place.location || (place.geometry && place.geometry.location);
+                        if (location) {
+                            const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+                            const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+
+                            if (type === 'origin') {
+                                document.getElementById('origin-lat').textContent = lat.toFixed(6);
+                                document.getElementById('origin-lon').textContent = lng.toFixed(6);
+                                document.getElementById('btn-copy-origin').classList.remove('hidden');
+                                updateMarker('origin', { lat, lng });
+                            } else {
+                                document.getElementById('dest-lat').textContent = lat.toFixed(6);
+                                document.getElementById('dest-lon').textContent = lng.toFixed(6);
+                                document.getElementById('btn-copy-dest').classList.remove('hidden');
+                                updateMarker('dest', { lat, lng });
+                            }
+                        }
+                    }
+
+                    // Escuchas para Origen
                     if (origenAutocomplete) {
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
-                            const place = event.detail.place;
-                            if (place) {
-                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
-                                if (place.location) {
-                                    const lat = place.location.lat();
-                                    const lng = place.location.lng();
-                                    document.getElementById('origin-lat').textContent = lat.toFixed(6);
-                                    document.getElementById('origin-lon').textContent = lng.toFixed(6);
-                                    document.getElementById('btn-copy-origin').classList.remove('hidden');
-                                    
-                                    updateMarker('origin', { lat, lng });
-                                }
-                            }
+                            await procesarLugar(event.detail.place, 'origin');
+                        });
+                        origenAutocomplete.addEventListener('place_changed', async () => {
+                            await procesarLugar(origenAutocomplete.place, 'origin');
                         });
                     }
 
-                    // 2. Capturar Destino con el componente web nativo
+                    // Escuchas para Destino
                     if (destinoAutocomplete) {
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
-                            const place = event.detail.place;
-                            if (place) {
-                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
-                                if (place.location) {
-                                    const lat = place.location.lat();
-                                    const lng = place.location.lng();
-                                    document.getElementById('dest-lat').textContent = lat.toFixed(6);
-                                    document.getElementById('dest-lon').textContent = lng.toFixed(6);
-                                    document.getElementById('btn-copy-dest').classList.remove('hidden');
-                                    
-                                    updateMarker('dest', { lat, lng });
-                                }
-                            }
+                            await procesarLugar(event.detail.place, 'dest');
+                        });
+                        destinoAutocomplete.addEventListener('place_changed', async () => {
+                            await procesarLugar(destinoAutocomplete.place, 'dest');
                         });
                     }
                 }
@@ -151,6 +160,7 @@
 
         function updateMarker(type, coord) {
             if (type === 'origin') {
+                if (originMarker) map.removeLayer(originMarker);
                 if (originMarker) originMarker.setMap(null);
                 originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
             } else {

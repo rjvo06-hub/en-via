@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EN-VIA - Rutas y Coordenadas con Google Maps</title>
+    <title>EN-VIA - Rutas y Coordenadas</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API -->
+    <!-- Google Maps API con Places y Geometry -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
@@ -31,8 +31,8 @@
 
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold text-blue-600">Rutas y Coordenadas con Google Maps</h1>
-            <p class="text-slate-600 mt-1">Búsqueda inteligente, coordenadas exactas y trazado de ruta vehicular real.</p>
+            <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
+            <p class="text-slate-600 mt-1">Selecciona una dirección para extraer sus coordenadas y trazar la ruta.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -43,7 +43,7 @@
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Dirección de Origen</label>
                     <gmp-place-autocomplete id="origen-autocomplete">
-                        <input type="text" id="origen" placeholder="Ej. Sambil Maracaibo..." autocomplete="off">
+                        <input type="text" id="origen" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
                     <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
@@ -74,7 +74,7 @@
                 <!-- Resumen de Ruta -->
                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
                     <div class="flex justify-between text-sm">
-                        <span class="text-slate-600">Distancia por carretera:</span>
+                        <span class="text-slate-600">Distancia:</span>
                         <span id="route-distance" class="font-bold text-slate-800">-</span>
                     </div>
                     <div class="flex justify-between text-sm">
@@ -90,17 +90,14 @@
                 <div class="rounded-lg overflow-hidden border border-slate-200 mb-4">
                     <div id="map"></div>
                 </div>
-                <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
-                    <div id="status-msg" class="text-slate-600 italic">Selecciona origen y destino para trazar la ruta.</div>
-                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition shadow-sm">
-                        Abrir ruta en Google Maps
-                    </a>
+                <div id="status-msg" class="text-slate-600 text-sm text-center italic">
+                    Selecciona una dirección de origen o destino para iniciar.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script de integración y comunicación con el extractor -->
+    <!-- Script de Integración y Retorno -->
     <script>
         let map;
         let directionsService;
@@ -113,7 +110,7 @@
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
         window.addEventListener('load', () => {
-            // Revisar si regresan coordenadas del archivo geo-extractor.html
+            // 1. Revisar si acabamos de regresar del geo-extractor con las coordenadas listas
             const datosRegresados = localStorage.getItem('en_via_resultado_coord');
             if (datosRegresados) {
                 const res = JSON.parse(datosRegresados);
@@ -153,7 +150,7 @@
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
 
-                    // Al hacer clic en una opción del origen, lo manda al extractor separado
+                    // 2. Al seleccionar Origen, empaquetar y saltar al extractor
                     if (origenAutocomplete) {
                         origenAutocomplete.addEventListener('gmp-placeselect', async (e) => {
                             const place = e.detail.place;
@@ -167,7 +164,7 @@
                         });
                     }
 
-                    // Al hacer clic en una opción del destino, lo manda al extractor separado
+                    // 3. Al seleccionar Destino, empaquetar y saltar al extractor
                     if (destinoAutocomplete) {
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (e) => {
                             const place = e.detail.place;
@@ -198,7 +195,7 @@
 
         function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
-                document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
+                document.getElementById('status-msg').textContent = "Calculando ruta vial...";
                 const request = {
                     origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
                     destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),
@@ -215,12 +212,8 @@
                         document.getElementById('route-distance').textContent = route.distance.text;
                         document.getElementById('route-duration').textContent = route.duration.text;
                         document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
-
-                        const gmapsLink = document.getElementById('gmaps-link');
-                        gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
-                        gmapsLink.classList.remove('hidden');
                     } else {
-                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
+                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta.";
                     }
                 });
             }

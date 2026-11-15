@@ -2,121 +2,235 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EN-VIA - Coordenadas y Cálculo de Ruta</title>
-    <!-- Tailwind CSS para el diseño -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EN-VIA - Panel de Carreras y Rutas</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Google Maps API con las librerías de places, marker y geometry -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ&libraries=places,marker,geometry" async defer></script>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-100 min-h-screen">
 
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-xl">
-        <h1 class="text-2xl font-bold text-slate-800 mb-6 text-center">EN-VIA: Selector de Coordenadas y Ruta</h1>
+    <!-- Cabecera Adaptativa con Acceso al Gestor de Conductores -->
+    <header class="bg-slate-900 text-white shadow-sm sticky top-0 z-50 py-3 px-4">
+        <div class="app-container flex justify-between items-center !p-0">
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                <span>🚕</span> EN-VIA
+            </h1>
+            <div class="flex items-center gap-2">
+                <!-- Enlace directo al capturador de conductores en la carpeta admin/ -->
+                <a href="admin/conductores.html" class="text-xs bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5 font-medium">
+                    <span>👥</span> Conductores
+                </a>
+                <div class="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-medium text-slate-300">En Vivo</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container pb-16 pt-4 max-w-xl mx-auto px-4">
         
-        <div class="space-y-4">
-            <!-- Input Origen -->
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Dirección de Origen</label>
-                <input type="text" id="origen" value="Galerias Mall, Maracaibo, Venezuela" 
-                    class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <!-- Formulario para Registrar/Publicar Solicitud -->
+        <section class="bg-white rounded-2xl shadow-sm p-5 mb-6 border border-slate-200">
+            <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                <span>Nueva Solicitud y Ruta</span>
+                <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">Panel Operativo</span>
+            </h2>
+            
+            <form id="formCarrera" class="space-y-3.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Cliente</label>
+                        <input type="text" id="clienteNombre" placeholder="Nombre" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Teléfono</label>
+                        <input type="tel" id="clienteTelefono" placeholder="Móvil" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Punto de Origen con Sesgo Geográfico en Maracaibo -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
+                    <gmp-place-autocomplete id="origen-autocomplete" class="block w-full">
+                        <input type="text" id="origen" required placeholder="Ej. Galerías Mall, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </gmp-place-autocomplete>
+                </div>
+
+                <!-- Destino con Sesgo Geográfico en Maracaibo -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
+                    <gmp-place-autocomplete id="destino-autocomplete" class="block w-full">
+                        <input type="text" id="destino" required placeholder="Ej. Centro Comercial Sambil, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </gmp-place-autocomplete>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Hora</label>
+                        <input type="text" id="hora" required placeholder="Ej. 14:30" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Distancia</label>
+                        <input type="text" id="distancia" required placeholder="Ej. 8.5 km" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Precio Acordado ($)</label>
+                    <input type="text" id="precio" required placeholder="Ej. 25.00" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition font-bold text-emerald-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Notas / Observaciones</label>
+                    <input type="text" id="notas" placeholder="Ej. Equipaje grande, vuelo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold py-3.5 px-4 rounded-xl transition shadow-sm mt-2">
+                    Publicar Servicio
+                </button>
+            </form>
+        </section>
+
+        <!-- Contenedor del Mapa Visual de la Ruta -->
+        <section class="bg-white rounded-2xl shadow-sm p-4 mb-6 border border-slate-200">
+            <h2 class="text-sm font-bold text-slate-800 mb-2">Vista Previa de Ruta</h2>
+            <div id="map" class="w-full h-64 rounded-xl"></div>
+        </section>
+
+        <!-- Listado de Servicios Disponibles -->
+        <section>
+            <div class="flex items-center justify-between mb-3 px-1">
+                <h2 class="text-base font-bold text-slate-900">Servicios Disponibles</h2>
+                <span id="contadorCarreras" class="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">0</span>
             </div>
-
-            <!-- Input Destino -->
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Dirección de Destino</label>
-                <input type="text" id="destino" value="Centro Comercial Sambil Maracaibo, Venezuela" 
-                    class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            
+            <div id="listaCarreras" class="space-y-3">
+                <p class="text-slate-400 text-center py-10 bg-white rounded-2xl border border-slate-200 text-sm">Cargando servicios...</p>
             </div>
+        </section>
 
-            <!-- Botón de cálculo -->
-            <button onclick="calcularRutaYMapa()" 
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition duration-200">
-                Obtener Coordenadas y Calcular Ruta
-            </button>
-        </div>
+    </main>
 
-        <!-- Resultados de Texto -->
-        <div id="resultados" class="mt-6 hidden space-y-3 bg-slate-100 p-4 rounded-lg text-sm text-slate-700">
-            <h2 class="font-semibold text-slate-900 border-b pb-1">Resultados:</h2>
-            <div id="info-origen"></div>
-            <div id="info-destino"></div>
-            <div id="info-ruta" class="mt-2 pt-2 border-t font-medium text-blue-800"></div>
-        </div>
+    <!-- Supabase JS UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/app.js"></script>
 
-        <!-- Contenedor del Mapa interactivo -->
-        <div id="map" class="mt-6 w-full h-80 rounded-lg shadow-inner hidden"></div>
-    </div>
-
-    <!-- Carga la API de Google Maps con tu clave -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places"></script>
-
+    <!-- Script de Inicialización, Geolocalización y Cálculo de Ruta -->
     <script>
-        function calcularRutaYMapa() {
-            const origenTexto = document.getElementById('origen').value;
-            const destinoTexto = document.getElementById('destino').value;
-            
-            if (!origenTexto || !destinoTexto) {
-                alert('Por favor completa ambas direcciones.');
-                return;
-            }
+        window.gm_authFailure = function() {
+            console.error("⚠️ Error de autenticación en Google Maps.");
+        };
 
-            const resultadosDiv = document.getElementById('resultados');
-            resultadosDiv.classList.remove('hidden');
+        let map, directionsService, directionsRenderer;
 
-            const mapDiv = document.getElementById('map');
-            mapDiv.classList.remove('hidden');
+        window.addEventListener('load', () => {
+            const checkMapsInterval = setInterval(() => {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                    clearInterval(checkMapsInterval);
 
-            const infoOrigen = document.getElementById('info-origen');
-            const infoDestino = document.getElementById('info-destino');
-            const infoRuta = document.getElementById('info-ruta');
+                    // Inicializar el mapa centrado en Maracaibo
+                    const maracaiboCoords = { lat: 10.6549, lng: -71.6146 };
+                    map = new google.maps.Map(document.getElementById('map'), {
+                        zoom: 13,
+                        center: maracaiboCoords,
+                        mapTypeControl: false,
+                        streetViewControl: false
+                    });
 
-            const geocoder = new google.maps.Geocoder();
+                    directionsService = new google.maps.DirectionsService();
+                    directionsRenderer = new google.maps.DirectionsRenderer();
+                    directionsRenderer.setMap(map);
 
-            // 1. Geocodificar Origen
-            geocoder.geocode({ address: origenTexto }, (resultsOrigen, statusOrigen) => {
-                if (statusOrigen === 'OK' && resultsOrigen[0]) {
-                    const latO = resultsOrigen[0].geometry.location.lat();
-                    const lngO = resultsOrigen[0].geometry.location.lng();
-                    infoOrigen.innerHTML = `<strong>[Origen]</strong><br>Lat: ${latO}, Lng: ${lngO}`;
-                } else {
-                    infoOrigen.innerHTML = `<strong>[Origen]</strong> No se pudo encontrar.`;
+                    // Definir los límites geográficos (Bounding Box) de Maracaibo, Zulia
+                    const maracaiboBounds = {
+                        north: 10.7500,
+                        south: 10.5800,
+                        east: -71.5500,
+                        west: -71.7200
+                    };
+
+                    // Configurar Origen
+                    const origenAutocomplete = document.getElementById('origen-autocomplete');
+                    const inputOrigen = document.getElementById('origen');
+                    if (origenAutocomplete) {
+                        origenAutocomplete.locationRestriction = maracaiboBounds;
+                        origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            await place.fetchFields({ fields: ['formatted_address', 'displayName'] });
+                            if (inputOrigen) {
+                                inputOrigen.value = place.formattedAddress || place.displayName || '';
+                                calcularRutaAutomatica();
+                            }
+                        });
+                    }
+
+                    // Configurar Destino
+                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
+                    const inputDestino = document.getElementById('destino');
+                    if (destinoAutocomplete) {
+                        destinoAutocomplete.locationRestriction = maracaiboBounds;
+                        destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            await place.fetchFields({ fields: ['formatted_address', 'displayName'] });
+                            if (inputDestino) {
+                                inputDestino.value = place.formattedAddress || place.displayName || '';
+                                calcularRutaAutomatica();
+                            }
+                        });
+                    }
+
+                    // Detectar cuando el usuario escribe manualmente y sale del input
+                    if (inputOrigen) inputOrigen.addEventListener('change', calcularRutaAutomatica);
+                    if (inputDestino) inputDestino.addEventListener('change', calcularRutaAutomatica);
+
+                    // Establecer hora actual por defecto
+                    const now = new Date();
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    const inputHora = document.getElementById('hora');
+                    if (inputHora) inputHora.value = `${hours}:${minutes}`;
+
+                    console.log("✅ Google Maps Places y Rutas configurados correctamente en Maracaibo.");
                 }
-            });
+            }, 300);
 
-            // 2. Geocodificar Destino
-            geocoder.geocode({ address: destinoTexto }, (resultsDestino, statusDestino) => {
-                if (statusDestino === 'OK' && resultsDestino[0]) {
-                    const latD = resultsDestino[0].geometry.location.lat();
-                    const lngD = resultsDestino[0].geometry.location.lng();
-                    infoDestino.innerHTML = `<strong>[Destino]</strong><br>Lat: ${latD}, Lng: ${lngD}`;
-                } else {
-                    infoDestino.innerHTML = `<strong>[Destino]</strong> No se pudo encontrar.`;
-                }
-            });
+            setTimeout(() => {
+                clearInterval(checkMapsInterval);
+            }, 8000);
+        });
 
-            // 3. Inicializar el mapa y calcular la ruta con DirectionsService
-            const map = new google.maps.Map(mapDiv, {
-                zoom: 13,
-                center: { lat: 10.6549, lng: -71.6146 } // Maracaibo por defecto
-            });
+        // Función para calcular la ruta y actualizar distancia y precio automáticamente
+        function calcularRutaAutomatica() {
+            const origenVal = document.getElementById('origen').value;
+            const destinoVal = document.getElementById('destino').value;
 
-            const directionsService = new google.maps.DirectionsService();
-            const directionsRenderer = new google.maps.DirectionsRenderer();
-            
-            directionsRenderer.setMap(map);
+            if (!origenVal || !destinoVal || origenVal.length < 3 || destinoVal.length < 3) return;
 
             directionsService.route(
                 {
-                    origin: origenTexto,
-                    destination: destinoTexto,
+                    origin: origenVal,
+                    destination: destinoVal,
                     travelMode: google.maps.TravelMode.DRIVING
                 },
                 (response, status) => {
                     if (status === 'OK') {
                         directionsRenderer.setDirections(response);
                         const route = response.routes[0].legs[0];
-                        infoRuta.innerHTML = `🚗 <strong>Distancia:</strong> ${route.distance.text} <br>⏱️ <strong>Tiempo estimado:</strong> ${route.duration.text}`;
+                        
+                        // Rellenar campo de distancia
+                        document.getElementById('distancia').value = route.distance.text;
+
+                        // Opcional: Calcular precio estimado en base a los kilómetros (ej: $1 por km o tarifa base)
+                        const kmValor = route.distance.value / 1000; // en km
+                        const precioEstimado = Math.max(3, (kmValor * 1.5).toFixed(2)); // Tarifa orientativa
+                        document.getElementById('precio').value = precioEstimado;
                     } else {
-                        infoRuta.innerHTML = `⚠️ No se pudo calcular la ruta en el mapa (${status}).`;
+                        console.warn("No se pudo trazar la ruta automáticamente:", status);
                     }
                 }
             );

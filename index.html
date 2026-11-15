@@ -3,45 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador Global de Coordenadas</title>
+    <title>Buscador y Rutas - Google Maps API</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
-        #map { height: 420px; width: 100%; }
-        .autocomplete-list {
-            position: absolute;
-            z-index: 1000;
-            width: 100%;
-            max-height: 220px;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid #e5e7eb;
+        #map { height: 450px; width: 100%; }
+        /* Ajuste para que las sugerencias de autocompletado de Google se vean limpias */
+        .pac-container {
+            z-index: 1050 !important;
             border-radius: 0.5rem;
+            margin-top: 4px;
+            border: 1px solid #e5e7eb;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-family: inherit;
         }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
 
-    <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold text-blue-600">Buscador Global de Coordenadas</h1>
-            <p class="text-slate-600 mt-1">Busca cualquier dirección o ciudad del mundo (con centro inicial en Maracaibo).</p>
+            <h1 class="text-3xl font-extrabold text-blue-600">Rutas y Coordenadas con Google Maps</h1>
+            <p class="text-slate-600 mt-1">Búsqueda inteligente global, coordenadas exactas y trazado de ruta vehicular real.</p>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <!-- Panel de Entradas -->
-            <div class="bg-white p-6 rounded-xl shadow-md space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Panel de Controles -->
+            <div class="bg-white p-6 rounded-xl shadow-md space-y-6 lg:col-span-1">
                 
                 <!-- Origen -->
                 <div class="relative">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Origen</label>
-                    <input type="text" id="origin-input" placeholder="Ej. Sambil, Madrid, Tokio..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
-                    <div id="origin-suggestions" class="autocomplete-list hidden mt-1"></div>
+                    <input type="text" id="origin-input" placeholder="Ej. Sambil Maracaibo..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
                     
                     <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
@@ -55,8 +48,7 @@
                 <!-- Destino -->
                 <div class="relative">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Destino</label>
-                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago, Nueva York..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
-                    <div id="dest-suggestions" class="autocomplete-list hidden mt-1"></div>
+                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
                     
                     <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
@@ -67,126 +59,180 @@
                     </div>
                 </div>
 
-                <div class="text-xs text-slate-500 italic text-center">
-                    * Escribe las primeras letras para buscar en cualquier parte del mundo.
+                <!-- Resumen de Ruta Vial -->
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-600">Distancia por carretera:</span>
+                        <span id="route-distance" class="font-bold text-slate-800">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-600">Tiempo estimado:</span>
+                        <span id="route-duration" class="font-bold text-slate-800">-</span>
+                    </div>
                 </div>
+
             </div>
 
             <!-- Panel del Mapa -->
-            <div class="bg-white p-4 rounded-xl shadow-md flex flex-col justify-between">
+            <div class="bg-white p-4 rounded-xl shadow-md lg:col-span-2 flex flex-col justify-between">
                 <div class="rounded-lg overflow-hidden border border-slate-200 mb-4">
                     <div id="map"></div>
                 </div>
-                <div id="status-msg" class="text-sm text-slate-600 text-center">
-                    Mapa centrado en Maracaibo. Escribe cualquier ubicación.
+                <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
+                    <div id="status-msg" class="text-slate-600 italic">Selecciona origen y destino para trazar la ruta.</div>
+                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition shadow-sm">
+                        Abrir ruta en Google Maps
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Script oficial de Google Maps con tu API Key y la librería de Places -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places&callback=initMap"></script>
+
     <script>
-        // Coordenadas iniciales centradas exactamente en Maracaibo
-        const maracaiboLat = 10.6549;
-        const maracaiboLon = -71.6146;
-
-        const map = L.map('map').setView([maracaiboLat, maracaiboLon], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-
+        let map;
+        let directionsService;
+        let directionsRenderer;
+        
         let originMarker = null;
         let destMarker = null;
 
-        const originInput = document.getElementById('origin-input');
-        const destInput = document.getElementById('dest-input');
-        const originSuggestions = document.getElementById('origin-suggestions');
-        const destSuggestions = document.getElementById('dest-suggestions');
+        let originCoord = null;
+        let destCoord = null;
 
-        // Autocompletado global sin restricciones geográficas
-        function setupAutocomplete(inputElement, suggestionsElement, type) {
-            let timeout = null;
+        const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
-            inputElement.addEventListener('input', function() {
-                clearTimeout(timeout);
-                const query = this.value.trim();
-                
-                if (query.length < 2) {
-                    suggestionsElement.classList.add('hidden');
-                    return;
-                }
-
-                timeout = setTimeout(() => {
-                    // Búsqueda abierta a nivel mundial, pero utilizando las coordenadas de Maracaibo como punto de referencia (near)
-                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&lat=${maracaiboLat}&lon=${maracaiboLon}&limit=6`;
-                    
-                    fetch(url)
-                        .then(response => response.json())
-                        .then(data => {
-                            suggestionsElement.innerHTML = '';
-                            if (data.length === 0) {
-                                suggestionsElement.classList.add('hidden');
-                                return;
-                            }
-
-                            data.forEach(item => {
-                                const div = document.createElement('div');
-                                div.className = 'px-4 py-2 hover:bg-slate-100 cursor-pointer text-sm border-b border-slate-100 last:border-none';
-                                div.textContent = item.display_name;
-                                
-                                div.addEventListener('click', () => {
-                                    inputElement.value = item.display_name;
-                                    suggestionsElement.classList.add('hidden');
-                                    
-                                    const lat = parseFloat(item.lat);
-                                    const lon = parseFloat(item.lon);
-
-                                    if (type === 'origin') {
-                                        document.getElementById('origin-lat').textContent = lat.toFixed(6);
-                                        document.getElementById('origin-lon').textContent = lon.toFixed(6);
-                                        document.getElementById('btn-copy-origin').classList.remove('hidden');
-                                        updateMapMarker('origin', lat, lon, item.display_name);
-                                    } else {
-                                        document.getElementById('dest-lat').textContent = lat.toFixed(6);
-                                        document.getElementById('dest-lon').textContent = lon.toFixed(6);
-                                        document.getElementById('btn-copy-dest').classList.remove('hidden');
-                                        updateMapMarker('dest', lat, lon, item.display_name);
-                                    }
-                                });
-                                suggestionsElement.appendChild(div);
-                            });
-                            suggestionsElement.classList.remove('hidden');
-                        })
-                        .catch(err => console.error("Error buscando direcciones:", err));
-                }, 250);
+        function initMap() {
+            // Inicializar mapa de Google centrado en Maracaibo
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: maracaiboCenter,
+                zoom: 13,
+                mapTypeControl: false,
+                streetViewControl: false
             });
 
-            // Ocultar sugerencias al hacer clic fuera
-            document.addEventListener('click', function(e) {
-                if (!inputElement.contains(e.target) && !suggestionsElement.contains(e.target)) {
-                    suggestionsElement.classList.add('hidden');
-                }
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                suppressMarkers: false // Muestra los marcadores predeterminados A y B de Google
+            });
+
+            setupAutocomplete();
+        }
+
+        function setupAutocomplete() {
+            const originInput = document.getElementById('origin-input');
+            const destInput = document.getElementById('dest-input');
+
+            // Configurar autocompletado de Google para Maracaibo como sesgo inicial (bounds) pero global
+            const defaultBounds = {
+                north: 10.85,
+                south: 10.45,
+                east: -71.40,
+                west: -71.85,
+            };
+
+            const options = {
+                bounds: defaultBounds,
+                strictBounds: false, // Permite buscar en todo el mundo si el usuario escribe otra ciudad
+                fields: ["geometry", "name", "formatted_address"]
+            };
+
+            const originAutocomplete = new google.maps.places.Autocomplete(originInput, options);
+            const destAutocomplete = new google.maps.places.Autocomplete(destInput, options);
+
+            originAutocomplete.addListener('place_changed', () => {
+                const place = originAutocomplete.getPlace();
+                if (!place.geometry || !place.geometry.location) return;
+
+                originCoord = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                };
+
+                document.getElementById('origin-lat').textContent = originCoord.lat.toFixed(6);
+                document.getElementById('origin-lon').textContent = originCoord.lng.toFixed(6);
+                document.getElementById('btn-copy-origin').classList.remove('hidden');
+
+                if (originMarker) originMarker.setMap(null);
+                originMarker = new google.maps.Marker({
+                    map: map,
+                    position: originCoord,
+                    title: "Origen"
+                });
+
+                map.setCenter(originCoord);
+                map.setZoom(15);
+
+                checkAndCalculateRoute();
+            });
+
+            destAutocomplete.addListener('place_changed', () => {
+                const place = destAutocomplete.getPlace();
+                if (!place.geometry || !place.geometry.location) return;
+
+                destCoord = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                };
+
+                document.getElementById('dest-lat').textContent = destCoord.lat.toFixed(6);
+                document.getElementById('dest-lon').textContent = destCoord.lng.toFixed(6);
+                document.getElementById('btn-copy-dest').classList.remove('hidden');
+
+                if (destMarker) destMarker.setMap(null);
+                destMarker = new google.maps.Marker({
+                    map: map,
+                    position: destCoord,
+                    title: "Destino"
+                });
+
+                map.setCenter(destCoord);
+                map.setZoom(15);
+
+                checkAndCalculateRoute();
             });
         }
 
-        setupAutocomplete(originInput, originSuggestions, 'origin');
-        setupAutocomplete(destInput, destSuggestions, 'dest');
+        function checkAndCalculateRoute() {
+            if (originCoord && destCoord) {
+                document.getElementById('status-msg').textContent = "Calculando ruta vehicular real con Google...";
 
-        // Actualizar marcador en el mapa
-        function updateMapMarker(type, lat, lon, title) {
-            if (type === 'origin') {
-                if (originMarker) map.removeLayer(originMarker);
-                originMarker = L.marker([lat, lon]).addTo(map)
-                    .bindPopup(`<b>Origen:</b><br>${title}`).openPopup();
-            } else {
-                if (destMarker) map.removeLayer(destMarker);
-                destMarker = L.marker([lat, lon]).addTo(map)
-                    .bindPopup(`<b>Destino:</b><br>${title}`).openPopup();
+                const request = {
+                    origin: originCoord,
+                    destination: destCoord,
+                    travelMode: google.maps.TravelMode.DRIVING
+                };
+
+                directionsService.route(request, (result, status) => {
+                    if (status === 'OK') {
+                        // Ocultar marcadores individuales personalizados para usar la ruta limpia de Google Directions
+                        if (originMarker) originMarker.setMap(null);
+                        if (destMarker) destMarker.setMap(null);
+
+                        directionsRenderer.setDirections(result);
+
+                        const route = result.routes[0].legs[0];
+                        document.getElementById('route-distance').textContent = route.distance.text;
+                        document.getElementById('route-duration').textContent = route.duration.text;
+                        document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
+
+                        // Enlace directo oficial a Google Maps
+                        const originStr = `${originCoord.lat},${originCoord.lng}`;
+                        const destStr = `${destCoord.lat},${destCoord.lng}`;
+                        const gmapsLink = document.getElementById('gmaps-link');
+                        gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destStr}&travelmode=driving`;
+                        gmapsLink.classList.remove('hidden');
+                    } else {
+                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
+                    }
+                });
             }
-            map.setView([lat, lon], 14);
-            document.getElementById('status-msg').textContent = `Ubicación de ${type === 'origin' ? 'Origen' : 'Destino'} actualizada.`;
         }
 
-        // Función para copiar coordenadas
+        // Función para copiar coordenadas al portapapeles
         function copyCoords(type) {
             const lat = document.getElementById(`${type}-lat`).textContent;
             const lon = document.getElementById(`${type}-lon`).textContent;

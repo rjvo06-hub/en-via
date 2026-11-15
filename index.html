@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -119,7 +118,6 @@
                 if (typeof google !== 'undefined' && google.maps) {
                     clearInterval(checkMapsInterval);
 
-                    // Inicializamos el mapa en segundo plano (sin mostrarlo todavía)
                     map = new google.maps.Map(document.getElementById('map'), {
                         center: maracaiboCenter,
                         zoom: 13,
@@ -181,7 +179,7 @@
             document.getElementById('map-container').classList.remove('hidden');
             document.getElementById('route-summary').classList.remove('hidden');
             
-            // Forzar al mapa a recalcular su tamaño por si estaba oculto al iniciar
+            // 2. CRUCIAL: Forzar al mapa a actualizar su renderizado ahora que ya es visible
             google.maps.event.trigger(map, 'resize');
 
             document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
@@ -192,7 +190,7 @@
             const request = {
                 origin: p1,
                 destination: p2,
-                travelMode: google.maps.TravelMode.DRIVING // Ruta en vehículo
+                travelMode: google.maps.TravelMode.DRIVING // Ruta en vehículo utilizando Routes API / Directions Service
             };
 
             directionsService.route(request, (response, status) => {

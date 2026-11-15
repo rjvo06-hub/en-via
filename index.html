@@ -11,11 +11,11 @@
     <style>
         #map { height: 450px; width: 100%; }
         gmp-place-autocomplete { width: 100%; }
-        /* Añadido un borde claro y visible al campo nativo para que destaque sobre el fondo */
+        /* Campo nativo con fondo oscuro, borde visible y texto claro */
         gmp-place-autocomplete input {
             width: 100%;
             background-color: #161616 !important;
-            border: 1px solid #3b82f6 !important; /* Borde azul sutil y elegante (o usa #383838 si prefieres gris) */
+            border: 1px solid #3b82f6 !important;
             border-radius: 0.75rem;
             padding: 0.75rem 1rem;
             color: #ffffff !important;
@@ -138,12 +138,31 @@
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
 
+                    // Configurar sesgo de ubicación hacia Maracaibo para los autocompletados
+                    configurarSesgoBusqueda('origen-autocomplete');
+                    configurarSesgoBusqueda('destino-autocomplete');
+
                     // Configurar escucha para origen y destino
                     configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
                     configurarLugar('destino-autocomplete', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
                 }
             }, 300);
         });
+
+        function configurarSesgoBusqueda(autocompleteId) {
+            const autocompleteEl = document.getElementById(autocompleteId);
+            if (autocompleteEl) {
+                // Definir un rectángulo de sesgo/restricción alrededor de Maracaibo para priorizar resultados locales
+                const defaultBounds = {
+                    north: 10.8500,
+                    south: 10.4500,
+                    east: -71.4500,
+                    west: -71.8000,
+                };
+                autocompleteEl.includedBounds = defaultBounds;
+                autocompleteEl.locationBias = maracaiboCenter;
+            }
+        }
 
         function configurarLugar(autocompleteId, campoLibreId, latId, lonId, btnCopyId, tipo) {
             const autocompleteEl = document.getElementById(autocompleteId);

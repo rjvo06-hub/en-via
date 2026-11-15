@@ -120,7 +120,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script de Inicialización, Geolocalización y Cálculo de Ruta -->
+    <!-- Script de Inicialización, Geolocalización y Cálculo de Ruta Automático -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -204,7 +204,7 @@
             }, 8000);
         });
 
-        // Función para calcular la ruta y actualizar distancia y precio automáticamente
+        // Función para calcular la ruta, la distancia y el precio ($1 por km, mínimo $3)
         function calcularRutaAutomatica() {
             const origenVal = document.getElementById('origen').value;
             const destinoVal = document.getElementById('destino').value;
@@ -222,13 +222,19 @@
                         directionsRenderer.setDirections(response);
                         const route = response.routes[0].legs[0];
                         
-                        // Rellenar campo de distancia
-                        document.getElementById('distancia').value = route.distance.text;
+                        // 1. Obtener la distancia exacta en kilómetros
+                        const distanciaMetros = route.distance.value;
+                        const kmValor = distanciaMetros / 1000;
+                        
+                        document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
 
-                        // Opcional: Calcular precio estimado en base a los kilómetros (ej: $1 por km o tarifa base)
-                        const kmValor = route.distance.value / 1000; // en km
-                        const precioEstimado = Math.max(3, (kmValor * 1.5).toFixed(2)); // Tarifa orientativa
-                        document.getElementById('precio').value = precioEstimado;
+                        // 2. Calcular precio automático ($1 por km, mínimo $3)
+                        let precioCalculado = kmValor * 1.0; 
+                        if (precioCalculado < 3) {
+                            precioCalculado = 3.00;
+                        }
+
+                        document.getElementById('precio').value = precioCalculado.toFixed(2);
                     } else {
                         console.warn("No se pudo trazar la ruta automáticamente:", status);
                     }

@@ -9,11 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Estilo para el buscador moderno nativo de Google */
-        gmp-place-picker {
-            width: 100%;
-            height: 45px;
-        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-between">
@@ -23,10 +18,10 @@
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador de Coordenadas</h1>
-                <p class="text-indigo-200 text-sm mt-1">Places API (New) y Maps JavaScript API</p>
+                <p class="text-indigo-200 text-sm mt-1">Escribe una dirección o lugar y obtén su latitud y longitud</p>
             </div>
             <span class="bg-indigo-700 text-indigo-100 text-xs font-medium px-3 py-1.5 rounded-full border border-indigo-500">
-                Conectado
+                Maps & Geocoding Activo
             </span>
         </div>
     </header>
@@ -37,19 +32,19 @@
         <!-- Grid de Búsqueda, Resultados y Mapa -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <!-- Panel izquierdo: Buscador y Coordenadas -->
+            <!-- Panel izquierdo: Buscador de texto y Coordenadas -->
             <div class="space-y-6 md:col-span-1">
                 
-                <!-- Caja de Búsqueda Moderna con Places API (New) -->
+                <!-- Caja de Búsqueda por Texto Libre -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3">
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-indigo-600">Buscar Lugar / Centro Comercial</label>
-                    
-                    <!-- Componente web oficial de Google Maps para búsqueda de lugares nuevos -->
-                    <div id="picker-container">
-                        <gmp-place-picker id="place-picker" placeholder="Ej: Centro Comercial Andino..."></gmp-place-picker>
+                    <label for="addressInput" class="block text-xs font-semibold uppercase tracking-wider text-indigo-600">Buscar Dirección o Lugar</label>
+                    <div class="space-y-2">
+                        <input id="addressInput" type="text" placeholder="Ej: Centro Comercial Andino..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        <button onclick="searchAddress()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-xl text-xs transition shadow-sm cursor-pointer">
+                            Buscar Coordenadas
+                        </button>
                     </div>
-
-                    <p class="text-[11px] text-slate-500">Escribe el nombre y selecciona una sugerencia o haz clic directo en el mapa.</p>
+                    <p class="text-[11px] text-slate-500">Escribe lo que buscas y presiona el botón o haz clic directo en el mapa.</p>
                 </div>
 
                 <!-- Tarjeta de Resultados -->
@@ -58,7 +53,7 @@
                     
                     <div class="space-y-3 text-sm">
                         <div>
-                            <span class="text-slate-400 block text-xs font-medium">Lugar:</span>
+                            <span class="text-slate-400 block text-xs font-medium">Dirección Encontrada:</span>
                             <span id="resAddress" class="font-medium text-slate-800 text-xs">-</span>
                         </div>
                         <div class="space-y-2 pt-2 border-t border-slate-100">
@@ -94,7 +89,7 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        EN-VIA App • Módulo de Geolocalización
+        EN-VIA App • Geocodificación y Selector
     </footer>
 
     <!-- Notificación Toast -->
@@ -102,7 +97,7 @@
         ¡Acción realizada con éxito!
     </div>
 
-    <!-- Script principal de Google Maps API -->
+    <!-- Script principal -->
     <script>
         const apiKey = "AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I";
         let map;
@@ -126,24 +121,23 @@
         window.onload = function() {
             initMap().catch(err => {
                 console.error(err);
-                showToast('Error al cargar Google Maps. Verifica tu clave.');
+                showToast('Error al cargar Google Maps.');
             });
         };
 
         async function initMap() {
             const { Map } = await google.maps.importLibrary("maps");
             const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-            await google.maps.importLibrary("places");
 
             const mapContainer = document.getElementById('map');
             mapContainer.innerHTML = '';
 
-            const defaultLocation = { lat: 4.6097, lng: -74.0817 }; // Bogotá por defecto
+            const defaultLocation = { lat: 4.6097, lng: -74.0817 }; // Bogotá
 
             map = new Map(mapContainer, {
                 center: defaultLocation,
                 zoom: 14,
-                mapId: "EN_VIA_MAP_SEARCH_NEW_ID"
+                mapId: "EN_VIA_CUSTOM_SEARCH_ID"
             });
 
             marker = new AdvancedMarkerElement({
@@ -151,47 +145,61 @@
                 position: defaultLocation
             });
 
-            const placePicker = document.getElementById('place-picker');
-
-            // Escoger lugar mediante Places API (New) con el componente web oficial
-            placePicker.addEventListener('gmp-select', async ({ place }) => {
-                if (!place) return;
-
-                await place.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
-
-                if (!place.location) {
-                    showToast('No se encontraron coordenadas para este lugar.');
-                    return;
+            // Permitir buscar presionando la tecla Enter en el input
+            document.getElementById('addressInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    searchAddress();
                 }
-
-                const lat = place.location.lat();
-                const lng = place.location.lng();
-                const name = place.displayName || place.formattedAddress || "Lugar seleccionado";
-
-                updateLocation(place.location, name, lat, lng);
-                showToast('¡Lugar encontrado!');
             });
 
-            // Permitir hacer clic directamente en el mapa
-            map.addListener('click', (event) => {
+            // Hacer clic en el mapa también actualiza los datos
+            map.addListener('click', async (event) => {
                 const clickedLocation = event.latLng;
                 const lat = clickedLocation.lat();
                 const lng = clickedLocation.lng();
-
-                updateLocation(clickedLocation, "Punto personalizado en el mapa", lat, lng);
-                showToast('¡Coordenadas actualizadas desde el mapa!');
+                
+                updateLocation(clickedLocation, `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`, lat, lng);
+                showToast('¡Coordenadas obtenidas del mapa!');
             });
 
-            // Inicializar con valores por defecto
             updateLocation(defaultLocation, "Bogotá, Colombia", defaultLocation.lat, defaultLocation.lng);
         }
 
-        function updateLocation(location, name, lat, lng) {
-            map.setCenter(location);
-            map.setZoom(16);
-            marker.position = location;
+        // Función para buscar la dirección escrita usando la API oficial web
+        async function searchAddress() {
+            const query = document.getElementById('addressInput').value.trim();
+            if (!query) {
+                showToast('Por favor escribe una dirección o lugar.');
+                return;
+            }
 
-            document.getElementById('resAddress').textContent = name;
+            try {
+                const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === 'OK' && data.results.length > 0) {
+                    const result = data.results[0];
+                    const location = result.geometry.location;
+                    const latLng = new google.maps.LatLng(location.lat, location.lng);
+                    
+                    updateLocation(latLng, result.formatted_address, location.lat, location.lng);
+                    showToast('¡Dirección encontrada con éxito!');
+                } else {
+                    showToast('No se encontró la dirección especificada.');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Error al conectar con el servicio de búsqueda.');
+            }
+        }
+
+        function updateLocation(latLng, address, lat, lng) {
+            map.setCenter(latLng);
+            map.setZoom(16);
+            marker.position = latLng;
+
+            document.getElementById('resAddress').textContent = address;
             document.getElementById('resLat').textContent = lat.toFixed(6);
             document.getElementById('resLng').textContent = lng.toFixed(6);
         }

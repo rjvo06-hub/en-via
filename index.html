@@ -8,6 +8,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Maps API con Places (New) y Geometry -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
+    <!-- SDK de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Tu archivo de configuración de Supabase -->
+    <script src="js/supabaseclient.js"></script>
+    
     <style>
         #map { height: 450px; width: 100%; }
         gmp-place-autocomplete { width: 100%; }
@@ -81,6 +86,11 @@
                     </div>
                 </div>
 
+                <!-- Botón de Guardar Ruta -->
+                <button id="btn-guardar" onclick="guardarRuta()" disabled class="w-full py-3 px-4 bg-slate-300 text-slate-500 font-bold rounded-xl transition shadow-sm cursor-not-allowed">
+                    Guardar Ruta en Base de Datos
+                </button>
+
             </div>
 
             <!-- Panel del Mapa -->
@@ -107,6 +117,7 @@
         let destMarker = null;
         let origenCoords = null;
         let destCoords = null;
+        let rutaCalculada = false;
 
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
@@ -125,7 +136,7 @@
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ 
                         map: map, 
-                        suppressMarkers: false // Muestra los marcadores oficiales de la ruta de Google
+                        suppressMarkers: false 
                     });
 
                     configurarLugar('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
@@ -169,7 +180,6 @@
         }
 
         function updateMarker(type, coord) {
-            // Si ya hay una ruta trazada, limpiamos el renderizador para que no interfiera con los marcadores individuales
             directionsRenderer.set('directions', null);
 
             if (type === 'origin') {
@@ -180,7 +190,6 @@
                 destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
             }
 
-            // Si ambos puntos existen, ajustamos los límites para ver ambos; si solo hay uno, centramos en ese
             if (origenCoords && destCoords) {
                 const bounds = new google.maps.LatLngBounds();
                 bounds.extend(origenCoords);
@@ -194,20 +203,9 @@
 
         function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
-                // 1. Calcular distancia en línea recta inicial
                 const p1 = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
                 const p2 = new google.maps.LatLng(destCoords.lat, destCoords.lng);
-                const distanciaMetros = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
                 
-                let distanciaTexto = "";
-                if (distanciaMetros >= 1000) {
-                    distanciaTexto = (distanciaMetros / 1000).toFixed(2) + " km (línea recta)";
-                } else {
-                    distanciaTexto = Math.round(distanciaMetros) + " m (línea recta)";
-                }
-                document.getElementById('route-distance').textContent = distanciaTexto;
-
-                // 2. Solicitar ruta vial oficial a Google Maps
                 document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
                 const request = {
                     origin: p1,
@@ -217,12 +215,10 @@
 
                 directionsService.route(request, (response, status) => {
                     if (status === 'OK') {
-                        // Ocultamos los marcadores individuales para que Google Maps muestre los de la ruta completa
                         if (originMarker) originMarker.setMap(null);
                         if (destMarker) destMarker.setMap(null);
                         
                         directionsRenderer.setDirections(response);
-                        // El propio DirectionsRenderer ajusta automáticamente el zoom y los límites (bounds) para mostrar toda la ruta y ambos puntos.
 
                         const route = response.routes[0].legs[0];
                         document.getElementById('route-distance').textContent = route.distance.text;
@@ -232,10 +228,57 @@
                         const gmapsLink = document.getElementById('gmaps-link');
                         gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
                         gmapsLink.classList.remove('hidden');
+
+                        // Habilitar botón de guardar
+                        rutaCalculada = true;
+                        const btnGuardar = document.getElementById('btn-guardar');
+                        btnGuardar.disabled = false;
+                        btnGuardar.className = "w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-sm cursor-pointer";
                     } else {
                         document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
                     }
                 });
+            }
+        }
+
+        async function guardarRuta() {
+            if (!rutaCalculada) return;
+
+            const btnGuardar = document.getElementById('btn-guardar');
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = "Guardando...";
+
+            // Extraemos los textos de los inputs de origen y destino
+            const origenDir = document.getElementById('origen-autocomplete').querySelector('input').value;
+            const destinoDir = document.getElementById('destino-autocomplete').querySelector('input').value;
+            const distancia = document.getElementById('route-distance').textContent;
+            const duracion = document.getElementById('route-duration').textContent;
+
+            // Inserción usando tu variable supabaseClient definida en js/supabaseclient.js
+            const { data, error } = await supabaseClient
+                .from('rutas_coordenadas') // Asegúrate de que este sea el nombre de la tabla creada en Supabase
+                .insert([
+                    {
+                        origen_direccion: origenDir,
+                        origen_lat: origenCoords.lat,
+                        origen_lng: origenCoords.lng,
+                        destino_direccion: destinoDir,
+                        destino_lat: destCoords.lat,
+                        destino_lng: destCoords.lng,
+                        distancia: distancia,
+                        duracion: duracion
+                    }
+                ]);
+
+            if (error) {
+                console.error('Error al guardar en Supabase:', error);
+                alert('Hubo un error al guardar la ruta: ' + error.message);
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = "Guardar Ruta en Base de Datos";
+            } else {
+                alert('¡Ruta guardada exitosamente en la base de datos!');
+                btnGuardar.textContent = "¡Guardado con éxito!";
+                btnGuardar.className = "w-full py-3 px-4 bg-emerald-600 text-white font-bold rounded-xl transition shadow-sm cursor-default";
             }
         }
     </script>

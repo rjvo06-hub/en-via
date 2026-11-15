@@ -3,41 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rutas y Coordenadas con Google Maps</title>
+    <title>Buscador de Coordenadas - Google Maps</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Maps API con la nueva Places API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
-        #map { height: 450px; width: 100%; }
-        .custom-dropdown {
-            position: absolute;
-            z-index: 1000;
+        #map { height: 400px; width: 100%; }
+        gmp-place-autocomplete { width: 100%; }
+        gmp-place-autocomplete input {
             width: 100%;
-            max-height: 220px;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #1e293b;
+            outline: none;
+        }
+        gmp-place-autocomplete input:focus {
+            background-color: #ffffff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
 
-    <div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold text-blue-600">Rutas y Coordenadas con Google Maps</h1>
-            <p class="text-slate-600 mt-1">Búsqueda inteligente global, coordenadas exactas y trazado de ruta vehicular real.</p>
+            <h1 class="text-3xl font-extrabold text-blue-600">Buscador de Coordenadas</h1>
+            <p class="text-slate-600 mt-1">Escribe una dirección para desplegar las opciones y obtener su latitud y longitud.</p>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- Panel de Controles -->
-            <div class="bg-white p-6 rounded-xl shadow-md space-y-6 lg:col-span-1">
+            <div class="bg-white p-6 rounded-xl shadow-md space-y-6">
                 
                 <!-- Origen -->
-                <div class="relative">
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Origen</label>
-                    <input type="text" id="origin-input" placeholder="Ej. Sambil Maracaibo..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
-                    <div id="origin-suggestions" class="custom-dropdown hidden mt-1"></div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Dirección de Origen</label>
+                    <gmp-place-autocomplete id="origen-autocomplete">
+                        <input type="text" id="origen" placeholder="Ej. Sambil Maracaibo..." autocomplete="off">
+                    </gmp-place-autocomplete>
                     
                     <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
@@ -49,10 +56,11 @@
                 </div>
 
                 <!-- Destino -->
-                <div class="relative">
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Destino</label>
-                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
-                    <div id="dest-suggestions" class="custom-dropdown hidden mt-1"></div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Dirección de Destino</label>
+                    <gmp-place-autocomplete id="destino-autocomplete">
+                        <input type="text" id="destino" placeholder="Ej. Vereda del Lago..." autocomplete="off">
+                    </gmp-place-autocomplete>
                     
                     <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
@@ -63,192 +71,101 @@
                     </div>
                 </div>
 
-                <!-- Resumen de Ruta Vial -->
-                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-600">Distancia por carretera:</span>
-                        <span id="route-distance" class="font-bold text-slate-800">-</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-600">Tiempo estimado:</span>
-                        <span id="route-duration" class="font-bold text-slate-800">-</span>
-                    </div>
-                </div>
-
             </div>
 
             <!-- Panel del Mapa -->
-            <div class="bg-white p-4 rounded-xl shadow-md lg:col-span-2 flex flex-col justify-between">
+            <div class="bg-white p-4 rounded-xl shadow-md flex flex-col justify-between">
                 <div class="rounded-lg overflow-hidden border border-slate-200 mb-4">
                     <div id="map"></div>
                 </div>
-                <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
-                    <div id="status-msg" class="text-slate-600 italic">Selecciona origen y destino para trazar la ruta.</div>
-                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition shadow-sm">
-                        Abrir ruta en Google Maps
-                    </a>
+                <div id="status-msg" class="text-sm text-slate-600 text-center">
+                    Selecciona una dirección para ver sus coordenadas.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script oficial de Google Maps cargando las librerías necesarias -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry&callback=initMap"></script>
-
+    <!-- Script sencillo y directo para capturar coordenadas -->
     <script>
         let map;
-        let directionsService;
-        let directionsRenderer;
-        let placesService;
-        
         let originMarker = null;
         let destMarker = null;
-
-        let originCoord = null;
-        let destCoord = null;
-
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
-        function initMap() {
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: maracaiboCenter,
-                zoom: 13,
-                mapTypeControl: false,
-                streetViewControl: false
-            });
+        window.addEventListener('load', () => {
+            const checkMapsInterval = setInterval(() => {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                    clearInterval(checkMapsInterval);
 
-            directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer({
-                map: map,
-                suppressMarkers: false
-            });
-
-            // Servicio nativo de Google para consultas de texto y autocompletado interno
-            placesService = new google.maps.places.PlacesService(map);
-
-            setupCustomAutocomplete('origin-input', 'origin-suggestions', 'origin');
-            setupCustomAutocomplete('dest-input', 'dest-suggestions', 'dest');
-        }
-
-        // Buscador inteligente propio sin usar componentes gráficos obsoletos de Google
-        function setupCustomAutocomplete(inputId, suggestionsId, type) {
-            const input = document.getElementById(inputId);
-            const suggestionsBox = document.getElementById(suggestionsId);
-            let timeout = null;
-
-            input.addEventListener('input', function() {
-                clearTimeout(timeout);
-                const query = this.value.trim();
-
-                if (query.length < 2) {
-                    suggestionsBox.classList.add('hidden');
-                    return;
-                }
-
-                timeout = setTimeout(() => {
-                    const request = {
-                        query: query,
-                        location: maracaiboCenter,
-                        radius: 50000 // Prioriza radio cercano, pero busca globalmente
-                    };
-
-                    placesService.textSearch(request, (results, status) => {
-                        suggestionsBox.innerHTML = '';
-                        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-                            results.forEach(place => {
-                                const div = document.createElement('div');
-                                div.className = 'px-4 py-2 hover:bg-slate-100 cursor-pointer text-sm border-b border-slate-100 last:border-none';
-                                div.innerHTML = `<strong>${place.name}</strong><br><span class="text-xs text-slate-500">${place.formatted_address || ''}</span>`;
-                                
-                                div.addEventListener('click', () => {
-                                    input.value = place.name;
-                                    suggestionsBox.classList.add('hidden');
-
-                                    const lat = place.geometry.location.lat();
-                                    const lng = place.geometry.location.lng();
-                                    const coord = { lat, lng };
-
-                                    if (type === 'origin') {
-                                        originCoord = coord;
-                                        document.getElementById('origin-lat').textContent = lat.toFixed(6);
-                                        document.getElementById('origin-lon').textContent = lng.toFixed(6);
-                                        document.getElementById('btn-copy-origin').classList.remove('hidden');
-
-                                        if (originMarker) originMarker.setMap(null);
-                                        originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
-                                    } else {
-                                        destCoord = coord;
-                                        document.getElementById('dest-lat').textContent = lat.toFixed(6);
-                                        document.getElementById('dest-lon').textContent = lng.toFixed(6);
-                                        document.getElementById('btn-copy-dest').classList.remove('hidden');
-
-                                        if (destMarker) destMarker.setMap(null);
-                                        destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
-                                    }
-
-                                    map.setCenter(coord);
-                                    map.setZoom(15);
-                                    checkAndCalculateRoute();
-                                });
-
-                                suggestionsBox.appendChild(div);
-                            });
-                            suggestionsBox.classList.remove('hidden');
-                        } else {
-                            suggestionsBox.classList.add('hidden');
-                        }
+                    // Inicializar mapa
+                    map = new google.maps.Map(document.getElementById('map'), {
+                        center: maracaiboCenter,
+                        zoom: 13,
+                        mapTypeControl: false,
+                        streetViewControl: false
                     });
-                }, 300);
-            });
 
-            // Ocultar al hacer clic fuera
-            document.addEventListener('click', function(e) {
-                if (!input.contains(e.target) && !suggestionsBox.contains(e.target)) {
-                    suggestionsBox.classList.add('hidden');
-                }
-            });
-        }
+                    const origenAutocomplete = document.getElementById('origen-autocomplete');
+                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
 
-        function checkAndCalculateRoute() {
-            if (originCoord && destCoord) {
-                document.getElementById('status-msg').textContent = "Calculando ruta vehicular real con Google...";
-
-                const request = {
-                    origin: originCoord,
-                    destination: destCoord,
-                    travelMode: google.maps.TravelMode.DRIVING
-                };
-
-                directionsService.route(request, (result, status) => {
-                    if (status === 'OK') {
-                        if (originMarker) originMarker.setMap(null);
-                        if (destMarker) destMarker.setMap(null);
-
-                        directionsRenderer.setDirections(result);
-
-                        const route = result.routes[0].legs[0];
-                        document.getElementById('route-distance').textContent = route.distance.text;
-                        document.getElementById('route-duration').textContent = route.duration.text;
-                        document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
-
-                        const originStr = `${originCoord.lat},${originCoord.lng}`;
-                        const destStr = `${destCoord.lat},${destCoord.lng}`;
-                        const gmapsLink = document.getElementById('gmaps-link');
-                        gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destStr}&travelmode=driving`;
-                        gmapsLink.classList.remove('hidden');
-                    } else {
-                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
+                    // 1. Capturar Origen con el componente web nativo
+                    if (origenAutocomplete) {
+                        origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            if (place) {
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
+                                if (place.location) {
+                                    const lat = place.location.lat();
+                                    const lng = place.location.lng();
+                                    document.getElementById('origin-lat').textContent = lat.toFixed(6);
+                                    document.getElementById('origin-lon').textContent = lng.toFixed(6);
+                                    document.getElementById('btn-copy-origin').classList.remove('hidden');
+                                    
+                                    updateMarker('origin', { lat, lng });
+                                }
+                            }
+                        });
                     }
-                });
+
+                    // 2. Capturar Destino con el componente web nativo
+                    if (destinoAutocomplete) {
+                        destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            if (place) {
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
+                                if (place.location) {
+                                    const lat = place.location.lat();
+                                    const lng = place.location.lng();
+                                    document.getElementById('dest-lat').textContent = lat.toFixed(6);
+                                    document.getElementById('dest-lon').textContent = lng.toFixed(6);
+                                    document.getElementById('btn-copy-dest').classList.remove('hidden');
+                                    
+                                    updateMarker('dest', { lat, lng });
+                                }
+                            }
+                        });
+                    }
+                }
+            }, 300);
+        });
+
+        function updateMarker(type, coord) {
+            if (type === 'origin') {
+                if (originMarker) originMarker.setMap(null);
+                originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
+            } else {
+                if (destMarker) destMarker.setMap(null);
+                destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
             }
+            map.setCenter(coord);
+            map.setZoom(15);
+            document.getElementById('status-msg').textContent = `Coordenadas de ${type === 'origin' ? 'Origen' : 'Destino'} capturadas con éxito.`;
         }
 
         function copyCoords(type) {
             const lat = document.getElementById(`${type}-lat`).textContent;
             const lon = document.getElementById(`${type}-lon`).textContent;
-            const textToCopy = `${lat}, ${lon}`;
-            
-            navigator.clipboard.writeText(textToCopy).then(() => {
+            navigator.clipboard.writeText(`${lat}, ${lon}`).then(() => {
                 const btn = document.getElementById(`btn-copy-${type}`);
                 const originalText = btn.textContent;
                 btn.textContent = "¡Copiado!";

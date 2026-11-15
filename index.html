@@ -37,7 +37,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona origen y destino para mostrar coordenadas y trazar la ruta automáticamente.</p>
+            <p class="text-slate-600 mt-1">Selecciona origen y destino en Maracaibo para mostrar coordenadas y trazar la ruta.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -139,16 +139,26 @@
                         suppressMarkers: false 
                     });
 
-                    configurarLugar('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
-                    configurarLugar('destino-autocomplete', 'dest-lat', 'dest-lon', 'dest');
+                    // Inicializamos los componentes de autocompletado con sesgo y restricciones hacia Maracaibo / Venezuela
+                    configurarLugarRestringido('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
+                    configurarLugarRestringido('destino-autocomplete', 'dest-lat', 'dest-lon', 'dest');
                 }
             }, 300);
         });
 
-        function configurarLugar(autocompleteId, latId, lonId, tipo) {
+        function configurarLugarRestringido(autocompleteId, latId, lonId, tipo) {
             const autocompleteEl = document.getElementById(autocompleteId);
 
             if (autocompleteEl) {
+                // Configuramos restricciones geográficas para priorizar Maracaibo / Venezuela
+                autocompleteEl.options = {
+                    componentRestrictions: { country: 've' },
+                    locationBias: { 
+                        center: maracaiboCenter, 
+                        radius: 50000 // Sesgo de 50 km alrededor de Maracaibo para priorizar cercanía
+                    }
+                };
+
                 autocompleteEl.addEventListener('gmp-select', async ({ placePrediction }) => {
                     if (!placePrediction) return;
 
@@ -229,7 +239,6 @@
                         gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
                         gmapsLink.classList.remove('hidden');
 
-                        // Habilitar botón de guardar
                         rutaCalculada = true;
                         const btnGuardar = document.getElementById('btn-guardar');
                         btnGuardar.disabled = false;
@@ -248,15 +257,13 @@
             btnGuardar.disabled = true;
             btnGuardar.textContent = "Guardando...";
 
-            // Extraemos los textos de los inputs de origen y destino
             const origenDir = document.getElementById('origen-autocomplete').querySelector('input').value;
             const destinoDir = document.getElementById('destino-autocomplete').querySelector('input').value;
             const distancia = document.getElementById('route-distance').textContent;
             const duracion = document.getElementById('route-duration').textContent;
 
-            // Inserción usando tu variable supabaseClient definida en js/supabaseclient.js
             const { data, error } = await supabaseClient
-                .from('rutas_coordenadas') // Asegúrate de que este sea el nombre de la tabla creada en Supabase
+                .from('rutas_coordenadas')
                 .insert([
                     {
                         origen_direccion: origenDir,

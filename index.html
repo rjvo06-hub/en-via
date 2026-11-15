@@ -8,11 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Maps API con Places (New) -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
-    <!-- SDK de Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Tu archivo de configuración de Supabase -->
-    <script src="js/supabaseclient.js"></script>
-
     <style>
         #map { height: 450px; width: 100%; }
         gmp-place-autocomplete { width: 100%; }
@@ -37,7 +32,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona origen y destino para autocompletar, trazar la ruta y guardarla automáticamente.</p>
+            <p class="text-slate-600 mt-1">Selecciona origen y destino para mostrar coordenadas y trazar la ruta automáticamente.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -142,6 +137,7 @@
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
 
+                    // Configurar escucha para origen y destino
                     configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
                     configurarLugar('destino-autocomplete', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
                 }
@@ -166,8 +162,10 @@
                         const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
                         const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
 
+                        // Mostrar en el campo duplicado
                         campoLibreEl.value = direccionFinal;
 
+                        // Mostrar lat y lon
                         document.getElementById(latId).textContent = lat.toFixed(6);
                         document.getElementById(lonId).textContent = lng.toFixed(6);
                         document.getElementById(btnCopyId).classList.remove('hidden');
@@ -201,7 +199,7 @@
 
         function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
-                document.getElementById('status-msg').textContent = "Calculando ruta vial y guardando en base de datos...";
+                document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
                 const request = {
                     origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
                     destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),
@@ -217,9 +215,7 @@
                         const route = response.routes[0].legs[0];
                         document.getElementById('route-distance').textContent = route.distance.text;
                         document.getElementById('route-duration').textContent = route.duration.text;
-                        
-                        // Guardar automáticamente en Supabase al trazar la ruta completa
-                        guardarRutaAutomaticamente(route.distance.text, route.duration.text);
+                        document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
 
                         const gmapsLink = document.getElementById('gmaps-link');
                         gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
@@ -228,33 +224,6 @@
                         document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
                     }
                 });
-            }
-        }
-
-        async function guardarRutaAutomaticamente(distanciaTexto, duracionTexto) {
-            const origenDir = document.getElementById('campo-libre-origen').value;
-            const destinoDir = document.getElementById('campo-libre-destino').value;
-
-            const { data, error } = await supabaseClient
-                .from('rutas_coordenadas')
-                .insert([
-                    {
-                        origen_direccion: origenDir,
-                        origen_lat: origenCoords.lat,
-                        origen_lng: origenCoords.lng,
-                        destino_direccion: destinoDir,
-                        destino_lat: destCoords.lat,
-                        destino_lng: destCoords.lng,
-                        distancia: distanciaTexto,
-                        duracion: duracionTexto
-                    }
-                ]);
-
-            if (error) {
-                console.error('Error al guardar automáticamente en Supabase:', error);
-                document.getElementById('status-msg').textContent = "Ruta trazada, pero falló el guardado automático.";
-            } else {
-                document.getElementById('status-msg').textContent = "¡Ruta trazada y guardada automáticamente en Supabase!";
             }
         }
 

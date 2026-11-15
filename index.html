@@ -6,7 +6,7 @@
     <title>EN-VIA - Rutas y Coordenadas</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API con Places y Geometry -->
+    <!-- Google Maps API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
@@ -32,7 +32,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona una dirección para extraer sus coordenadas y trazar la ruta.</p>
+            <p class="text-slate-600 mt-1">Escribe o selecciona una dirección y presiona Enter para extraer coordenadas.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -91,13 +91,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Selecciona una dirección de origen o destino para iniciar.
+                    Selecciona o escribe una dirección y presiona Enter para procesar.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script de Integración y Retorno -->
+    <!-- Script con disparador directo al extractor -->
     <script>
         let map;
         let directionsService;
@@ -110,7 +110,7 @@
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
         window.addEventListener('load', () => {
-            // 1. Revisar si acabamos de regresar del geo-extractor con las coordenadas listas
+            // 1. Revisar si regresamos del geo-extractor con las coordenadas listas
             const datosRegresados = localStorage.getItem('en_via_resultado_coord');
             if (datosRegresados) {
                 const res = JSON.parse(datosRegresados);
@@ -134,7 +134,7 @@
             }
 
             const checkMapsInterval = setInterval(() => {
-                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                if (typeof google !== 'undefined' && google.maps) {
                     clearInterval(checkMapsInterval);
 
                     map = new google.maps.Map(document.getElementById('map'), {
@@ -147,35 +147,37 @@
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
 
-                    const origenAutocomplete = document.getElementById('origen-autocomplete');
-                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
+                    const inputOrigen = document.getElementById('origen');
+                    const inputDestino = document.getElementById('destino');
 
-                    // 2. Al seleccionar Origen, empaquetar y saltar al extractor
-                    if (origenAutocomplete) {
-                        origenAutocomplete.addEventListener('gmp-placeselect', async (e) => {
-                            const place = e.detail.place;
-                            if (place) {
-                                await place.fetchFields({ fields: ['displayName', 'formattedAddress'] });
-                                const direccion = place.displayName || place.formattedAddress || document.getElementById('origen').value;
-                                
-                                localStorage.setItem('en_via_objetivo', JSON.stringify({ direccion, tipo: 'origen' }));
-                                window.location.href = 'geo-extractor.html';
-                            }
-                        });
+                    // Función para empaquetar y saltar al extractor autónomo
+                    function dispararExtractor(inputElement, tipo) {
+                        const direccion = inputElement.value.trim();
+                        if (direccion.length > 3) {
+                            localStorage.setItem('en_via_objetivo', JSON.stringify({ direccion, tipo }));
+                            window.location.href = 'geo-extractor.html';
+                        }
                     }
 
-                    // 3. Al seleccionar Destino, empaquetar y saltar al extractor
-                    if (destinoAutocomplete) {
-                        destinoAutocomplete.addEventListener('gmp-placeselect', async (e) => {
-                            const place = e.detail.place;
-                            if (place) {
-                                await place.fetchFields({ fields: ['displayName', 'formattedAddress'] });
-                                const direccion = place.displayName || place.formattedAddress || document.getElementById('destino').value;
-                                
-                                localStorage.setItem('en_via_objetivo', JSON.stringify({ direccion, tipo: 'destino' }));
-                                window.location.href = 'geo-extractor.html';
+                    // 2. Al presionar Enter o al cambiar el foco del input, salta automáticamente al extractor
+                    if (inputOrigen) {
+                        inputOrigen.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                dispararExtractor(inputOrigen, 'origen');
                             }
                         });
+                        inputOrigen.addEventListener('change', () => dispararExtractor(inputOrigen, 'origen'));
+                    }
+
+                    if (inputDestino) {
+                        inputDestino.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                dispararExtractor(inputDestino, 'destino');
+                            }
+                        });
+                        inputDestino.addEventListener('change', () => dispararExtractor(inputDestino, 'destino'));
                     }
                 }
             }, 300);

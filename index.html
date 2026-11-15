@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscador de Coordenadas EN-VIA</title>
-    <!-- Tailwind CSS para diseño moderno y responsive -->
+    <!-- Tailwind CSS para diseño moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -18,10 +18,10 @@
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador de Coordenadas</h1>
-                <p class="text-indigo-200 text-sm mt-1">Integración con Places API (New) y Maps JavaScript API</p>
+                <p class="text-indigo-200 text-sm mt-1">Optimizado con Maps JavaScript API y Places API (New)</p>
             </div>
             <span class="bg-indigo-700 text-indigo-100 text-xs font-medium px-3 py-1.5 rounded-full border border-indigo-500">
-                API Key Integrada
+                API Key Conectada
             </span>
         </div>
     </header>
@@ -29,19 +29,18 @@
     <!-- Main Container -->
     <main class="max-w-4xl w-full mx-auto p-4 sm:p-6 my-6 flex-grow space-y-6">
 
-        <!-- Buscador y Mapa Grid -->
+        <!-- Grid de Búsqueda y Mapa -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <!-- Columna de Búsqueda y Resultados -->
             <div class="space-y-6">
-                <!-- Buscador de Ubicación con Places (New) Autocomplete -->
+                <!-- Buscador de Ubicación moderno -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-                    <label for="autocompleteInput" class="block text-sm font-semibold text-slate-700">Buscar Centro Comercial o Lugar</label>
+                    <label for="placeSearchInput" class="block text-sm font-semibold text-slate-700">Buscar Centro Comercial o Lugar</label>
                     <div class="relative">
-                        <!-- Usamos el elemento moderno gmp-place-picker o input con Autocomplete de Places (New) -->
-                        <input type="text" id="autocompleteInput" placeholder="Ej: Centro Comercial Andino..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+                        <input type="text" id="placeSearchInput" placeholder="Escribe un centro comercial, ej: Andino..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
                     </div>
-                    <p class="text-xs text-slate-500">Escribe y selecciona una opción de la lista desplegable de Google Maps.</p>
+                    <p class="text-xs text-slate-500">Escribe el nombre y haz clic en la opción que despliegue Google.</p>
                 </div>
 
                 <!-- Tarjeta de Resultados -->
@@ -50,7 +49,7 @@
                     
                     <div class="space-y-3 text-sm">
                         <div>
-                            <span class="text-slate-400 block text-xs font-medium">Dirección / Lugar:</span>
+                            <span class="text-slate-400 block text-xs font-medium">Lugar / Dirección:</span>
                             <span id="resAddress" class="font-medium text-slate-800">-</span>
                         </div>
                         <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
@@ -72,7 +71,7 @@
                 </div>
             </div>
 
-            <!-- Columna del Mapa Visual -->
+            <!-- Columna del Mapa Visual con AdvancedMarker -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 h-[400px] md:h-auto flex flex-col">
                 <div id="map" class="w-full h-full rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-sm min-h-[350px]">
                     Cargando mapa interactivo...
@@ -85,20 +84,19 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        EN-VIA App • Módulo de geolocalización optimizado
+        EN-VIA App • Módulo de Geolocalización
     </footer>
 
-    <!-- Notificación emergente estilo toast -->
+    <!-- Notificación Toast -->
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
         ¡Acción realizada con éxito!
     </div>
 
-    <!-- Script de inicialización de la API de Google con tu API Key -->
+    <!-- Script principal de Google Maps API (Places New + Maps) -->
     <script>
         const apiKey = "AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I";
         let map;
         let marker;
-        let autocomplete;
 
         function showToast(message) {
             const toast = document.getElementById('toast');
@@ -109,56 +107,53 @@
             }, 3000);
         }
 
-        // Cargador estándar moderno de Google Maps API que incluye las librerías correctas
+        // Cargador asíncrono oficial moderno
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t.toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&`+e;d[q]=f;a.onerror=()=>n(new Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?fn:d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
             key: apiKey,
             v: "weekly"
         });
 
         window.onload = function() {
-            initMapAndPlaces().catch(err => {
+            initMap().catch(err => {
                 console.error(err);
-                showToast('Error al inicializar los servicios de Google Maps.');
+                showToast('Error al cargar Google Maps. Verifica tu clave o consola.');
             });
         };
 
-        async function initMapAndPlaces() {
-            // Importar librerías asíncronas compatibles con la arquitectura actual
+        async function initMap() {
+            // Importar librerías modernas requeridas
             const { Map } = await google.maps.importLibrary("maps");
-            const { Marker } = await google.maps.importLibrary("marker");
+            const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
             const { Autocomplete } = await google.maps.importLibrary("places");
 
             const mapContainer = document.getElementById('map');
             mapContainer.innerHTML = '';
 
-            const defaultLocation = { lat: 4.6097, lng: -74.0817 }; // Coordenadas por defecto
+            const defaultLocation = { lat: 4.6097, lng: -74.0817 }; // Coordenadas iniciales
 
             map = new Map(mapContainer, {
                 center: defaultLocation,
                 zoom: 13,
-                mapId: "EN_VIA_NEW_MAP",
-                mapTypeControl: false,
-                streetViewControl: false,
-                fullscreenControl: false
+                mapId: "EN_VIA_MAP_ID_MODERN" // Requerido para AdvancedMarkerElement
             });
 
-            marker = new Marker({
+            marker = new AdvancedMarkerElement({
                 map: map,
                 position: defaultLocation
             });
 
-            const input = document.getElementById('autocompleteInput');
+            const input = document.getElementById('placeSearchInput');
 
-            // Configurar Autocomplete utilizando las especificaciones de Places API (New)
-            autocomplete = new Autocomplete(input, {
-                fields: ["formatted_address", "geometry", "name", "place_id"]
+            // Usar el componente moderno de Autocompletado de Places
+            const autocomplete = new Autocomplete(input, {
+                fields: ["formatted_address", "geometry", "name"]
             });
 
             autocomplete.addListener('place_changed', () => {
                 const place = autocomplete.getPlace();
 
                 if (!place.geometry || !place.geometry.location) {
-                    showToast('No se encontraron coordenadas precisas para este lugar.');
+                    showToast('No se encontraron coordenadas para este lugar.');
                     return;
                 }
 
@@ -166,22 +161,22 @@
                 const lng = place.geometry.location.lng();
                 const address = place.formatted_address || place.name;
 
-                // Actualizar la posición del mapa y el marcador
+                // Actualizar vista del mapa y marcador avanzado
                 map.setCenter(place.geometry.location);
                 map.setZoom(16);
-                marker.setPosition(place.geometry.location);
+                marker.position = place.geometry.location;
 
-                // Mostrar los resultados en la interfaz
+                // Mostrar en pantalla la tarjeta de resultados
                 document.getElementById('resAddress').textContent = address;
                 document.getElementById('resLat').textContent = lat.toFixed(6);
                 document.getElementById('resLng').textContent = lng.toFixed(6);
                 document.getElementById('resultCard').classList.remove('hidden');
 
-                showToast('¡Ubicación cargada con éxito!');
+                showToast('¡Ubicación cargada correctamente!');
             });
         }
 
-        // Función robusta para copiar coordenadas
+        // Copiar coordenadas al portapapeles
         function copyCoordinates() {
             const lat = document.getElementById('resLat').textContent;
             const lng = document.getElementById('resLng').textContent;
@@ -190,30 +185,21 @@
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(textToCopy).then(() => {
                     showToast('¡Coordenadas copiadas: ' + textToCopy + '!');
-                }).catch(() => {
-                    fallbackCopy(textToCopy);
                 });
             } else {
-                fallbackCopy(textToCopy);
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('¡Coordenadas copiadas!');
+                } catch (e) {
+                    showToast('No se pudo copiar.');
+                }
+                document.body.removeChild(textArea);
             }
-        }
-
-        function fallbackCopy(text) {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.position = "fixed";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showToast('¡Coordenadas copiadas: ' + text + '!');
-            } catch (err) {
-                showToast('No se pudo copiar automáticamente.');
-            }
-            document.body.removeChild(textArea);
         }
     </script>
 </body>
 </html>
-```eof

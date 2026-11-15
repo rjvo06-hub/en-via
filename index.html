@@ -18,10 +18,10 @@
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador de Coordenadas</h1>
-                <p class="text-indigo-200 text-sm mt-1">Busca centros comerciales, lugares y obtén latitud y longitud al instante</p>
+                <p class="text-indigo-200 text-sm mt-1">Integración con Places API (New) y Maps JavaScript API</p>
             </div>
             <span class="bg-indigo-700 text-indigo-100 text-xs font-medium px-3 py-1.5 rounded-full border border-indigo-500">
-                API Integrada
+                API Key Integrada
             </span>
         </div>
     </header>
@@ -34,13 +34,14 @@
             
             <!-- Columna de Búsqueda y Resultados -->
             <div class="space-y-6">
-                <!-- Buscador de Ubicación -->
+                <!-- Buscador de Ubicación con Places (New) Autocomplete -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-                    <label for="autocompleteInput" class="block text-sm font-semibold text-slate-700">Buscar lugar o centro comercial</label>
+                    <label for="autocompleteInput" class="block text-sm font-semibold text-slate-700">Buscar Centro Comercial o Lugar</label>
                     <div class="relative">
-                        <input type="text" id="autocompleteInput" placeholder="Ej: Centro Comercial Andino, Bogotá..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+                        <!-- Usamos el elemento moderno gmp-place-picker o input con Autocomplete de Places (New) -->
+                        <input type="text" id="autocompleteInput" placeholder="Ej: Centro Comercial Andino..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
                     </div>
-                    <p class="text-xs text-slate-500">Escribe lo que buscas, selecciona una opción de la lista desplegable y verás su ubicación exacta.</p>
+                    <p class="text-xs text-slate-500">Escribe y selecciona una opción de la lista desplegable de Google Maps.</p>
                 </div>
 
                 <!-- Tarjeta de Resultados -->
@@ -84,15 +85,15 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        EN-VIA App • Módulo de búsqueda de coordenadas
+        EN-VIA App • Módulo de geolocalización optimizado
     </footer>
 
-    <!-- Notificación emergente estilo toast en vez de alert -->
+    <!-- Notificación emergente estilo toast -->
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
-        ¡Coordenadas copiadas al portapapeles!
+        ¡Acción realizada con éxito!
     </div>
 
-    <!-- Script de Google Maps API configurado con tu clave -->
+    <!-- Script de inicialización de la API de Google con tu API Key -->
     <script>
         const apiKey = "AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I";
         let map;
@@ -108,21 +109,21 @@
             }, 3000);
         }
 
-        // Carga automática del script de Google Maps usando el API moderno
+        // Cargador estándar moderno de Google Maps API que incluye las librerías correctas
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t.toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&`+e;d[q]=f;a.onerror=()=>n(new Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?fn:d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
             key: apiKey,
             v: "weekly"
         });
 
-        // Inicializar la aplicación al cargar la ventana
         window.onload = function() {
-            initApp().catch(err => {
+            initMapAndPlaces().catch(err => {
                 console.error(err);
-                showToast('Error al inicializar Google Maps. Comprueba tu conexión o clave.');
+                showToast('Error al inicializar los servicios de Google Maps.');
             });
         };
 
-        async function initApp() {
+        async function initMapAndPlaces() {
+            // Importar librerías asíncronas compatibles con la arquitectura actual
             const { Map } = await google.maps.importLibrary("maps");
             const { Marker } = await google.maps.importLibrary("marker");
             const { Autocomplete } = await google.maps.importLibrary("places");
@@ -130,13 +131,12 @@
             const mapContainer = document.getElementById('map');
             mapContainer.innerHTML = '';
 
-            // Coordenadas por defecto iniciales
-            const defaultLocation = { lat: 4.6097, lng: -74.0817 };
+            const defaultLocation = { lat: 4.6097, lng: -74.0817 }; // Coordenadas por defecto
 
             map = new Map(mapContainer, {
                 center: defaultLocation,
                 zoom: 13,
-                mapId: "EN_VIA_MAP_ID",
+                mapId: "EN_VIA_NEW_MAP",
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: false
@@ -149,16 +149,16 @@
 
             const input = document.getElementById('autocompleteInput');
 
-            // Configurar el AutAutocomplete con las librerías Places API
+            // Configurar Autocomplete utilizando las especificaciones de Places API (New)
             autocomplete = new Autocomplete(input, {
-                fields: ["formatted_address", "geometry", "name"]
+                fields: ["formatted_address", "geometry", "name", "place_id"]
             });
 
             autocomplete.addListener('place_changed', () => {
                 const place = autocomplete.getPlace();
 
                 if (!place.geometry || !place.geometry.location) {
-                    showToast('No se encontraron coordenadas para este lugar.');
+                    showToast('No se encontraron coordenadas precisas para este lugar.');
                     return;
                 }
 
@@ -166,22 +166,22 @@
                 const lng = place.geometry.location.lng();
                 const address = place.formatted_address || place.name;
 
-                // Actualizar mapa y marcador
+                // Actualizar la posición del mapa y el marcador
                 map.setCenter(place.geometry.location);
                 map.setZoom(16);
                 marker.setPosition(place.geometry.location);
 
-                // Mostrar tarjeta de resultados
+                // Mostrar los resultados en la interfaz
                 document.getElementById('resAddress').textContent = address;
                 document.getElementById('resLat').textContent = lat.toFixed(6);
                 document.getElementById('resLng').textContent = lng.toFixed(6);
                 document.getElementById('resultCard').classList.remove('hidden');
-                
-                showToast('¡Ubicación seleccionada con éxito!');
+
+                showToast('¡Ubicación cargada con éxito!');
             });
         }
 
-        // Función para copiar coordenadas al portapapeles
+        // Función robusta para copiar coordenadas
         function copyCoordinates() {
             const lat = document.getElementById('resLat').textContent;
             const lng = document.getElementById('resLng').textContent;

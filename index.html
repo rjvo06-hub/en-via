@@ -10,26 +10,25 @@
     <!-- Google Maps API con la nueva Places API (librerías places y geometry) -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ&libraries=places,geometry" async defer></script>
     <style>
-        /* Forzar que el desplegable de sugerencias de Google aparezca siempre por encima de todo */
+        /* Estilos limpios para que el componente web de Google ocupe todo el ancho y sea estético */
         gmp-place-autocomplete {
             display: block;
-            position: relative;
             width: 100%;
         }
-        /* Estilos limpios para el input interno del componente web */
-        gmp-place-autocomplete input {
-            width: 100% !important;
-            background-color: #f8fafc !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 0.75rem !important;
-            padding: 0.75rem 1rem !important;
-            color: #1e293b !important;
-            outline: none !important;
+        gmp-place-autocomplete::part(input) {
+            width: 100%;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #1e293b;
+            font-size: 0.875rem;
+            outline: none;
         }
-        gmp-place-autocomplete input:focus {
-            background-color: #ffffff !important;
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        gmp-place-autocomplete::part(input):focus {
+            background-color: #ffffff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
@@ -75,20 +74,16 @@
                     </div>
                 </div>
 
-                <!-- Punto de Origen con la Nueva Places API (gmp-place-autocomplete) -->
+                <!-- Punto de Origen (Sin input anidado para que el componente despliegue el menú libremente) -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
-                    <gmp-place-autocomplete id="origen-autocomplete">
-                        <input type="text" id="origen" required placeholder="Ej. Galerías Mall, Maracaibo...">
-                    </gmp-place-autocomplete>
+                    <gmp-place-autocomplete id="origen-autocomplete" placeholder="Ej. Galerías Mall, Maracaibo..."></gmp-place-autocomplete>
                 </div>
 
-                <!-- Destino con la Nueva Places API (gmp-place-autocomplete) -->
+                <!-- Destino (Sin input anidado) -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
-                    <gmp-place-autocomplete id="destino-autocomplete">
-                        <input type="text" id="destino" required placeholder="Ej. Centro Comercial Sambil, Maracaibo...">
-                    </gmp-place-autocomplete>
+                    <gmp-place-autocomplete id="destino-autocomplete" placeholder="Ej. Centro Comercial Sambil, Maracaibo..."></gmp-place-autocomplete>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -98,14 +93,12 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Distancia (Automática)</label>
-                        <!-- Campo bloqueado -->
                         <input type="text" id="distancia" readonly placeholder="Pendiente..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-slate-600 font-medium cursor-not-allowed">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Precio Acordado ($ - Automático)</label>
-                    <!-- Campo bloqueado -->
                     <input type="text" id="precio" readonly placeholder="Pendiente..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-emerald-700 font-bold cursor-not-allowed">
                 </div>
 
@@ -139,7 +132,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script sincronizado con la API moderna de Google Maps -->
+    <!-- Script de Integración corregido -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -150,19 +143,16 @@
         let directionsService;
 
         window.addEventListener('load', () => {
-            const checkMapsInterval = setInterval(async () => {
+            const checkMapsInterval = setInterval(() => {
                 if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                     clearInterval(checkMapsInterval);
 
                     directionsService = new google.maps.DirectionsService();
 
-                    // Cargar explícitamente la librería Places de forma moderna
-                    const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
-
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
 
-                    // 1. Capturar Origen con el evento actualizado 'gmp-select'
+                    // 1. Capturar Origen con el evento oficial gmp-select
                     if (origenAutocomplete) {
                         origenAutocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
                             if (!placePrediction) return;
@@ -173,13 +163,13 @@
                                     lat: typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat,
                                     lng: typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng
                                 };
-                                console.log("📍 Origen capturado correctamente:", origenCoords);
+                                console.log("📍 Origen capturado:", origenCoords);
                                 intentarCalcularDistancia();
                             }
                         });
                     }
 
-                    // 2. Capturar Destino con el evento actualizado 'gmp-select'
+                    // 2. Capturar Destino con el evento oficial gmp-select
                     if (destinoAutocomplete) {
                         destinoAutocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
                             if (!placePrediction) return;
@@ -190,7 +180,7 @@
                                     lat: typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat,
                                     lng: typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng
                                 };
-                                console.log("📍 Destino capturado correctamente:", destinoCoords);
+                                console.log("📍 Destino capturado:", destinoCoords);
                                 intentarCalcularDistancia();
                             }
                         });
@@ -203,7 +193,7 @@
                     const inputHora = document.getElementById('hora');
                     if (inputHora) inputHora.value = `${hours}:${minutes}`;
 
-                    console.log("✅ Componente moderno y buscador desplegable inicializados correctamente.");
+                    console.log("✅ Componentes de autocompletado nativos configurados correctamente.");
                 }
             }, 300);
 
@@ -212,7 +202,7 @@
             }, 8000);
         });
 
-        // 3. Cálculo automático de distancia y precio por coordenadas
+        // 3. Función de cálculo basada en coordenadas exactas
         function intentarCalcularDistancia() {
             if (!origenCoords || !destinoCoords) {
                 console.log("⏳ Faltan coordenadas. Origen:", origenCoords ? "OK" : "Pendiente", "| Destino:", destinoCoords ? "OK" : "Pendiente");

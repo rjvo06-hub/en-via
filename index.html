@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador y Rutas - Google Maps API</title>
+    <title>Rutas y Coordenadas con Google Maps</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         #map { height: 450px; width: 100%; }
-        /* Ajuste para que las sugerencias de autocompletado de Google se vean limpias */
+        /* Estilos limpios para el componente moderno de Places */
         .pac-container {
             z-index: 1050 !important;
             border-radius: 0.5rem;
@@ -88,8 +88,8 @@
         </div>
     </div>
 
-    <!-- Script oficial de Google Maps con tu API Key y la librería de Places -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places&callback=initMap"></script>
+    <!-- Script oficial cargando las librerías permitidas en tu consola -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry&v=weekly&callback=initMap"></script>
 
     <script>
         let map;
@@ -104,8 +104,10 @@
 
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
-        function initMap() {
-            // Inicializar mapa de Google centrado en Maracaibo
+        async function initMap() {
+            // Cargar explícitamente la librería Places requerida para la versión New
+            await google.maps.importLibrary("places");
+
             map = new google.maps.Map(document.getElementById('map'), {
                 center: maracaiboCenter,
                 zoom: 13,
@@ -116,7 +118,7 @@
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({
                 map: map,
-                suppressMarkers: false // Muestra los marcadores predeterminados A y B de Google
+                suppressMarkers: false
             });
 
             setupAutocomplete();
@@ -126,18 +128,10 @@
             const originInput = document.getElementById('origin-input');
             const destInput = document.getElementById('dest-input');
 
-            // Configurar autocompletado de Google para Maracaibo como sesgo inicial (bounds) pero global
-            const defaultBounds = {
-                north: 10.85,
-                south: 10.45,
-                east: -71.40,
-                west: -71.85,
-            };
-
+            // Usar la configuración compatible con Places API (New)
             const options = {
-                bounds: defaultBounds,
-                strictBounds: false, // Permite buscar en todo el mundo si el usuario escribe otra ciudad
-                fields: ["geometry", "name", "formatted_address"]
+                fields: ["geometry", "name", "formatted_address"],
+                componentRestrictions: { country: ["ve", "es", "us"] } // Permitir búsqueda global priorizando localizaciones comunes
             };
 
             const originAutocomplete = new google.maps.places.Autocomplete(originInput, options);
@@ -208,7 +202,6 @@
 
                 directionsService.route(request, (result, status) => {
                     if (status === 'OK') {
-                        // Ocultar marcadores individuales personalizados para usar la ruta limpia de Google Directions
                         if (originMarker) originMarker.setMap(null);
                         if (destMarker) destMarker.setMap(null);
 
@@ -219,7 +212,6 @@
                         document.getElementById('route-duration').textContent = route.duration.text;
                         document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
 
-                        // Enlace directo oficial a Google Maps
                         const originStr = `${originCoord.lat},${originCoord.lng}`;
                         const destStr = `${destCoord.lat},${destCoord.lng}`;
                         const gmapsLink = document.getElementById('gmaps-link');
@@ -232,7 +224,6 @@
             }
         }
 
-        // Función para copiar coordenadas al portapapeles
         function copyCoords(type) {
             const lat = document.getElementById(`${type}-lat`).textContent;
             const lon = document.getElementById(`${type}-lon`).textContent;

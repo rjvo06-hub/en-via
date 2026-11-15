@@ -116,7 +116,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script de Integración con la Nueva Places API y Cálculo Automático -->
+    <!-- Script de Integración corregido para gmp-place-autocomplete -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -133,7 +133,6 @@
 
                     directionsService = new google.maps.DirectionsService();
 
-                    // Delimitador geográfico para Maracaibo, Zulia
                     const maracaiboBounds = {
                         north: 10.7500,
                         south: 10.5800,
@@ -146,51 +145,104 @@
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
                     const inputDestino = document.getElementById('destino');
 
-                    // 1. Configurar Origen con la Nueva Places API (gmp-placeselect)
+                    // Asignar restricciones geográficas directamente a los componentes
+                    if (origenAutocomplete) origenAutocomplete.locationRestriction = maracaiboBounds;
+                    if (destinoAutocomplete) destinoAutocomplete.locationRestriction = maracaiboBounds;
+
+                    // 1. Capturar Origen usando el evento correcto del componente web y respaldo por texto/geocoder
                     if (origenAutocomplete) {
-                        origenAutocomplete.locationRestriction = maracaiboBounds;
-                        
+                        origenAutocomplete.addEventListener('place_changed', async () => {
+                            const place = origenAutocomplete.place;
+                            if (place && place.geometry && place.geometry.location) {
+                                origenCoords = {
+                                    lat: place.geometry.location.lat(),
+                                    lng: place.geometry.location.lng()
+                                };
+                                console.log("📍 Origen capturado:", origenCoords);
+                                intentarCalcularDistancia();
+                            }
+                        });
+
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
-                            await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
-                            
-                            if (place.location) {
-                                origenCoords = {
-                                    lat: place.location.lat(),
-                                    lng: place.location.lng()
-                                };
-                                console.log("📍 [Nueva Places API] Origen Lat/Lng capturado:", origenCoords);
+                            if (place) {
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
+                                if (place.location) {
+                                    origenCoords = {
+                                        lat: place.location.lat(),
+                                        lng: place.location.lng()
+                                    };
+                                    console.log("📍 Origen capturado (gmp-placeselect):", origenCoords);
+                                    intentarCalcularDistancia();
+                                }
                             }
-
-                            if (inputOrigen) {
-                                inputOrigen.value = place.formattedAddress || place.displayName || '';
-                            }
-
-                            verificarYCalcularRuta();
                         });
                     }
 
-                    // 2. Configurar Destino con la Nueva Places API (gmp-placeselect)
+                    // 2. Capturar Destino usando el evento correcto del componente web
                     if (destinoAutocomplete) {
-                        destinoAutocomplete.locationRestriction = maracaiboBounds;
-                        
+                        destinoAutocomplete.addEventListener('place_changed', async () => {
+                            const place = destinoAutocomplete.place;
+                            if (place && place.geometry && place.geometry.location) {
+                                destinoCoords = {
+                                    lat: place.geometry.location.lat(),
+                                    lng: place.geometry.location.lng()
+                                };
+                                console.log("📍 Destino capturado:", destinoCoords);
+                                intentarCalcularDistancia();
+                            }
+                        });
+
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
-                            await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
-                            
-                            if (place.location) {
-                                destinoCoords = {
-                                    lat: place.location.lat(),
-                                    lng: place.location.lng()
-                                };
-                                console.log("📍 [Nueva Places API] Destino Lat/Lng capturado:", destinoCoords);
+                            if (place) {
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
+                                if (place.location) {
+                                    destinoCoords = {
+                                        lat: place.location.lat(),
+                                        lng: place.location.lng()
+                                    };
+                                    console.log("📍 Destino capturado (gmp-placeselect):", destinoCoords);
+                                    intentarCalcularDistancia();
+                                }
                             }
+                        });
+                    }
 
-                            if (inputDestino) {
-                                inputDestino.value = place.formattedAddress || place.displayName || '';
+                    // Respaldo por Geocoder si el usuario escribe y hace blur (sale del input) sin hacer clic en la lista
+                    const geocoder = new google.maps.Geocoder();
+
+                    if (inputOrigen) {
+                        inputOrigen.addEventListener('change', () => {
+                            if (!origenCoords && inputOrigen.value.length > 3) {
+                                geocoder.geocode({ address: inputOrigen.value }, (results, status) => {
+                                    if (status === 'OK' && results[0]) {
+                                        origenCoords = {
+                                            lat: results[0].geometry.location.lat(),
+                                            lng: results[0].geometry.location.lng()
+                                        };
+                                        console.log("📍 Origen obtenido por Geocoder:", origenCoords);
+                                        intentarCalcularDistancia();
+                                    }
+                                });
                             }
+                        });
+                    }
 
-                            verificarYCalcularRuta();
+                    if (inputDestino) {
+                        inputDestino.addEventListener('change', () => {
+                            if (!destinoCoords && inputDestino.value.length > 3) {
+                                geocoder.geocode({ address: inputDestino.value }, (results, status) => {
+                                    if (status === 'OK' && results[0]) {
+                                        destinoCoords = {
+                                            lat: results[0].geometry.location.lat(),
+                                            lng: results[0].geometry.location.lng()
+                                        };
+                                        console.log("📍 Destino obtenido por Geocoder:", destinoCoords);
+                                        intentarCalcularDistancia();
+                                    }
+                                });
+                            }
                         });
                     }
 
@@ -210,8 +262,8 @@
             }, 8000);
         });
 
-        // 3. Función que verifica si tenemos ambas coordenadas y calcula la distancia y el precio bloqueado
-        function verificarYCalcularRuta() {
+        // 3. Función de cálculo basada estrictamente en coordenadas lat/lng
+        function intentarCalcularDistancia() {
             if (!origenCoords || !destinoCoords) {
                 console.log("⏳ Faltan coordenadas. Origen:", origenCoords ? "OK" : "Pendiente", "| Destino:", destinoCoords ? "OK" : "Pendiente");
                 return;
@@ -223,7 +275,7 @@
             const origenLatLng = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
             const destinoLatLng = new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng);
 
-            console.log("🚀 Solicitando ruta con lat/lng de la nueva Places API...");
+            console.log("🚀 Solicitando ruta con lat/lng exactos...");
 
             directionsService.route(
                 {

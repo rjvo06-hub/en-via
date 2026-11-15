@@ -2,248 +2,240 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EN-VIA - Panel de Carreras y Coordenadas</title>
-    <!-- Tailwind CSS CDN -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EN-VIA - Panel de Rutas</title>
+    <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/styles.css">
-    <!-- Google Maps API con la nueva Places API (librerías places y geometry) -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ&libraries=places,geometry" async defer></script>
+    <!-- Google Maps API con Places (New) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
-        /* Estilos limpios para que el componente web de Google ocupe todo el ancho y sea estético */
-        gmp-place-autocomplete {
-            display: block;
-            width: 100%;
-        }
-        gmp-place-autocomplete::part(input) {
+        #map { height: 450px; width: 100%; }
+        gmp-place-autocomplete { width: 100%; }
+        gmp-place-autocomplete input {
             width: 100%;
             background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #cbd5e1;
             border-radius: 0.75rem;
             padding: 0.75rem 1rem;
             color: #1e293b;
-            font-size: 0.875rem;
             outline: none;
         }
-        gmp-place-autocomplete::part(input):focus {
+        gmp-place-autocomplete input:focus {
             background-color: #ffffff;
             border-color: #3b82f6;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen">
+<body class="bg-slate-50 min-h-screen text-slate-800">
 
-    <!-- Cabecera Adaptativa con Acceso al Gestor de Conductores -->
-    <header class="bg-slate-900 text-white shadow-sm sticky top-0 z-50 py-3 px-4">
-        <div class="app-container flex justify-between items-center !p-0">
-            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
-                <span>🚕</span> EN-VIA
-            </h1>
-            <div class="flex items-center gap-2">
-                <!-- Enlace directo al capturador de conductores en la carpeta admin/ -->
-                <a href="admin/conductores.html" class="text-xs bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5 font-medium">
-                    <span>👥</span> Conductores
-                </a>
-                <div class="flex items-center gap-1.5 pl-2 border-l border-slate-800">
-                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-xs font-medium text-slate-300">En Vivo</span>
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
+            <p class="text-slate-600 mt-1">Selecciona origen y destino para mostrar coordenadas y trazar la ruta automáticamente.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Panel de Controles -->
+            <div class="bg-white p-6 rounded-xl shadow-md space-y-6 lg:col-span-1">
+                
+                <!-- Origen -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
+                    <gmp-place-autocomplete id="origen-autocomplete">
+                        <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
+                    </gmp-place-autocomplete>
+                    
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto seleccionado:</label>
+                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
+                    </div>
+                    
+                    <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | 
+                            <span class="font-bold">Lon:</span> <span id="origin-lon">-</span>
+                        </div>
+                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-600 hover:underline font-medium cursor-pointer">Copiar</button>
+                    </div>
+                </div>
+
+                <!-- Destino -->
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
+                    <gmp-place-autocomplete id="destino-autocomplete">
+                        <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
+                    </gmp-place-autocomplete>
+                    
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto seleccionado:</label>
+                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
+                    </div>
+                    
+                    <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | 
+                            <span class="font-bold">Lon:</span> <span id="dest-lon">-</span>
+                        </div>
+                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-600 hover:underline font-medium cursor-pointer">Copiar</button>
+                    </div>
+                </div>
+
+                <!-- Resumen de Ruta -->
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-600">Distancia:</span>
+                        <span id="route-distance" class="font-bold text-slate-800">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-600">Tiempo estimado:</span>
+                        <span id="route-duration" class="font-bold text-slate-800">-</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Panel del Mapa -->
+            <div class="bg-white p-4 rounded-xl shadow-md lg:col-span-2 flex flex-col justify-between">
+                <div class="rounded-lg overflow-hidden border border-slate-200 mb-4">
+                    <div id="map"></div>
+                </div>
+                <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
+                    <div id="status-msg" class="text-slate-600 italic">Selecciona origen y destino para trazar la ruta.</div>
+                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition shadow-sm">
+                        Abrir ruta en Google Maps
+                    </a>
                 </div>
             </div>
         </div>
-    </header>
+    </div>
 
-    <main class="app-container pb-16 pt-4 max-w-xl mx-auto px-4">
-        
-        <!-- Formulario para Registrar/Publicar Solicitud -->
-        <section class="bg-white rounded-2xl shadow-sm p-5 mb-6 border border-slate-200">
-            <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
-                <span>Nueva Solicitud y Coordenadas</span>
-                <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">Panel Operativo</span>
-            </h2>
-            
-            <form id="formCarrera" class="space-y-3.5">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Cliente</label>
-                        <input type="text" id="clienteNombre" placeholder="Nombre" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Teléfono</label>
-                        <input type="tel" id="clienteTelefono" placeholder="Móvil" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                    </div>
-                </div>
-
-                <!-- Punto de Origen (Sin input anidado para que el componente despliegue el menú libremente) -->
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
-                    <gmp-place-autocomplete id="origen-autocomplete" placeholder="Ej. Galerías Mall, Maracaibo..."></gmp-place-autocomplete>
-                </div>
-
-                <!-- Destino (Sin input anidado) -->
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
-                    <gmp-place-autocomplete id="destino-autocomplete" placeholder="Ej. Centro Comercial Sambil, Maracaibo..."></gmp-place-autocomplete>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Hora</label>
-                        <input type="text" id="hora" required placeholder="Ej. 14:30" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Distancia (Automática)</label>
-                        <input type="text" id="distancia" readonly placeholder="Pendiente..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-slate-600 font-medium cursor-not-allowed">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Precio Acordado ($ - Automático)</label>
-                    <input type="text" id="precio" readonly placeholder="Pendiente..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-emerald-700 font-bold cursor-not-allowed">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Notas / Observaciones</label>
-                    <input type="text" id="notas" placeholder="Ej. Equipaje grande, vuelo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                </div>
-
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold py-3.5 px-4 rounded-xl transition shadow-sm mt-2">
-                    Publicar Servicio
-                </button>
-            </form>
-        </section>
-
-        <!-- Listado de Servicios Disponibles -->
-        <section>
-            <div class="flex items-center justify-between mb-3 px-1">
-                <h2 class="text-base font-bold text-slate-900">Servicios Disponibles</h2>
-                <span id="contadorCarreras" class="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">0</span>
-            </div>
-            
-            <div id="listaCarreras" class="space-y-3">
-                <p class="text-slate-400 text-center py-10 bg-white rounded-2xl border border-slate-200 text-sm">Cargando servicios...</p>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Supabase JS UMD -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabaseClient.js"></script>
-    <script src="js/app.js"></script>
-
-    <!-- Script de Integración corregido -->
+    <!-- Script principal unificado -->
     <script>
-        window.gm_authFailure = function() {
-            console.error("⚠️ Error de autenticación en Google Maps.");
-        };
-
-        let origenCoords = null;
-        let destinoCoords = null;
+        let map;
         let directionsService;
+        let directionsRenderer;
+        let originMarker = null;
+        let destMarker = null;
+        let origenCoords = null;
+        let destCoords = null;
+
+        const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
         window.addEventListener('load', () => {
             const checkMapsInterval = setInterval(() => {
-                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                if (typeof google !== 'undefined' && google.maps) {
                     clearInterval(checkMapsInterval);
 
+                    map = new google.maps.Map(document.getElementById('map'), {
+                        center: maracaiboCenter,
+                        zoom: 13,
+                        mapTypeControl: false,
+                        streetViewControl: false
+                    });
+
                     directionsService = new google.maps.DirectionsService();
+                    directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
 
-                    const origenAutocomplete = document.getElementById('origen-autocomplete');
-                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
-
-                    // 1. Capturar Origen con el evento oficial gmp-select
-                    if (origenAutocomplete) {
-                        origenAutocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
-                            if (!placePrediction) return;
-                            const place = placePrediction.toPlace();
-                            await place.fetchFields({ fields: ['location', 'formattedAddress', 'displayName'] });
-                            if (place.location) {
-                                origenCoords = {
-                                    lat: typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat,
-                                    lng: typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng
-                                };
-                                console.log("📍 Origen capturado:", origenCoords);
-                                intentarCalcularDistancia();
-                            }
-                        });
-                    }
-
-                    // 2. Capturar Destino con el evento oficial gmp-select
-                    if (destinoAutocomplete) {
-                        destinoAutocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
-                            if (!placePrediction) return;
-                            const place = placePrediction.toPlace();
-                            await place.fetchFields({ fields: ['location', 'formattedAddress', 'displayName'] });
-                            if (place.location) {
-                                destinoCoords = {
-                                    lat: typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat,
-                                    lng: typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng
-                                };
-                                console.log("📍 Destino capturado:", destinoCoords);
-                                intentarCalcularDistancia();
-                            }
-                        });
-                    }
-
-                    // Hora actual por defecto
-                    const now = new Date();
-                    const hours = String(now.getHours()).padStart(2, '0');
-                    const minutes = String(now.getMinutes()).padStart(2, '0');
-                    const inputHora = document.getElementById('hora');
-                    if (inputHora) inputHora.value = `${hours}:${minutes}`;
-
-                    console.log("✅ Componentes de autocompletado nativos configurados correctamente.");
+                    // Configurar escucha para origen y destino
+                    configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
+                    configurarLugar('destino-autocomplete', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
                 }
             }, 300);
-
-            setTimeout(() => {
-                clearInterval(checkMapsInterval);
-            }, 8000);
         });
 
-        // 3. Función de cálculo basada en coordenadas exactas
-        function intentarCalcularDistancia() {
-            if (!origenCoords || !destinoCoords) {
-                console.log("⏳ Faltan coordenadas. Origen:", origenCoords ? "OK" : "Pendiente", "| Destino:", destinoCoords ? "OK" : "Pendiente");
-                return;
-            }
+        function configurarLugar(autocompleteId, campoLibreId, latId, lonId, btnCopyId, tipo) {
+            const autocompleteEl = document.getElementById(autocompleteId);
+            const campoLibreEl = document.getElementById(campoLibreId);
 
-            document.getElementById('distancia').value = "Calculando...";
-            document.getElementById('precio').value = "Calculando...";
+            if (autocompleteEl) {
+                autocompleteEl.addEventListener('gmp-select', async ({ placePrediction }) => {
+                    if (!placePrediction) return;
 
-            const origenLatLng = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
-            const destinoLatLng = new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng);
+                    const place = placePrediction.toPlace();
+                    await place.fetchFields({ fields: ['formattedAddress', 'displayName', 'location'] });
 
-            directionsService.route(
-                {
-                    origin: origenLatLng,
-                    destination: destinoLatLng,
-                    travelMode: google.maps.TravelMode.DRIVING
-                },
-                (response, status) => {
-                    if (status === 'OK') {
-                        const route = response.routes[0].legs[0];
-                        const distanciaMetros = route.distance.value;
-                        const kmValor = distanciaMetros / 1000;
-                        
-                        document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
+                    const direccionFinal = place.formattedAddress || place.displayName;
+                    const location = place.location;
 
-                        // Regla de cobro: $1 por kilómetro, mínimo $3
-                        let precioCalculado = kmValor * 1.0; 
-                        if (precioCalculado < 3) {
-                            precioCalculado = 3.00;
+                    if (direccionFinal && location) {
+                        const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+                        const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+
+                        // Mostrar en el campo duplicado
+                        campoLibreEl.value = direccionFinal;
+
+                        // Mostrar lat y lon
+                        document.getElementById(latId).textContent = lat.toFixed(6);
+                        document.getElementById(lonId).textContent = lng.toFixed(6);
+                        document.getElementById(btnCopyId).classList.remove('hidden');
+
+                        const coords = { lat, lng };
+                        if (tipo === 'origin') {
+                            origenCoords = coords;
+                            updateMarker('origin', coords);
+                        } else {
+                            destCoords = coords;
+                            updateMarker('dest', coords);
                         }
 
-                        document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
-                        console.log(`✅ Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
-                    } else {
-                        console.error("❌ Error en DirectionsService:", status);
-                        document.getElementById('distancia').value = "Error al calcular";
-                        document.getElementById('precio').value = "Error";
+                        verificarYCalcularRuta();
                     }
-                }
-            );
+                });
+            }
+        }
+
+        function updateMarker(type, coord) {
+            if (type === 'origin') {
+                if (originMarker) originMarker.setMap(null);
+                originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
+            } else {
+                if (destMarker) destMarker.setMap(null);
+                destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
+            }
+            map.setCenter(coord);
+            map.setZoom(15);
+        }
+
+        function verificarYCalcularRuta() {
+            if (origenCoords && destCoords) {
+                document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
+                const request = {
+                    origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
+                    destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),
+                    travelMode: google.maps.TravelMode.DRIVING
+                };
+
+                directionsService.route(request, (response, status) => {
+                    if (status === 'OK') {
+                        if (originMarker) originMarker.setMap(null);
+                        if (destMarker) destMarker.setMap(null);
+                        directionsRenderer.setDirections(response);
+
+                        const route = response.routes[0].legs[0];
+                        document.getElementById('route-distance').textContent = route.distance.text;
+                        document.getElementById('route-duration').textContent = route.duration.text;
+                        document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
+
+                        const gmapsLink = document.getElementById('gmaps-link');
+                        gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
+                        gmapsLink.classList.remove('hidden');
+                    } else {
+                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
+                    }
+                });
+            }
+        }
+
+        function copyCoords(type) {
+            const lat = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-lat`).textContent;
+            const lon = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-lon`).textContent;
+            navigator.clipboard.writeText(`${lat}, ${lon}`).then(() => {
+                const btn = document.getElementById(`btn-copy-${type}`);
+                const originalText = btn.textContent;
+                btn.textContent = "¡Copiado!";
+                setTimeout(() => { btn.textContent = originalText; }, 2000);
+            });
         }
     </script>
 </body>

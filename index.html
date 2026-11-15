@@ -1,621 +1,288 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculador de Rutas y Coordenadas - Origen y Destino</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Calculadora de Rutas y Tarifas - Maracaibo</title>
+    <!-- Tailwind CSS para el diseño moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS for Interactive Map -->
+    <!-- Leaflet CSS para el mapa -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .suggestions-scroll::-webkit-scrollbar { width: 6px; }
-        .suggestions-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
-        .suggestions-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-        .suggestions-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        #map { height: 450px; width: 100%; }
+        .autocomplete-list {
+            position: absolute;
+            z-index: 1000;
+            width: 100%;
+            max-height: 220px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
-<body class="h-full bg-slate-50 text-slate-800 flex flex-col">
+<body class="bg-slate-50 min-h-screen text-slate-800">
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-white border-b border-slate-200 shadow-sm z-20 flex-shrink-0">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                    <i class="fa-solid fa-route text-xl"></i>
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-extrabold text-blue-600">Calculador de Rutas y Tarifas</h1>
+            <p class="text-slate-600 mt-1">Búsqueda inteligente enfocada en Maracaibo, Zulia con coordenadas y cálculo de distancia.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Panel de Controles -->
+            <div class="bg-white p-6 rounded-xl shadow-md space-y-6 lg:col-span-1">
+                
+                <!-- Origen -->
+                <div class="relative">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Origen</label>
+                    <input type="text" id="origin-input" placeholder="Ej. Sambil Maracaibo..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <div id="origin-suggestions" class="autocomplete-list hidden mt-1"></div>
+                    <div class="text-xs text-slate-500 mt-1">Lat: <span id="origin-lat">-</span>, Lon: <span id="origin-lon">-</span></div>
                 </div>
+
+                <!-- Botón de intercambio -->
+                <div class="flex justify-center">
+                    <button onclick="swapLocations()" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition text-slate-600" title="Intercambiar origen y destino">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Destino -->
+                <div class="relative">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Destino</label>
+                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <div id="dest-suggestions" class="autocomplete-list hidden mt-1"></div>
+                    <div class="text-xs text-slate-500 mt-1">Lat: <span id="dest-lat">-</span>, Lon: <span id="dest-lon">-</span></div>
+                </div>
+
+                <!-- Tarifa por Km -->
                 <div>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-900">GeoRoute Calc</h1>
-                    <p class="text-xs text-slate-500 hidden sm:block">Calculadora de Rutas, Coordenadas y Tarifas</p>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Tarifa por Kilómetro ($)</label>
+                    <input type="number" id="rate-per-km" value="1.5" step="0.1" min="0" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
+
+                <!-- Resultados del Cálculo -->
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-600">Distancia estimada:</span>
+                        <span id="distance-result" class="font-bold text-slate-800">0.00 km</span>
+                    </div>
+                    <div class="flex justify-between text-base border-t border-blue-200 pt-2">
+                        <span class="font-semibold text-blue-900">Tarifa Total:</span>
+                        <span id="price-result" class="font-extrabold text-blue-600">$0.00</span>
+                    </div>
+                </div>
+
             </div>
-            <div class="flex items-center space-x-3">
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Sistema Activo
-                </span>
+
+            <!-- Panel del Mapa -->
+            <div class="bg-white p-4 rounded-xl shadow-md lg:col-span-2 flex flex-col justify-between">
+                <div class="rounded-lg overflow-hidden border border-slate-200 mb-4">
+                    <div id="map"></div>
+                </div>
+                <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
+                    <div id="route-status" class="text-slate-600 italic">Selecciona origen y destino para calcular la ruta.</div>
+                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition shadow-sm">
+                        Abrir ruta en Google Maps
+                    </a>
+                </div>
             </div>
         </div>
-    </header>
-
-    <!-- Main Content Layout -->
-    <main class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
-        
-        <!-- Sidebar Panel for Inputs & Route Details -->
-        <section class="w-full lg:w-[460px] bg-white border-r border-slate-200 z-10 flex flex-col shadow-lg lg:shadow-none flex-shrink-0">
-            <div class="p-4 sm:p-6 flex-1 overflow-y-auto space-y-6">
-                
-                <!-- Inputs Container (Origen & Destino) -->
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 relative space-y-4">
-                    
-                    <!-- Origen Input Group -->
-                    <div class="relative">
-                        <label for="origin-input" class="block text-xs font-bold uppercase tracking-wider text-emerald-600 mb-1.5 flex items-center">
-                            <i class="fa-solid fa-circle-dot mr-1.5 text-emerald-500"></i> Dirección Origen
-                        </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                            </div>
-                            <input 
-                                type="text" 
-                                id="origin-input" 
-                                autocomplete="off"
-                                placeholder="Ej. Aeropuerto, Calle Principal..." 
-                                class="w-full pl-9 pr-9 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-sm"
-                            >
-                            <button id="clear-origin" type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
-                                <i class="fa-solid fa-circle-xmark"></i>
-                            </button>
-                        </div>
-                        <!-- Suggestions Dropdown Origen -->
-                        <div id="suggestions-origin" class="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-200 max-h-60 overflow-y-auto suggestions-scroll hidden z-40"></div>
-                    </div>
-
-                    <!-- Connecting Line Visual -->
-                    <div class="absolute left-7 top-16 bottom-16 w-0.5 border-l-2 border-dashed border-slate-300 pointer-events-none hidden sm:block"></div>
-
-                    <!-- Destino Input Group -->
-                    <div class="relative">
-                        <label for="dest-input" class="block text-xs font-bold uppercase tracking-wider text-blue-600 mb-1.5 flex items-center">
-                            <i class="fa-solid fa-location-dot mr-1.5 text-blue-500"></i> Dirección Destino
-                        </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                            </div>
-                            <input 
-                                type="text" 
-                                id="dest-input" 
-                                autocomplete="off"
-                                placeholder="Ej. Centro Comercial, Plaza Mayor..." 
-                                class="w-full pl-9 pr-9 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                            >
-                            <button id="clear-dest" type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
-                                <i class="fa-solid fa-circle-xmark"></i>
-                            </button>
-                        </div>
-                        <!-- Suggestions Dropdown Destino -->
-                        <div id="suggestions-dest" class="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-200 max-h-60 overflow-y-auto suggestions-scroll hidden z-40"></div>
-                    </div>
-
-                    <!-- Swap Button -->
-                    <div class="flex justify-end pt-1">
-                        <button onclick="swapLocations()" class="text-xs bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm flex items-center space-x-1">
-                            <i class="fa-solid fa-right-left rotate-90 text-blue-600"></i>
-                            <span>Intercambiar Origen / Destino</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Route & Distance Summary Card -->
-                <div id="route-card" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm transition-all">
-                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                        <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm">
-                            <i class="fa-solid fa-chart-line text-blue-600"></i>
-                            <span>Resumen de la Ruta</span>
-                        </div>
-                        <button id="fit-map-btn" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-medium transition-colors hidden shadow-sm">
-                            <i class="fa-solid fa-expand mr-1"></i> Ver Ruta
-                        </button>
-                    </div>
-
-                    <!-- Distance & Estimated Time / Pricing -->
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div class="bg-blue-50/50 p-3.5 rounded-xl border border-blue-100">
-                            <span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-1">Distancia Est.</span>
-                            <span id="distance-value" class="text-lg font-extrabold text-blue-900">-- km</span>
-                        </div>
-                        <div class="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-100">
-                            <span class="block text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">Costo Estimado</span>
-                            <span id="price-value" class="text-lg font-extrabold text-emerald-900">$0.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Tariff Settings -->
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4">
-                        <div class="flex justify-between items-center text-xs text-slate-600 mb-1">
-                            <span>Tarifa por km:</span>
-                            <span id="rate-display" class="font-bold text-slate-900">$1.50 / km</span>
-                        </div>
-                        <input type="range" id="rate-slider" min="0.5" max="5.0" step="0.25" value="1.5" class="w-full accent-blue-600 cursor-pointer" oninput="updateRate(this.value)">
-                    </div>
-
-                    <!-- Details of Origin & Destination Coordinates -->
-                    <div class="space-y-3 pt-3 border-t border-slate-100 text-xs">
-                        <!-- Origen Coord Info -->
-                        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                            <div class="min-w-0 flex-1 mr-2">
-                                <span class="font-bold text-emerald-600 block truncate" id="summary-origin-title">Origen: No seleccionado</span>
-                                <span class="font-mono text-[10px] text-slate-500" id="summary-origin-coords">--</span>
-                            </div>
-                            <button id="copy-origin-btn" disabled onclick="copyCoords('origin')" class="p-2 text-slate-400 hover:text-emerald-600 disabled:opacity-30 transition-colors" title="Copiar coordenadas origen">
-                                <i class="fa-regular fa-copy"></i>
-                            </button>
-                        </div>
-                        <!-- Destino Coord Info -->
-                        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                            <div class="min-w-0 flex-1 mr-2">
-                                <span class="font-bold text-blue-600 block truncate" id="summary-dest-title">Destino: No seleccionado</span>
-                                <span class="font-mono text-[10px] text-slate-500" id="summary-dest-coords">--</span>
-                            </div>
-                            <button id="copy-dest-btn" disabled onclick="copyCoords('dest')" class="p-2 text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-colors" title="Copiar coordenadas destino">
-                                <i class="fa-regular fa-copy"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- External Links -->
-                    <div class="mt-4 flex space-x-2">
-                        <a id="gmaps-route-link" href="#" target="_blank" class="hidden flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-3 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center space-x-1.5">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            <span>Abrir Ruta en Google Maps</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Quick Presets -->
-                <div>
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Ejemplos Rápidos</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="setPreset('Aeropuerto Barajas', 'Puerta del Sol')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium p-2 rounded-xl transition-colors border border-slate-200 text-left truncate">
-                            ✈️ Aeropuerto ➔ Sol
-                        </button>
-                        <button onclick="setPreset('Estación de Atocha', 'Centro Comercial')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium p-2 rounded-xl transition-colors border border-slate-200 text-left truncate">
-                            🚆 Atocha ➔ C. Comercial
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-            
-            <div class="p-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500">
-                GeoRoute Calc • Leaflet & OpenStreetMap
-            </div>
-        </section>
-
-        <!-- Interactive Map Container -->
-        <section class="flex-1 relative h-[400px] lg:h-full">
-            <div id="map" class="w-full h-full z-0"></div>
-            
-            <!-- Toast Notification -->
-            <div id="toast" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/90 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 z-[1000] flex items-center space-x-2">
-                <i class="fa-solid fa-circle-check text-emerald-400"></i>
-                <span id="toast-msg">Notificación</span>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Leaflet JS CDN -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    </div>
 
     <script>
-        // Global state variables
-        let map;
+        // Coordenadas de Maracaibo (Bounding Box aproximado para restringir búsquedas: minLon, minLat, maxLon, maxLat)
+        const MARACAIBO_VIEWBOX = "-71.75,10.55,-71.55,10.75";
+
+        // Inicializar Mapa centrado en Maracaibo
+        const map = L.map('map').setView([10.6549, -71.6146], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        let originCoord = null;
+        let destCoord = null;
         let originMarker = null;
         let destMarker = null;
-        let routePolyline = null;
-        
-        let originData = null; // { name, lat, lng, address }
-        let destData = null;   // { name, lat, lng, address }
-        
-        let ratePerKm = 1.5;
-        let searchTimeouts = { origin: null, dest: null };
+        let routeLine = null;
 
-        // Initialize application on window load
-        window.addEventListener('DOMContentLoaded', () => {
-            initMap();
-            setupEventListeners();
-        });
+        const originInput = document.getElementById('origin-input');
+        const destInput = document.getElementById('dest-input');
+        const originSuggestions = document.getElementById('origin-suggestions');
+        const destSuggestions = document.getElementById('dest-suggestions');
+        const rateInput = document.getElementById('rate-per-km');
 
-        function initMap() {
-            // Default initial center (Madrid)
-            map = L.map('map', { zoomControl: false }).setView([40.4168, -3.7038], 6);
+        // Búsqueda con Autocompletado (Nominatim acotado a Maracaibo)
+        function setupAutocomplete(inputElement, suggestionsElement, isOrigin) {
+            let timeout = null;
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
-
-            L.control.zoom({ position: 'topright' }).addTo(map);
-        }
-
-        function setupEventListeners() {
-            const originInput = document.getElementById('origin-input');
-            const destInput = document.getElementById('dest-input');
-            const clearOrigin = document.getElementById('clear-origin');
-            const clearDest = document.getElementById('clear-dest');
-
-            // Origin input events
-            originInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim();
-                if (query.length > 0) {
-                    clearOrigin.classList.remove('hidden');
-                } else {
-                    clearOrigin.classList.add('hidden');
-                    document.getElementById('suggestions-origin').classList.add('hidden');
-                    originData = null;
-                    updateRouteAndUI();
+            inputElement.addEventListener('input', function() {
+                clearTimeout(timeout);
+                const query = this.value;
+                if (query.length < 3) {
+                    suggestionsElement.classList.add('hidden');
+                    return;
                 }
 
-                clearTimeout(searchTimeouts.origin);
-                searchTimeouts.origin = setTimeout(() => fetchSuggestions(query, 'origin'), 350);
-            });
+                timeout = setTimeout(() => {
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${MARACAIBO_VIEWBOX}&bounded=1&limit=5`;
+                    
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(data => {
+                            suggestionsElement.innerHTML = '';
+                            if (data.length === 0) {
+                                suggestionsElement.classList.add('hidden');
+                                return;
+                            }
 
-            clearOrigin.addEventListener('click', () => {
-                originInput.value = '';
-                clearOrigin.classList.add('hidden');
-                document.getElementById('suggestions-origin').classList.add('hidden');
-                originData = null;
-                if (originMarker) { map.removeLayer(originMarker); originMarker = null; }
-                updateRouteAndUI();
-                originInput.focus();
-            });
-
-            // Dest input events
-            destInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim();
-                if (query.length > 0) {
-                    clearDest.classList.remove('hidden');
-                } else {
-                    clearDest.classList.add('hidden');
-                    document.getElementById('suggestions-dest').classList.add('hidden');
-                    destData = null;
-                    updateRouteAndUI();
-                }
-
-                clearTimeout(searchTimeouts.dest);
-                searchTimeouts.dest = setTimeout(() => fetchSuggestions(query, 'dest'), 350);
-            });
-
-            clearDest.addEventListener('click', () => {
-                destInput.value = '';
-                clearDest.classList.add('hidden');
-                document.getElementById('suggestions-dest').classList.add('hidden');
-                destData = null;
-                if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
-                updateRouteAndUI();
-                destInput.focus();
-            });
-
-            // Close suggestions on outside click
-            document.addEventListener('click', (e) => {
-                if (!originInput.contains(e.target) && !document.getElementById('suggestions-origin').contains(e.target)) {
-                    document.getElementById('suggestions-origin').classList.add('hidden');
-                }
-                if (!destInput.contains(e.target) && !document.getElementById('suggestions-dest').contains(e.target)) {
-                    document.getElementById('suggestions-dest').classList.add('hidden');
-                }
-            });
-
-            // Fit map button
-            document.getElementById('fit-map-btn').addEventListener('click', () => {
-                if (originData && destData) {
-                    const bounds = L.latLngBounds(
-                        [originData.lat, originData.lng],
-                        [destData.lat, destData.lng]
-                    );
-                    map.fitBounds(bounds, { padding: [70, 70], maxZoom: 15 });
-                }
+                            data.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'px-4 py-2 hover:bg-slate-100 cursor-pointer text-sm border-b border-slate-100 last:border-none';
+                                div.textContent = item.display_name;
+                                div.addEventListener('click', () => {
+                                    inputElement.value = item.display_name;
+                                    suggestionsElement.classList.add('hidden');
+                                    
+                                    const coord = { lat: parseFloat(item.lat), lon: parseFloat(item.lon) };
+                                    if (isOrigin) {
+                                        originCoord = coord;
+                                        document.getElementById('origin-lat').textContent = coord.lat.toFixed(4);
+                                        document.getElementById('origin-lon').textContent = coord.lon.toFixed(4);
+                                        updateMarker('origin', coord);
+                                    } else {
+                                        destCoord = coord;
+                                        document.getElementById('dest-lat').textContent = coord.lat.toFixed(4);
+                                        document.getElementById('dest-lon').textContent = coord.lon.toFixed(4);
+                                        updateMarker('dest', coord);
+                                    }
+                                    calculateRoute();
+                                });
+                                suggestionsElement.appendChild(div);
+                            });
+                            suggestionsElement.classList.remove('hidden');
+                        })
+                        .catch(err => console.error("Error en autocompletado:", err));
+                }, 300);
             });
         }
 
-        // Fetch autocomplete suggestions using Nominatim API
-        async function fetchSuggestions(query, type) {
-            const boxId = type === 'origin' ? 'suggestions-origin' : 'suggestions-dest';
-            const suggestionsBox = document.getElementById(boxId);
+        setupAutocomplete(originInput, originSuggestions, true);
+        setupAutocomplete(destInput, destSuggestions, false);
 
-            suggestionsBox.innerHTML = `
-                <div class="p-3 text-xs text-slate-400 text-center flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-spinner fa-spin text-blue-500"></i>
-                    <span>Buscando...</span>
-                </div>
-            `;
-            suggestionsBox.classList.remove('hidden');
+        // Actualizar Marcadores en el Mapa
+        function updateMarker(type, coord) {
+            if (type === 'origin') {
+                if (originMarker) map.removeLayer(originMarker);
+                originMarker = L.marker([coord.lat, coord.lon], {title: "Origen"}).addTo(map)
+                    .bindPopup("<b>Origen</b>").openPopup();
+            } else {
+                if (destMarker) map.removeLayer(destMarker);
+                destMarker = L.marker([coord.lat, coord.lon], {title: "Destino"}).addTo(map)
+                    .bindPopup("<b>Destino</b>").openPopup();
+            }
 
-            try {
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
-                const response = await fetch(url, { headers: { 'Accept-Language': 'es' } });
-                const data = await response.json();
-
-                if (data && data.length > 0) {
-                    renderSuggestions(data, type);
-                } else {
-                    suggestionsBox.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">Sin resultados</div>`;
-                }
-            } catch (error) {
-                console.error('Error fetching suggestions:', error);
-                suggestionsBox.innerHTML = `<div class="p-3 text-xs text-red-500 text-center">Error de conexión</div>`;
+            if (originCoord && destCoord) {
+                const bounds = L.latLngBounds([
+                    [originCoord.lat, originCoord.lon],
+                    [destCoord.lat, destCoord.lon]
+                ]);
+                map.fitBounds(bounds, { padding: [50, 50] });
+            } else {
+                map.setView([coord.lat, coord.lon], 14);
             }
         }
 
-        function renderSuggestions(places, type) {
-            const boxId = type === 'origin' ? 'suggestions-origin' : 'suggestions-dest';
-            const suggestionsBox = document.getElementById(boxId);
-            suggestionsBox.innerHTML = '';
-
-            places.forEach(place => {
-                const item = document.createElement('div');
-                item.className = 'px-3.5 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors flex items-start space-x-2.5';
-                
-                const title = place.name || place.display_name.split(',')[0];
-                
-                item.innerHTML = `
-                    <div class="w-6 h-6 rounded-md ${type === 'origin' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'} flex items-center justify-center flex-shrink-0 mt-0.5 text-xs">
-                        <i class="fa-solid ${type === 'origin' ? 'fa-circle-dot' : 'fa-location-dot'}"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-slate-900 truncate">${escapeHtml(title)}</p>
-                        <p class="text-[10px] text-slate-500 truncate">${escapeHtml(place.display_name)}</p>
-                    </div>
-                `;
-
-                item.addEventListener('click', () => {
-                    const locationObj = {
-                        name: title,
-                        address: place.display_name,
-                        lat: parseFloat(place.lat),
-                        lng: parseFloat(place.lon)
-                    };
-
-                    if (type === 'origin') {
-                        originData = locationObj;
-                        document.getElementById('origin-input').value = title;
-                        document.getElementById('clear-origin').classList.remove('hidden');
-                        suggestionsBox.classList.add('hidden');
-                    } else {
-                        destData = locationObj;
-                        document.getElementById('dest-input').value = title;
-                        document.getElementById('clear-dest').classList.remove('hidden');
-                        suggestionsBox.classList.add('hidden');
-                    }
-
-                    updateRouteAndUI();
-                });
-
-                suggestionsBox.appendChild(item);
-            });
-        }
-
-        // Haversine formula to calculate accurate distance in kilometers
-        function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth radius in km
-            const dLat = toRad(lat2 - lat1);
-            const dLon = toRad(lon2 - lon1);
+        // Calcular Distancia (Fórmula Haversine)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radio de la tierra en km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = 
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
         }
 
-        function toRad(value) {
-            return value * Math.PI / 180;
+        // Calcular Ruta y Tarifas
+        function calculateRoute() {
+            if (!originCoord || !destCoord) return;
+
+            // Distancia en línea recta refinada por factor vial promedio urbano (+20%)
+            const straightDist = calculateDistance(originCoord.lat, originCoord.lon, destCoord.lat, destCoord.lon);
+            const roadDist = straightDist * 1.25; 
+
+            document.getElementById('distance-result').textContent = roadDist.toFixed(2) + " km";
+
+            const rate = parseFloat(rateInput.value) || 0;
+            const totalPrice = roadDist * rate;
+            document.getElementById('price-result').textContent = "$" + totalPrice.toFixed(2);
+
+            // Trazar línea de ruta en el mapa
+            if (routeLine) map.removeLayer(routeLine);
+            routeLine = L.polyline([
+                [originCoord.lat, originCoord.lon],
+                [destCoord.lat, destCoord.lon]
+            ], {color: '#3b82f6', weight: 4, opacity: 0.7, dashArray: '5, 10'}).addTo(map);
+
+            // Actualizar estado y enlace a Google Maps
+            document.getElementById('route-status').textContent = "Ruta calculada correctamente.";
+            const gmapsLink = document.getElementById('gmaps-link');
+            gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${originCoord.lat},${originCoord.lon}&destination=${destCoord.lat},${destCoord.lon}`;
+            gmapsLink.classList.remove('hidden');
         }
 
-        // Update markers, route line, calculations and UI elements
-        function updateRouteAndUI() {
-            // Update Origin Marker
-            if (originData) {
-                if (originMarker) map.removeLayer(originMarker);
-                
-                const customIcon = L.divIcon({
-                    className: 'custom-pin',
-                    html: `<div style="background-color: #10b981; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 11px;"><i class="fa-solid fa-a"></i></div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
+        rateInput.addEventListener('input', calculateRoute);
 
-                originMarker = L.marker([originData.lat, originData.lng], { icon: customIcon }).addTo(map)
-                    .bindPopup(`<b>Origen:</b> ${escapeHtml(originData.name)}`);
-                
-                document.getElementById('summary-origin-title').textContent = originData.name;
-                document.getElementById('summary-origin-coords').textContent = `${originData.lat.toFixed(5)}, ${originData.lng.toFixed(5)}`;
-                document.getElementById('copy-origin-btn').removeAttribute('disabled');
-            } else {
-                document.getElementById('summary-origin-title').textContent = 'Origen: No seleccionado';
-                document.getElementById('summary-origin-coords').textContent = '--';
-                document.getElementById('copy-origin-btn').setAttribute('disabled', 'true');
-            }
-
-            // Update Dest Marker
-            if (destData) {
-                if (destMarker) map.removeLayer(destMarker);
-
-                const customIcon = L.divIcon({
-                    className: 'custom-pin',
-                    html: `<div style="background-color: #3b82f6; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 11px;"><i class="fa-solid fa-b"></i></div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-
-                destMarker = L.marker([destData.lat, destData.lng], { icon: customIcon }).addTo(map)
-                    .bindPopup(`<b>Destino:</b> ${escapeHtml(destData.name)}`);
-
-                document.getElementById('summary-dest-title').textContent = destData.name;
-                document.getElementById('summary-dest-coords').textContent = `${destData.lat.toFixed(5)}, ${destData.lng.toFixed(5)}`;
-                document.getElementById('copy-dest-btn').removeAttribute('disabled');
-            } else {
-                document.getElementById('summary-dest-title').textContent = 'Destino: No seleccionado';
-                document.getElementById('summary-dest-coords').textContent = '--';
-                document.getElementById('copy-dest-btn').setAttribute('disabled', 'true');
-            }
-
-            // Handle Route Line and Calculations if both exist
-            if (originData && destData) {
-                if (routePolyline) map.removeLayer(routePolyline);
-
-                // Draw connecting dashed line
-                routePolyline = L.polyline([
-                    [originData.lat, originData.lng],
-                    [destData.lat, destData.lng]
-                ], {
-                    color: '#3b82f6',
-                    weight: 4,
-                    opacity: 0.8,
-                    dashArray: '8, 8'
-                }).addTo(map);
-
-                // Calculate distance
-                const distKm = calculateHaversineDistance(originData.lat, originData.lng, destData.lat, destData.lng);
-                document.getElementById('distance-value').textContent = `${distKm.toFixed(2)} km`;
-
-                // Calculate price
-                const estimatedPrice = distKm * ratePerKm;
-                document.getElementById('price-value').textContent = `$${estimatedPrice.toFixed(2)}`;
-
-                // Fit bounds
-                const bounds = L.latLngBounds(
-                    [originData.lat, originData.lng],
-                    [destData.lat, destData.lng]
-                );
-                map.fitBounds(bounds, { padding: [70, 70], maxZoom: 15 });
-
-                // Show fit button & Gmaps link
-                document.getElementById('fit-map-btn').classList.remove('hidden');
-                const gmapsRoute = document.getElementById('gmaps-route-link');
-                gmapsRoute.href = `https://www.google.com/maps/dir/?api=1&origin=${originData.lat},${originData.lng}&destination=${destData.lat},${destData.lng}`;
-                gmapsRoute.classList.remove('hidden');
-
-            } else {
-                if (routePolyline) {
-                    map.removeLayer(routePolyline);
-                    routePolyline = null;
-                }
-                document.getElementById('distance-value').textContent = '-- km';
-                document.getElementById('price-value').textContent = '$0.00';
-                document.getElementById('fit-map-btn').classList.add('hidden');
-                document.getElementById('gmaps-route-link').classList.add('hidden');
-
-                // Center single point if only one exists
-                if (originData) {
-                    map.setView([originData.lat, originData.lng], 14);
-                } else if (destData) {
-                    map.setView([destData.lat, destData.lng], 14);
-                }
-            }
-        }
-
-        // Update tariff rate slider
-        function updateRate(val) {
-            ratePerKm = parseFloat(val);
-            document.getElementById('rate-display').textContent = `$${ratePerKm.toFixed(2)} / km`;
-            if (originData && destData) {
-                const distKm = calculateHaversineDistance(originData.lat, originData.lng, destData.lat, destData.lng);
-                document.getElementById('price-value').textContent = `$${(distKm * ratePerKm).toFixed(2)}`;
-            }
-        }
-
-        // Swap origin and destination
+        // Intercambiar Origen y Destino
         function swapLocations() {
-            const tempOrigin = originData;
-            const tempOriginText = document.getElementById('origin-input').value;
+            const tempCoord = originCoord;
+            const tempText = originInput.value;
+            const tempLat = document.getElementById('origin-lat').textContent;
+            const tempLon = document.getElementById('origin-lon').textContent;
 
-            originData = destData;
-            document.getElementById('origin-input').value = document.getElementById('dest-input').value;
-            
-            destData = tempOrigin;
-            document.getElementById('dest-input').value = tempOriginText;
+            originCoord = destCoord;
+            originInput.value = destInput.value;
+            document.getElementById('origin-lat').textContent = document.getElementById('dest-lat').textContent;
+            document.getElementById('origin-lon').textContent = document.getElementById('dest-lon').textContent;
 
-            // Toggle clear button visibility
-            if (originData) document.getElementById('clear-origin').classList.remove('hidden');
-            else document.getElementById('clear-origin').classList.add('hidden');
+            destCoord = tempCoord;
+            destInput.value = tempText;
+            document.getElementById('dest-lat').textContent = tempLat;
+            document.getElementById('dest-lon').textContent = tempLon;
 
-            if (destData) document.getElementById('clear-dest').classList.remove('hidden');
-            else document.getElementById('clear-dest').classList.add('hidden');
-
-            updateRouteAndUI();
-            showToast('Origen y Destino intercambiados');
-        }
-
-        // Set quick presets
-        async function setPreset(originTerm, destTerm) {
-            document.getElementById('origin-input').value = originTerm;
-            document.getElementById('dest-input').value = destTerm;
-            document.getElementById('clear-origin').classList.remove('hidden');
-            document.getElementById('clear-dest').classList.remove('hidden');
-
-            try {
-                const [res1, res2] = await Promise.all([
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(originTerm)}&limit=1`).then(r => r.json()),
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destTerm)}&limit=1`).then(r => r.json())
-                ]);
-
-                if (res1 && res1.length > 0) {
-                    originData = { name: res1[0].name || originTerm, lat: parseFloat(res1[0].lat), lng: parseFloat(res1[0].lon) };
-                }
-                if (res2 && res2.length > 0) {
-                    destData = { name: res2[0].name || destTerm, lat: parseFloat(res2[0].lat), lng: parseFloat(res2[0].lon) };
-                }
-
-                updateRouteAndUI();
-                showToast('Ejemplo cargado con éxito');
-            } catch (err) {
-                console.error(err);
-                showToast('Error al cargar preset');
+            if (originCoord) updateMarker('origin', originCoord);
+            else {
+                if (originMarker) map.removeLayer(originMarker);
+                document.getElementById('origin-lat').textContent = '-';
+                document.getElementById('origin-lon').textContent = '-';
             }
-        }
 
-        // Copy coordinates
-        function copyCoords(type) {
-            const target = type === 'origin' ? originData : destData;
-            if (target) {
-                const text = `${target.lat}, ${target.lng}`;
-                copyTextToClipboard(text, `Coordenadas de ${type} copiadas`);
+            if (destCoord) updateMarker('dest', destCoord);
+            else {
+                if (destMarker) map.removeLayer(destMarker);
+                document.getElementById('dest-lat').textContent = '-';
+                document.getElementById('dest-lon').textContent = '-';
             }
-        }
 
-        function copyTextToClipboard(text, msg) {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.position = "fixed";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showToast(msg);
-            } catch (err) {
-                showToast('Error al copiar');
+            if (originCoord && destCoord) {
+                calculateRoute();
+            } else {
+                if (routeLine) map.removeLayer(routeLine);
+                document.getElementById('distance-result').textContent = "0.00 km";
+                document.getElementById('price-result').textContent = "$0.00";
+                document.getElementById('route-status').textContent = "Selecciona origen y destino para calcular la ruta.";
+                document.getElementById('gmaps-link').classList.add('hidden');
             }
-            document.body.removeChild(textArea);
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-msg').textContent = message;
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 3000);
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
         }
     </script>
 </body>

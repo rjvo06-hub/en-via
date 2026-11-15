@@ -6,40 +6,67 @@
     <title>EN-VIA - Panel de Rutas</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API con Places y geometry -->
+    <!-- Google Maps API con Places (New) -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
+        
+        /* Forzar al componente web de Google a mantener el ancho exacto de la tarjeta y evitar que expanda en móvil */
+        gmp-place-autocomplete {
+            width: 100% !important;
+            max-width: 100% !important;
+            display: block !important;
+            position: relative !important;
+            background: transparent !important;
+            border: none !important;
+        }
 
-        /* Estilo personalizado y limpio para la lista de sugerencias flotante */
-        .custom-suggestions-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            z-index: 50;
-            background-color: #141414;
-            border: 1px solid #2e2e2e;
-            border-radius: 0.75rem;
-            margin-top: 4px;
-            max-height: 220px;
-            overflow-y: auto;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8);
+        /* Forzar al menú desplegable interno de Google a alinearse al ancho del contenedor y no ocupar toda la pantalla */
+        gmp-place-autocomplete::part(dropdown),
+        gmp-place-autocomplete::part(panel),
+        gmp-place-autocomplete::part(menu) {
+            max-width: 100% !important;
+            width: 100% !important;
+            left: 0 !important;
+            right: 0 !important;
+            box-sizing: border-box !important;
+            background-color: #141414 !important;
+            border: 1px solid #2e2e2e !important;
+            border-radius: 0.6rem !important;
         }
-        .suggestion-item {
-            padding: 8px 12px;
-            font-size: 0.8rem;
-            color: #cbd5e1;
-            border-bottom: 1px solid #1f1f1f;
-            cursor: pointer;
-            transition: background 0.15s ease;
+        
+        gmp-place-autocomplete::part(input) {
+            background-color: #161616 !important;
+            border: 1px solid #2e2e2e !important;
+            border-radius: 0.6rem !important;
+            padding: 0.5rem 0.75rem !important;
+            font-size: 0.85rem !important;
+            color: #ffffff !important;
+            font-family: inherit !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
-        .suggestion-item:last-child {
-            border-bottom: none;
+
+        gmp-place-autocomplete::part(input):focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
         }
-        .suggestion-item:hover {
-            background-color: #1f1f1f;
-            color: #ffffff;
+
+        gmp-place-autocomplete input {
+            width: 100% !important;
+            background-color: #161616 !important;
+            border: 1px solid #2e2e2e !important;
+            border-radius: 0.6rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            color: #ffffff !important;
+            outline: none;
+            box-sizing: border-box;
+        }
+        gmp-place-autocomplete input:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
@@ -56,16 +83,15 @@
             <div id="control-panel" class="bg-[#111111] border border-[#222222] p-3.5 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 lg:col-span-1">
                 
                 <!-- Origen -->
-                <div class="space-y-1 relative">
+                <div class="space-y-1">
                     <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dirección de Origen</label>
-                    <div class="relative">
-                        <input type="text" id="origen-input" placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white outline-none transition" autocomplete="off">
-                        <div id="origen-suggestions" class="custom-suggestions-list hidden"></div>
-                    </div>
+                    <gmp-place-autocomplete id="origen-autocomplete">
+                        <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
+                    </gmp-place-autocomplete>
                     
-                    <div class="space-y-1 mt-1">
+                    <div class="space-y-1">
                         <label class="block text-[9px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2.5 py-1 text-[11px] text-slate-300 font-medium" readonly>
+                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2 py-1 text-[11px] text-slate-300 font-medium" readonly>
                     </div>
                     
                     <div class="p-2 bg-[#161616] rounded-lg border border-[#262626] text-[11px] text-slate-400 flex justify-between items-center">
@@ -78,16 +104,15 @@
                 </div>
 
                 <!-- Destino -->
-                <div class="space-y-1 pt-2 border-t border-[#222222] relative">
+                <div class="space-y-1 pt-2 border-t border-[#222222]">
                     <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dirección de Destino</label>
-                    <div class="relative">
-                        <input type="text" id="destino-input" placeholder="Ej. Vereda del Lago..." class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-white outline-none transition" autocomplete="off">
-                        <div id="destino-suggestions" class="custom-suggestions-list hidden"></div>
-                    </div>
+                    <gmp-place-autocomplete id="destino-autocomplete">
+                        <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
+                    </gmp-place-autocomplete>
                     
-                    <div class="space-y-1 mt-1">
+                    <div class="space-y-1">
                         <label class="block text-[9px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2.5 py-1 text-[11px] text-slate-300 font-medium" readonly>
+                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2 py-1 text-[11px] text-slate-300 font-medium" readonly>
                     </div>
                     
                     <div class="p-2 bg-[#161616] rounded-lg border border-[#262626] text-[11px] text-slate-400 flex justify-between items-center">
@@ -128,13 +153,11 @@
         </div>
     </div>
 
-    <!-- Script con AutAutocompleteService programático -->
+    <!-- Script principal unificado -->
     <script>
         let map;
         let directionsService;
         let directionsRenderer;
-        let autocompleteService;
-        let placesService;
         let originMarker = null;
         let destMarker = null;
         let origenCoords = null;
@@ -156,96 +179,66 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
-                    autocompleteService = new google.maps.places.AutocompleteService();
-                    placesService = new google.maps.places.PlacesService(map);
 
-                    // Configurar inputs personalizados con la API de datos
-                    setupCustomAutocomplete('origen-input', 'origen-suggestions', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
-                    setupCustomAutocomplete('destino-input', 'destino-suggestions', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
+                    configurarSesgoBusqueda('origen-autocomplete');
+                    configurarSesgoBusqueda('destino-autocomplete');
+
+                    configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
+                    configurarLugar('destino-autocomplete', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
                 }
             }, 300);
         });
 
-        function setupCustomAutocomplete(inputId, suggestionsId, campoLibreId, latId, lonId, btnCopyId, tipo) {
-            const input = document.getElementById(inputId);
-            const suggestionsBox = document.getElementById(suggestionsId);
-            const campoLibre = document.getElementById(campoLibreId);
-
-            // Sesgo geográfico centrado en Maracaibo
-            const maracaiboBounds = new google.maps.LatLngBounds(
-                new google.maps.LatLng(10.4500, -71.8000),
-                new google.maps.LatLng(10.8500, -71.4500)
-            );
-
-            input.addEventListener('input', () => {
-                const query = input.value.trim();
-                if (query.length < 2) {
-                    suggestionsBox.classList.add('hidden');
-                    suggestionsBox.innerHTML = '';
-                    return;
-                }
-
-                const request = {
-                    input: query,
-                    locationBias: maracaiboBounds,
-                    bounds: maracaiboBounds
+        function configurarSesgoBusqueda(autocompleteId) {
+            const autocompleteEl = document.getElementById(autocompleteId);
+            if (autocompleteEl) {
+                const defaultBounds = {
+                    north: 10.8500,
+                    south: 10.4500,
+                    east: -71.4500,
+                    west: -71.8000,
                 };
+                autocompleteEl.includedBounds = defaultBounds;
+                autocompleteEl.locationBias = maracaiboCenter;
+            }
+        }
 
-                autocompleteService.getPlacePredictions(request, (predictions, status) => {
-                    if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-                        suggestionsBox.innerHTML = '';
-                        suggestionsBox.classList.remove('hidden');
+        function configurarLugar(autocompleteId, campoLibreId, latId, lonId, btnCopyId, tipo) {
+            const autocompleteEl = document.getElementById(autocompleteId);
+            const campoLibreEl = document.getElementById(campoLibreId);
 
-                        predictions.forEach(prediction => {
-                            const div = document.createElement('div');
-                            div.className = 'suggestion-item';
-                            div.textContent = prediction.description;
-                            
-                            div.addEventListener('click', () => {
-                                input.value = prediction.description;
-                                suggestionsBox.classList.add('hidden');
-                                suggestionsBox.innerHTML = '';
+            if (autocompleteEl) {
+                autocompleteEl.addEventListener('gmp-select', async ({ placePrediction }) => {
+                    if (!placePrediction) return;
 
-                                // Obtener detalles geográficos del lugar seleccionado por placeId
-                                placesService.getDetails({ placeId: prediction.place_id, fields: ['geometry', 'formatted_address', 'name'] }, (place, status) => {
-                                    if (status === google.maps.places.PlacesServiceStatus.OK && place.geometry && place.geometry.location) {
-                                        const lat = place.geometry.location.lat();
-                                        const lng = place.geometry.location.lng();
-                                        const direccionFinal = place.formatted_address || place.name;
+                    const place = placePrediction.toPlace();
+                    await place.fetchFields({ fields: ['formattedAddress', 'displayName', 'location'] });
 
-                                        campoLibre.value = direccionFinal;
-                                        document.getElementById(latId).textContent = lat.toFixed(6);
-                                        document.getElementById(lonId).textContent = lng.toFixed(6);
-                                        document.getElementById(btnCopyId).classList.remove('hidden');
+                    const direccionFinal = place.formattedAddress || place.displayName;
+                    const location = place.location;
 
-                                        const coords = { lat, lng };
-                                        if (tipo === 'origin') {
-                                            origenCoords = coords;
-                                            updateMarker('origin', coords);
-                                        } else {
-                                            destCoords = coords;
-                                            updateMarker('dest', coords);
-                                        }
+                    if (direccionFinal && location) {
+                        const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+                        const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
 
-                                        verificarYCalcularRuta();
-                                    }
-                                });
-                            });
+                        campoLibreEl.value = direccionFinal;
+                        document.getElementById(latId).textContent = lat.toFixed(6);
+                        document.getElementById(lonId).textContent = lng.toFixed(6);
+                        document.getElementById(btnCopyId).classList.remove('hidden');
 
-                            suggestionsBox.appendChild(div);
-                        });
-                    } else {
-                        suggestionsBox.classList.add('hidden');
+                        const coords = { lat, lng };
+                        if (tipo === 'origin') {
+                            origenCoords = coords;
+                            updateMarker('origin', coords);
+                        } else {
+                            destCoords = coords;
+                            updateMarker('dest', coords);
+                        }
+
+                        verificarYCalcularRuta();
                     }
                 });
-            });
-
-            // Ocultar sugerencias al hacer clic fuera
-            document.addEventListener('click', (e) => {
-                if (!input.contains(e.target) && !suggestionsBox.contains(e.target)) {
-                    suggestionsBox.classList.add('hidden');
-                }
-            });
+            }
         }
 
         function updateMarker(type, coord) {

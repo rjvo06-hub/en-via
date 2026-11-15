@@ -58,7 +58,7 @@
                     <gmp-place-autocomplete id="origen-autocomplete" class="block w-full">
                         <input type="text" id="origen" required placeholder="Ej. Conjunto Residencial, Galerías..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                     </gmp-place-autocomplete>
-                    <p class="text-[10px] text-slate-400 mt-1">Escribe la dirección o conjunto y presiona Enter o sal del campo.</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Escribe la dirección, conjunto o lugar y presiona Enter o sal del campo.</p>
                 </div>
 
                 <!-- Destino -->
@@ -68,6 +68,24 @@
                         <input type="text" id="destino" required placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                     </gmp-place-autocomplete>
                     <p class="text-[10px] text-slate-400 mt-1">Escribe el destino y presiona Enter o sal del campo.</p>
+                </div>
+
+                <!-- Visualización de Coordenadas y Código Postal Capturados -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs text-slate-600">
+                    <div class="font-semibold text-slate-700 border-b border-slate-200 pb-1 flex justify-between">
+                        <span>📍 Información de Localización Geográfica</span>
+                        <span id="estadoGeo" class="text-blue-600 font-medium">Esperando datos...</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div>
+                            <span class="block text-[10px] uppercase text-slate-400 font-semibold">Origen (Lat, Lng):</span>
+                            <span id="lblOrigenCoords" class="font-mono text-slate-800">-</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] uppercase text-slate-400 font-semibold">Destino (Lat, Lng):</span>
+                            <span id="lblDestinoCoords" class="font-mono text-slate-800">-</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -116,7 +134,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script Integrado con Geocoding API y Places -->
+    <!-- Script Integrado con Geocoding API, Extracción de Código Postal y Cálculo de Distancias -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -142,8 +160,6 @@
                         west: -71.7200
                     };
 
-                    const maracaiboCenter = new google.maps.LatLng(10.6549, -71.6430);
-
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const inputOrigen = document.getElementById('origen');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
@@ -162,7 +178,7 @@
                                     lat: place.geometry.location.lat(),
                                     lng: place.geometry.location.lng()
                                 };
-                                console.log("📍 Origen capturado:", origenCoords);
+                                actualizarVisualizadorCoords();
                                 intentarCalcularDistancia();
                             }
                         });
@@ -170,13 +186,13 @@
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
                             if (place) {
-                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName', 'address_components'] });
                                 if (place.location) {
                                     origenCoords = {
                                         lat: place.location.lat(),
                                         lng: place.location.lng()
                                     };
-                                    console.log("📍 Origen capturado (gmp-placeselect):", origenCoords);
+                                    actualizarVisualizadorCoords();
                                     intentarCalcularDistancia();
                                 }
                             }
@@ -192,7 +208,7 @@
                                     lat: place.geometry.location.lat(),
                                     lng: place.geometry.location.lng()
                                 };
-                                console.log("📍 Destino capturado:", destinoCoords);
+                                actualizarVisualizadorCoords();
                                 intentarCalcularDistancia();
                             }
                         });
@@ -200,26 +216,25 @@
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
                             if (place) {
-                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName', 'address_components'] });
                                 if (place.location) {
                                     destinoCoords = {
                                         lat: place.location.lat(),
                                         lng: place.location.lng()
                                     };
-                                    console.log("📍 Destino capturado (gmp-placeselect):", destinoCoords);
+                                    actualizarVisualizadorCoords();
                                     intentarCalcularDistancia();
                                 }
                             }
                         });
                     }
 
-                    // --- INTEGRACIÓN ACTIVA DE GEOCODING API PARA BÚSQUEDA LIBRE ---
+                    // --- INTEGRACIÓN DE GEOCODING API CON CÓDIGO POSTAL Y BÚSQUEDA LIBRE ---
                     
                     function resolverConGeocoder(inputElement, esOrigen) {
                         const query = inputElement.value.trim();
                         if (!query || query.length < 3) return;
 
-                        // Añadir contexto de Maracaibo si el usuario escribe texto libre o un conjunto
                         let searchAddress = query;
                         if (!searchAddress.toLowerCase().includes('maracaibo')) {
                             searchAddress = `${searchAddress}, Maracaibo, Zulia, Venezuela`;
@@ -232,20 +247,31 @@
                             componentRestrictions: { country: 'VE' }
                         }, (results, status) => {
                             if (status === 'OK' && results && results[0]) {
-                                const location = results[0].geometry.location;
+                                const result = results[0];
+                                const location = result.geometry.location;
                                 const coords = {
                                     lat: location.lat(),
                                     lng: location.lng()
                                 };
 
-                                if (esOrigen) {
-                                    origenCoords = coords;
-                                    console.log("✅ Origen resuelto por Geocoding API:", origenCoords);
-                                } else {
-                                    destinoCoords = coords;
-                                    console.log("✅ Destino resuelto por Geocoding API:", destinoCoords);
+                                // Extraer código postal de la respuesta de Google
+                                let codigoPostal = "";
+                                for (const component of result.address_components) {
+                                    if (component.types.includes('postal_code')) {
+                                        codigoPostal = component.long_name;
+                                        break;
+                                    }
                                 }
 
+                                console.log(`📮 Código postal detectado: ${codigoPostal || "No asignado en esta zona"}`);
+
+                                if (esOrigen) {
+                                    origenCoords = coords;
+                                } else {
+                                    destinoCoords = coords;
+                                }
+
+                                actualizarVisualizadorCoords();
                                 intentarCalcularDistancia();
                             } else {
                                 console.warn("⚠️ Geocoding no encontró resultados exactos para:", query);
@@ -253,7 +279,7 @@
                         });
                     }
 
-                    // Eventos para disparar la Geocoding API al presionar Enter o perder el foco (blur)
+                    // Eventos para disparar Geocoding API al presionar Enter o perder el foco
                     if (inputOrigen) {
                         inputOrigen.addEventListener('keydown', (e) => {
                             if (e.key === 'Enter') {
@@ -291,7 +317,7 @@
                     const inputHora = document.getElementById('hora');
                     if (inputHora) inputHora.value = `${hours}:${minutes}`;
 
-                    console.log("✅ Geocoding API y Places configurados correctamente.");
+                    console.log("✅ Geocoding API, Código Postal y Places configurados correctamente.");
                 }
             }, 300);
 
@@ -300,10 +326,31 @@
             }, 8000);
         });
 
-        // 3. Función de cálculo basada estrictamente en coordenadas lat/lng
+        // 3. Actualizar la visualización de coordenadas en pantalla
+        function actualizarVisualizadorCoords() {
+            const estadoGeo = document.getElementById('estadoGeo');
+            const lblOrigen = document.getElementById('lblOrigenCoords');
+            const lblDestino = document.getElementById('lblDestinoCoords');
+
+            if (origenCoords) {
+                lblOrigen.textContent = `${origenCoords.lat.toFixed(5)}, ${origenCoords.lng.toFixed(5)}`;
+            }
+            if (destinoCoords) {
+                lblDestino.textContent = `${destinoCoords.lat.toFixed(5)}, ${destinoCoords.lng.toFixed(5)}`;
+            }
+
+            if (origenCoords && destinoCoords) {
+                estadoGeo.textContent = "¡Coordenadas listas!";
+                estadoGeo.className = "text-emerald-600 font-semibold";
+            } else {
+                estadoGeo.textContent = "Faltan puntos de ruta";
+                estadoGeo.className = "text-amber-600 font-medium";
+            }
+        }
+
+        // 4. Función de cálculo basada estrictamente en coordenadas lat/lng
         function intentarCalcularDistancia() {
             if (!origenCoords || !destinoCoords) {
-                console.log("⏳ Faltan coordenadas. Origen:", origenCoords ? "OK" : "Pendiente", "| Destino:", destinoCoords ? "OK" : "Pendiente");
                 return;
             }
 
@@ -312,8 +359,6 @@
 
             const origenLatLng = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
             const destinoLatLng = new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng);
-
-            console.log("🚀 Solicitando ruta con lat/lng exactos...");
 
             directionsService.route(
                 {
@@ -339,7 +384,6 @@
 
                         // Rellenar campo de precio bloqueado
                         document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
-                        console.log(`✅ Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
                     } else {
                         console.error("❌ Error en DirectionsService:", status);
                         document.getElementById('distancia').value = "Error al calcular";

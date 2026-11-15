@@ -32,7 +32,7 @@
     <div class="max-w-4xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">Buscador de Coordenadas</h1>
-            <p class="text-slate-600 mt-1">Escribe una dirección, selecciona del menú y obtén su latitud y longitud exacta.</p>
+            <p class="text-slate-600 mt-1">Escribe una dirección, selecciónala o presiona Enter para obtener su latitud y longitud.</p>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -85,11 +85,12 @@
         </div>
     </div>
 
-    <!-- Script de control y captura de coordenadas -->
+    <!-- Script con soporte dual (Menú desplegable + Respaldo automático por texto) -->
     <script>
         let map;
         let originMarker = null;
         let destMarker = null;
+        let geocoder;
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
         window.addEventListener('load', () => {
@@ -104,56 +105,75 @@
                         streetViewControl: false
                     });
 
+                    geocoder = new google.maps.Geocoder();
+
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
+                    const inputOrigen = document.getElementById('origen');
+                    const inputDestino = document.getElementById('destino');
 
-                    // Función central para extraer la lat/lng del componente web Place
-                    async function procesarSeleccionPlace(placeObj, type) {
-                        if (!placeObj) return;
-
-                        try {
-                            // Bitácora obligatoria: solicitar explícitamente los campos de ubicación a Google
-                            if (typeof placeObj.fetchFields === 'function') {
-                                await placeObj.fetchFields({ fields: ["location", "displayName", "formattedAddress"] });
-                            }
-
-                            // Extraer la ubicación geográfica según la estructura que devuelva el objeto
-                            const location = placeObj.location || (placeObj.geometry && placeObj.geometry.location);
-                            
-                            if (location) {
-                                const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
-                                const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
-
-                                console.log(`📍 Coordenadas obtenidas para ${type}:`, lat, lng);
-
-                                if (type === 'origin') {
-                                    document.getElementById('origin-lat').textContent = lat.toFixed(6);
-                                    document.getElementById('origin-lon').textContent = lng.toFixed(6);
-                                    document.getElementById('btn-copy-origin').classList.remove('hidden');
-                                    updateMarker('origin', { lat, lng });
-                                } else {
-                                    document.getElementById('dest-lat').textContent = lat.toFixed(6);
-                                    document.getElementById('dest-lon').textContent = lng.toFixed(6);
-                                    document.getElementById('btn-copy-dest').classList.remove('hidden');
-                                    updateMarker('dest', { lat, lng });
-                                }
-                            }
-                        } catch (error) {
-                            console.error("Error al obtener los campos del lugar:", error);
+                    // Función para procesar y pintar coordenadas
+                    async function aplicarCoordenadas(lat, lng, type) {
+                        if (type === 'origin') {
+                            document.getElementById('origin-lat').textContent = lat.toFixed(6);
+                            document.getElementById('origin-lon').textContent = lng.toFixed(6);
+                            document.getElementById('btn-copy-origin').classList.remove('hidden');
+                            updateMarker('origin', { lat, lng });
+                        } else {
+                            document.getElementById('dest-lat').textContent = lat.toFixed(6);
+                            document.getElementById('dest-lon').textContent = lng.toFixed(6);
+                            document.getElementById('btn-copy-dest').classList.remove('hidden');
+                            updateMarker('dest', { lat, lng });
                         }
                     }
 
-                    // Eventos para Origen
+                    // 1. Escuchar la selección directa del menú desplegable del componente web
                     if (origenAutocomplete) {
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
-                            await procesarSeleccionPlace(event.detail.place, 'origin');
+                            const place = event.detail.place;
+                            if (place) {
+                                await place.fetchFields({ fields: ["location"] });
+                                if (place.location) {
+                                    aplicarCoordenadas(place.location.lat(), place.location.lng(), 'origin');
+                                }
+                            }
                         });
                     }
 
-                    // Eventos para Destino
                     if (destinoAutocomplete) {
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
-                            await procesarSeleccionPlace(event.detail.place, 'dest');
+                            const place = event.detail.place;
+                            if (place) {
+                                await place.fetchFields({ fields: ["location"] });
+                                if (place.location) {
+                                    aplicarCoordenadas(place.location.lat(), place.location.lng(), 'dest');
+                                }
+                            }
+                        });
+                    }
+
+                    // 2. Respaldo automático: Si escriben y presionan Enter o salen del campo sin hacer clic en la lista
+                    function buscarPorTexto(texto, type) {
+                        if (texto.length < 3) return;
+                        geocoder.geocode({ address: texto }, (results, status) => {
+                            if (status === 'OK' && results[0]) {
+                                const loc = results[0].geometry.location;
+                                aplicarCoordenadas(loc.lat(), loc.lng(), type);
+                            }
+                        });
+                    }
+
+                    if (inputOrigen) {
+                        inputOrigen.addEventListener('change', () => buscarPorTexto(inputOrigen.value, 'origin'));
+                        inputOrigen.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') buscarPorTexto(inputOrigen.value, 'origin');
+                        });
+                    }
+
+                    if (inputDestino) {
+                        inputDestino.addEventListener('change', () => buscarPorTexto(inputDestino.value, 'dest'));
+                        inputDestino.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') buscarPorTexto(inputDestino.value, 'dest');
                         });
                     }
                 }

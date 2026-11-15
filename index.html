@@ -10,116 +10,103 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
-        
-        /* Estilos optimizados para que el componente nativo de Google encaje perfectamente con el tema oscuro */
-        gmp-place-autocomplete { 
-            width: 100%;
-            display: block;
-            border-radius: 0.75rem;
-            background-color: #0f172a;
-            border: 1px solid #334155;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-            transition: all 0.2s ease-in-out;
-        }
-
-        gmp-place-autocomplete:focus-within {
-            border-color: #38bdf8;
-            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
-        }
-
+        gmp-place-autocomplete { width: 100%; }
         gmp-place-autocomplete input {
-            width: 100% !important;
-            background-color: #0f172a !important;
-            border: none !important;
-            color: #f8fafc !important;
-            padding: 0.85rem 1rem !important;
-            font-size: 0.95rem !important;
-            outline: none !important;
-            box-sizing: border-box !important;
+            width: 100%;
+            background-color: #0f172a; /* Fondo oscuro exacto para combinar con el campo nativo */
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #ffffff;
+            outline: none;
         }
-
+        gmp-place-autocomplete input:focus {
+            background-color: #020617;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+        /* Ajustar icono de búsqueda nativo si lo renderiza el navegador */
         gmp-place-autocomplete input::placeholder {
-            color: #64748b !important;
+            color: #94a3b8;
         }
     </style>
 </head>
-<body class="bg-slate-900 min-h-screen text-slate-100">
+<body class="bg-slate-950 min-h-screen text-slate-100">
 
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold text-sky-400 tracking-wide">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-400 mt-2 text-sm sm:text-base">Selecciona origen y destino para mostrar coordenadas y trazar la ruta automáticamente.</p>
+            <h1 class="text-3xl font-extrabold text-sky-400">EN-VIA - Panel de Rutas</h1>
+            <p class="text-slate-400 mt-1">Selecciona origen y destino para mostrar coordenadas y trazar la ruta automáticamente.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Panel de Controles -->
-            <div class="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700/60 space-y-6 lg:col-span-1">
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl space-y-6 lg:col-span-1">
                 
                 <!-- Origen -->
                 <div class="space-y-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-sky-400">Dirección de Origen</label>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Dirección de Origen</label>
                     <gmp-place-autocomplete id="origen-autocomplete">
                         <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
-                    <div class="space-y-1 pt-1">
-                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 font-medium" readonly>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
+                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 font-medium" readonly>
                     </div>
                     
-                    <div class="p-2.5 bg-slate-900/50 rounded-lg border border-slate-700/50 text-xs text-slate-300 flex justify-between items-center">
+                    <div class="p-2 bg-slate-950/50 rounded border border-slate-800 text-xs text-slate-400 flex justify-between items-center">
                         <div>
-                            <span class="font-bold text-sky-400">Lat:</span> <span id="origin-lat">-</span> | 
-                            <span class="font-bold text-sky-400">Lon:</span> <span id="origin-lon">-</span>
+                            <span class="font-bold text-slate-300">Lat:</span> <span id="origin-lat">-</span> | 
+                            <span class="font-bold text-slate-300">Lon:</span> <span id="origin-lon">-</span>
                         </div>
-                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-sky-400 hover:text-sky-300 font-semibold cursor-pointer transition">Copiar</button>
+                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-sky-400 hover:text-sky-300 font-medium cursor-pointer">Copiar</button>
                     </div>
                 </div>
 
                 <!-- Destino -->
-                <div class="space-y-2 pt-2 border-t border-slate-700/60">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-sky-400">Dirección de Destino</label>
+                <div class="space-y-2 pt-2 border-t border-slate-800">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Dirección de Destino</label>
                     <gmp-place-autocomplete id="destino-autocomplete">
                         <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
-                    <div class="space-y-1 pt-1">
-                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 font-medium" readonly>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
+                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 font-medium" readonly>
                     </div>
                     
-                    <div class="p-2.5 bg-slate-900/50 rounded-lg border border-slate-700/50 text-xs text-slate-300 flex justify-between items-center">
+                    <div class="p-2 bg-slate-950/50 rounded border border-slate-800 text-xs text-slate-400 flex justify-between items-center">
                         <div>
-                            <span class="font-bold text-sky-400">Lat:</span> <span id="dest-lat">-</span> | 
-                            <span class="font-bold text-sky-400">Lon:</span> <span id="dest-lon">-</span>
+                            <span class="font-bold text-slate-300">Lat:</span> <span id="dest-lat">-</span> | 
+                            <span class="font-bold text-slate-300">Lon:</span> <span id="dest-lon">-</span>
                         </div>
-                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-sky-400 hover:text-sky-300 font-semibold cursor-pointer transition">Copiar</button>
+                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-sky-400 hover:text-sky-300 font-medium cursor-pointer">Copiar</button>
                     </div>
                 </div>
 
                 <!-- Resumen de Ruta -->
-                <div class="bg-sky-950/40 p-4 rounded-xl border border-sky-800/50 space-y-2">
+                <div class="bg-sky-950/40 p-4 rounded-xl border border-sky-900/50 space-y-2">
                     <div class="flex justify-between text-sm">
-                        <span class="text-slate-300">Distancia:</span>
-                        <span id="route-distance" class="font-bold text-sky-300">-</span>
+                        <span class="text-slate-400">Distancia:</span>
+                        <span id="route-distance" class="font-bold text-sky-200">-</span>
                     </div>
                     <div class="flex justify-between text-sm">
-                        <span class="text-slate-300">Tiempo estimado:</span>
-                        <span id="route-duration" class="font-bold text-sky-300">-</span>
+                        <span class="text-slate-400">Tiempo estimado:</span>
+                        <span id="route-duration" class="font-bold text-sky-200">-</span>
                     </div>
                 </div>
 
             </div>
 
             <!-- Panel del Mapa -->
-            <div class="bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-700/60 lg:col-span-2 flex flex-col justify-between">
-                <div class="rounded-xl overflow-hidden border border-slate-700 mb-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-xl lg:col-span-2 flex flex-col justify-between">
+                <div class="rounded-lg overflow-hidden border border-slate-800 mb-4">
                     <div id="map"></div>
                 </div>
-                <div class="flex flex-wrap gap-3 justify-between items-center text-sm px-2">
+                <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
                     <div id="status-msg" class="text-slate-400 italic">Selecciona origen y destino para trazar la ruta.</div>
-                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition shadow-lg shadow-emerald-900/30">
+                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition shadow-sm">
                         Abrir ruta en Google Maps
                     </a>
                 </div>
@@ -127,7 +114,7 @@
         </div>
     </div>
 
-    <!-- Script principal unificado con la lógica original intacta -->
+    <!-- Script principal unificado -->
     <script>
         let map;
         let directionsService;
@@ -148,69 +135,11 @@
                         center: maracaiboCenter,
                         zoom: 13,
                         mapTypeControl: false,
-                        streetViewControl: false,
-                        styles: [
-                            { elementType: "geometry", stylers: [{ color: "#1d232a" }] },
-                            { elementType: "labels.text.stroke", stylers: [{ color: "#1a202c" }] },
-                            { elementType: "labels.text.fill", stylers: [{ color: "#a0aec0" }] },
-                            {
-                                featureType: "administrative.locality",
-                                elementType: "labels.text.fill",
-                                stylers: [{ color: "#cbd5e0" }]
-                            },
-                            {
-                                featureType: "poi",
-                                elementType: "labels.text.fill",
-                                stylers: [{ color: "#a0aec0" }]
-                            },
-                            {
-                                featureType: "poi.park",
-                                elementType: "geometry",
-                                stylers: [{ color: "#263238" }]
-                            },
-                            {
-                                featureType: "road",
-                                elementType: "geometry",
-                                stylers: [{ color: "#2d3748" }]
-                            },
-                            {
-                                featureType: "road",
-                                elementType: "geometry.stroke",
-                                stylers: [{ color: "#1a202c" }]
-                            },
-                            {
-                                featureType: "road",
-                                elementType: "labels.text.fill",
-                                stylers: [{ color: "#cbd5e0" }]
-                            },
-                            {
-                                featureType: "transit",
-                                elementType: "geometry",
-                                stylers: [{ color: "#2d3748" }]
-                            },
-                            {
-                                featureType: "water",
-                                elementType: "geometry",
-                                stylers: [{ color: "#0f172a" }]
-                            },
-                            {
-                                featureType: "water",
-                                elementType: "labels.text.fill",
-                                stylers: [{ color: "#4a5568" }]
-                            }
-                        ]
+                        streetViewControl: false
                     });
 
                     directionsService = new google.maps.DirectionsService();
-                    directionsRenderer = new google.maps.DirectionsRenderer({ 
-                        map: map, 
-                        suppressMarkers: false,
-                        polylineOptions: {
-                            strokeColor: "#38bdf8",
-                            strokeWeight: 5,
-                            strokeOpacity: 0.8
-                        }
-                    });
+                    directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
 
                     // Configurar escucha para origen y destino
                     configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');

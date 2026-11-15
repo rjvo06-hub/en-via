@@ -6,7 +6,7 @@
     <title>EN-VIA - Panel de Rutas</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API con Places (New) -->
+    <!-- Google Maps API con Places (New) y Geometry -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
@@ -125,7 +125,6 @@
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
 
-                    // Configurar escucha para origen y destino (sin campos libres ni botones de copiar)
                     configurarLugar('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
                     configurarLugar('destino-autocomplete', 'dest-lat', 'dest-lon', 'dest');
                 }
@@ -148,7 +147,6 @@
                         const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
                         const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
 
-                        // Mostrar lat y lon como referencia
                         document.getElementById(latId).textContent = lat.toFixed(6);
                         document.getElementById(lonId).textContent = lng.toFixed(6);
 
@@ -181,10 +179,24 @@
 
         function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
+                // 1. Calcular distancia en línea recta de inmediato usando la librería geometry
+                const p1 = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
+                const p2 = new google.maps.LatLng(destCoords.lat, destCoords.lng);
+                const distanciaMetros = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
+                
+                let distanciaTexto = "";
+                if (distanciaMetros >= 1000) {
+                    distanciaTexto = (distanciaMetros / 1000).toFixed(2) + " km (línea recta)";
+                } else {
+                    distanciaTexto = Math.round(distanciaMetros) + " m (línea recta)";
+                }
+                document.getElementById('route-distance').textContent = distanciaTexto;
+
+                // 2. Solicitar ruta vial oficial a Google Maps
                 document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
                 const request = {
-                    origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
-                    destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),
+                    origin: p1,
+                    destination: p2,
                     travelMode: google.maps.TravelMode.DRIVING
                 };
 
@@ -195,6 +207,7 @@
                         directionsRenderer.setDirections(response);
 
                         const route = response.routes[0].legs[0];
+                        // Actualizar con la distancia real por carretera
                         document.getElementById('route-distance').textContent = route.distance.text;
                         document.getElementById('route-duration').textContent = route.duration.text;
                         document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";

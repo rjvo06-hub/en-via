@@ -41,7 +41,7 @@
                 <span>Nueva Solicitud y Coordenadas</span>
                 <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">Panel Operativo</span>
             </h2>
-            <p class="text-xs text-slate-500 mb-4" id="modoInstruccion">👇 Haz clic en el mapa para fijar el <strong class="text-blue-600">Punto de Origen</strong>.</p>
+            <p class="text-xs text-slate-500 mb-4" id="modoInstruccion">Escribe la dirección o haz clic en el mapa para fijar el <strong class="text-blue-600">Punto de Origen</strong>.</p>
             
             <form id="formCarrera" class="space-y-3.5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -55,16 +55,22 @@
                     </div>
                 </div>
 
-                <!-- Punto de Origen -->
+                <!-- Punto de Origen con botón de búsqueda directa -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
-                    <input type="text" id="origen" required readonly placeholder="Selecciona en el mapa..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 cursor-pointer">
+                    <div class="flex gap-2">
+                        <input type="text" id="origen" placeholder="Ej: Galerías Mall, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                        <button type="button" onclick="buscarTextoOrigen()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 rounded-xl text-xs font-semibold transition">Buscar</button>
+                    </div>
                 </div>
 
-                <!-- Destino -->
+                <!-- Destino con botón de búsqueda directa -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
-                    <input type="text" id="destino" required readonly placeholder="Se selecciona al hacer el 2do clic..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 cursor-pointer">
+                    <div class="flex gap-2">
+                        <input type="text" id="destino" placeholder="Ej: CC Sambil, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                        <button type="button" onclick="buscarTextoDestino()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 rounded-xl text-xs font-semibold transition">Buscar</button>
+                    </div>
                 </div>
 
                 <!-- Mapa Interactivo Visual -->
@@ -79,17 +85,19 @@
                 <!-- Panel de Coordenadas y Código Postal en Tiempo Real -->
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs text-slate-600">
                     <div class="font-semibold text-slate-700 border-b border-slate-200 pb-1 flex justify-between">
-                        <span>📍 Estado de la Ruta</span>
-                        <span id="estadoGeo" class="text-blue-600 font-medium">Selecciona el Origen en el mapa</span>
+                        <span>📍 Estado de la Ruta y Código Postal</span>
+                        <span id="estadoGeo" class="text-blue-600 font-medium">Escribe o haz clic en el mapa</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 pt-1">
                         <div>
                             <span class="block text-[10px] uppercase text-slate-400 font-semibold">Origen (Lat, Lng):</span>
                             <span id="lblOrigenCoords" class="font-mono text-slate-800">-</span>
+                            <span id="lblOrigenPostal" class="block text-[10px] text-slate-500">CP: -</span>
                         </div>
                         <div>
                             <span class="block text-[10px] uppercase text-slate-400 font-semibold">Destino (Lat, Lng):</span>
                             <span id="lblDestinoCoords" class="font-mono text-slate-800">-</span>
+                            <span id="lblDestinoPostal" class="block text-[10px] text-slate-500">CP: -</span>
                         </div>
                     </div>
                 </div>
@@ -140,7 +148,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script de Integración con Mapa Interactivo y Cálculo Automático -->
+    <!-- Script de Integración con Búsqueda por Texto y Mapa -->
     <script>
         let origenCoords = null;
         let destinoCoords = null;
@@ -150,7 +158,6 @@
         let directionsService;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Inicializar Google Directions Service mediante API de Google cargada
             const checkGoogleMaps = setInterval(() => {
                 if (typeof google !== 'undefined' && google.maps) {
                     clearInterval(checkGoogleMaps);
@@ -166,48 +173,36 @@
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
-            // Manejo de clics en el mapa: 1er clic = Origen, 2do clic = Destino
+            // Clic en el mapa (Mantiene la selección visual si prefieres mapa)
             map.on('click', async (e) => {
                 const lat = e.latlng.lat;
                 const lon = e.latlng.lng;
 
                 if (!origenCoords) {
-                    // Fijar Origen
                     origenCoords = { lat: lat, lng: lon };
                     if (markerOrigen) map.removeLayer(markerOrigen);
-                    markerOrigen = L.marker([lat, lon], {title: "Origen"}).addTo(map);
-                    markerOrigen.bindPopup("<b>Origen</b>").openPopup();
-
+                    markerOrigen = L.marker([lat, lon]).addTo(map);
+                    
+                    const data = await obtenerDatosPorCoordenadas(lat, lon);
+                    document.getElementById('origen').value = data.fullAddress;
                     document.getElementById('lblOrigenCoords').textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-                    document.getElementById('origen').value = "Obteniendo dirección...";
-                    document.getElementById('modoInstruccion').innerHTML = '👇 Haz clic en el mapa para fijar el <strong class="text-emerald-600">Punto de Destino</strong>.';
-                    document.getElementById('estadoGeo').textContent = "Selecciona el Destino";
-
-                    const direccion = await obtenerDireccionNominatim(lat, lon);
-                    document.getElementById('origen').value = direccion;
-
+                    document.getElementById('lblOrigenPostal').textContent = `CP: ${data.postcode}`;
+                    document.getElementById('modoInstruccion').innerHTML = '👇 Ahora busca o haz clic en el mapa para el <strong class="text-emerald-600">Destino</strong>.';
                 } else if (!destinoCoords) {
-                    // Fijar Destino
                     destinoCoords = { lat: lat, lng: lon };
                     if (markerDestino) map.removeLayer(markerDestino);
-                    markerDestino = L.marker([lat, lon], {title: "Destino"}).addTo(map);
-                    markerDestino.bindPopup("<b>Destino</b>").openPopup();
+                    markerDestino = L.marker([lat, lon]).addTo(map);
 
+                    const data = await obtenerDatosPorCoordenadas(lat, lon);
+                    document.getElementById('destino').value = data.fullAddress;
                     document.getElementById('lblDestinoCoords').textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-                    document.getElementById('destino').value = "Obteniendo dirección...";
-                    document.getElementById('modoInstruccion').innerHTML = '✅ Ruta completa fijada. Puedes publicar el servicio.';
-                    document.getElementById('estadoGeo').textContent = "¡Ruta calculada con éxito!";
-                    document.getElementById('estadoGeo').className = "text-emerald-600 font-semibold";
-
-                    const direccion = await obtenerDireccionNominatim(lat, lon);
-                    document.getElementById('destino').value = direccion;
-
-                    // Calcular Distancia y Precio automáticamente
+                    document.getElementById('lblDestinoPostal').textContent = `CP: ${data.postcode}`;
+                    document.getElementById('estadoGeo').textContent = "¡Ruta completa!";
+                    
                     calcularRutaYPrecio();
                 }
             });
 
-            // Hora actual por defecto
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -215,31 +210,101 @@
             if (inputHora) inputHora.value = `${hours}:${minutes}`;
         });
 
-        // Función auxiliar para obtener la dirección mediante Nominatim (igual que geo-bridge)[cite: 9]
-        async function obtenerDireccionNominatim(lat, lon) {
-            try {
-                const apiUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
-                const response = await fetch(apiUrl, {
-                    headers: { 'Accept-Language': 'es' }
-                });
-                if (!response.ok) throw new Error();
-                const data = await response.json();
-                const address = data.address || {};
-                const street = address.road || address.pedestrian || address.street || address.footway || 'Ubicación';
-                const houseNumber = address.house_number || '';
-                const postcode = address.postcode ? ` (CP: ${address.postcode})` : '';
+        // 1. Búsqueda por texto directo para el ORIGEN (Exactamente como tu geo-bridge)
+        async function buscarTextoOrigen() {
+            const query = document.getElementById('origen').value.trim();
+            if (!query) return alert('Escribe una dirección de origen.');
 
-                let fullAddress = street;
-                if (houseNumber && houseNumber !== 'S/N') {
-                    fullAddress += ` #${houseNumber}`;
-                }
-                return `${fullAddress.trim()}${postcode}`;
-            } catch (err) {
-                return `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+            const data = await buscarDireccionNominatimTexto(query);
+            if (data) {
+                origenCoords = { lat: data.lat, lng: data.lon };
+                if (markerOrigen) map.removeLayer(markerOrigen);
+                markerOrigen = L.marker([data.lat, data.lon]).addTo(map);
+                map.setView([data.lat, data.lon], 15);
+
+                document.getElementById('origen').value = data.fullAddress;
+                document.getElementById('lblOrigenCoords').textContent = `${data.lat.toFixed(5)}, ${data.lon.toFixed(5)}`;
+                document.getElementById('lblOrigenPostal').textContent = `CP: ${data.postcode}`;
+                
+                if (destinoCoords) calcularRutaYPrecio();
+            } else {
+                alert('No se encontró el origen especificado.');
             }
         }
 
-        // Cálculo de Distancia y Precio usando DirectionsService de Google Maps
+        // 2. Búsqueda por texto directo para el DESTINO
+        async function buscarTextoDestino() {
+            const query = document.getElementById('destino').value.trim();
+            if (!query) return alert('Escribe una dirección de destino.');
+
+            const data = await buscarDireccionNominatimTexto(query);
+            if (data) {
+                destinoCoords = { lat: data.lat, lng: data.lon };
+                if (markerDestino) map.removeLayer(markerDestino);
+                markerDestino = L.marker([data.lat, data.lon]).addTo(map);
+                map.setView([data.lat, data.lon], 15);
+
+                document.getElementById('destino').value = data.fullAddress;
+                document.getElementById('lblDestinoCoords').textContent = `${data.lat.toFixed(5)}, ${data.lon.toFixed(5)}`;
+                document.getElementById('lblDestinoPostal').textContent = `CP: ${data.postcode}`;
+                
+                if (origenCoords) calcularRutaYPrecio();
+            } else {
+                alert('No se encontró el destino especificado.');
+            }
+        }
+
+        // Consultar texto usando Nominatim API
+        async function buscarDireccionNominatimTexto(query) {
+            try {
+                let searchTerm = query;
+                if (!searchTerm.toLowerCase().includes('maracaibo')) {
+                    searchTerm += ', Maracaibo, Zulia, Venezuela';
+                }
+                const apiUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(searchTerm)}&limit=1`;
+                const response = await fetch(apiUrl, { headers: { 'Accept-Language': 'es' } });
+                const results = await response.json();
+
+                if (results && results.length > 0) {
+                    const place = results[0];
+                    const address = place.address || {};
+                    const street = address.road || address.pedestrian || place.display_name.split(',')[0];
+                    const postcode = address.postcode || 'N/D';
+
+                    return {
+                        lat: parseFloat(place.lat),
+                        lon: parseFloat(place.lon),
+                        fullAddress: street,
+                        postcode: postcode
+                    };
+                }
+                return null;
+            } catch (err) {
+                console.error(err);
+                return null;
+            }
+        }
+
+        // Obtener datos por coordenadas (Clic en mapa)
+        async function obtenerDatosPorCoordenadas(lat, lon) {
+            try {
+                const apiUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+                const response = await fetch(apiUrl, { headers: { 'Accept-Language': 'es' } });
+                const data = await response.json();
+                const address = data.address || {};
+                const street = address.road || address.pedestrian || address.street || 'Ubicación';
+                const postcode = address.postcode || 'N/D';
+
+                return {
+                    fullAddress: street,
+                    postcode: postcode
+                };
+            } catch (err) {
+                return { fullAddress: `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, postcode: 'N/D' };
+            }
+        }
+
+        // Cálculo de ruta y precio automático con Google Maps
         function calcularRutaYPrecio() {
             if (!origenCoords || !destinoCoords || !directionsService) return;
 
@@ -263,13 +328,12 @@
                         
                         document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
 
-                        // Regla de cobro: $1 por kilómetro, mínimo $3
                         let precioCalculado = kmValor * 1.0; 
-                        if (precioCalculado < 3) {
-                            precioCalculado = 3.00;
-                        }
+                        if (precioCalculado < 3) precioCalculado = 3.00;
 
                         document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
+                        document.getElementById('estadoGeo').textContent = "¡Ruta y tarifa calculadas!";
+                        document.getElementById('estadoGeo').className = "text-emerald-600 font-semibold";
                     } else {
                         document.getElementById('distancia').value = "Error al calcular ruta";
                         document.getElementById('precio').value = "Error";
@@ -278,7 +342,6 @@
             );
         }
 
-        // Botón para reiniciar selección de puntos
         function reiniciarPuntos() {
             origenCoords = null;
             destinoCoords = null;
@@ -288,10 +351,12 @@
             document.getElementById('destino').value = "";
             document.getElementById('lblOrigenCoords').textContent = "-";
             document.getElementById('lblDestinoCoords').textContent = "-";
+            document.getElementById('lblOrigenPostal').textContent = "CP: -";
+            document.getElementById('lblDestinoPostal').textContent = "CP: -";
             document.getElementById('distancia').value = "";
             document.getElementById('precio').value = "";
-            document.getElementById('modoInstruccion').innerHTML = '👇 Haz clic en el mapa para fijar el <strong class="text-blue-600">Punto de Origen</strong>.';
-            document.getElementById('estadoGeo').textContent = "Selecciona el Origen";
+            document.getElementById('modoInstruccion').innerHTML = 'Escribe la dirección o haz clic en el mapa para fijar el <strong class="text-blue-600">Punto de Origen</strong>.';
+            document.getElementById('estadoGeo').textContent = "Escribe o haz clic en el mapa";
             document.getElementById('estadoGeo').className = "text-blue-600 font-medium";
         }
     </script>

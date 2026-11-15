@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Evitar zoom automático en móviles que desborda la interfaz -->
+    <!-- Prevenir zoom automático en móviles -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Panel de Rutas</title>
     <!-- Tailwind CSS para diseño limpio -->
@@ -10,19 +10,18 @@
     <!-- Google Maps API con Places y geometry -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
-        #map { height: 450px; width: 100%; }
+        #map { height: 400px; width: 100%; }
 
-        /* Forzar fuente a 16px en móviles previene el zoom automático del navegador */
         input {
             font-size: 16px !important;
         }
         @media (min-width: 640px) {
             input {
-                font-size: 0.8rem !important;
+                font-size: 0.85rem !important;
             }
         }
 
-        /* Estilo personalizado para la lista de sugerencias flotante expandida */
+        /* Lista de sugerencias flotante limpia y adaptada */
         .custom-suggestions-list {
             position: absolute;
             top: 100%;
@@ -35,7 +34,7 @@
             margin-top: 4px;
             max-height: 220px;
             overflow-y: auto;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.9);
         }
         .suggestion-item {
             padding: 10px 12px;
@@ -56,99 +55,106 @@
 </head>
 <body class="bg-black min-h-screen text-slate-100 antialiased overflow-x-hidden">
 
-    <div class="max-w-6xl mx-auto px-3 py-4 sm:py-8">
+    <div class="max-w-4xl mx-auto px-3 py-4 sm:py-8">
         <header class="mb-4 text-center">
             <h1 class="text-xl sm:text-2xl font-extrabold text-blue-500 tracking-tight">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-400 text-xs mt-1">Selecciona origen y destino para trazar tu ruta automáticamente.</p>
+            <p class="text-slate-400 text-xs mt-1">Busca y selecciona tu origen y destino paso a paso.</p>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Panel de Controles -->
-            <div id="control-panel" class="bg-[#111111] border border-[#222222] p-3.5 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 lg:col-span-1">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Panel de Controles Unificado -->
+            <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-2xl space-y-4 flex flex-col justify-between">
                 
-                <!-- Origen -->
-                <div class="space-y-1 relative">
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dirección de Origen</label>
-                    <div class="relative">
-                        <input type="text" id="origen-input" placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-white outline-none transition" autocomplete="off">
-                        <div id="origen-suggestions" class="custom-suggestions-list hidden"></div>
+                <div class="space-y-4">
+                    <!-- Selector de Modo (Origen / Destino) -->
+                    <div class="flex bg-[#161616] p-1 rounded-xl border border-[#262626]">
+                        <button id="btn-mode-origin" onclick="setMode('origin')" class="flex-1 py-2 text-xs font-bold uppercase rounded-lg transition bg-blue-600 text-white shadow-sm cursor-pointer">
+                            1. Buscar Origen
+                        </button>
+                        <button id="btn-mode-dest" onclick="setMode('dest')" class="flex-1 py-2 text-xs font-bold uppercase rounded-lg transition text-slate-400 hover:text-white cursor-pointer">
+                            2. Buscar Destino
+                        </button>
                     </div>
-                    
-                    <div class="space-y-1 mt-1">
-                        <label class="block text-[9px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2.5 py-1 text-[11px] text-slate-300 font-medium" readonly>
-                    </div>
-                    
-                    <div class="p-2 bg-[#161616] rounded-lg border border-[#262626] text-[11px] text-slate-400 flex justify-between items-center">
-                        <div>
-                            <span class="font-bold text-slate-300">Lat:</span> <span id="origin-lat">-</span> | 
-                            <span class="font-bold text-slate-300">Lon:</span> <span id="origin-lon">-</span>
+
+                    <!-- Buscador Único Dinámico -->
+                    <div class="space-y-1 relative">
+                        <label id="search-label" class="block text-[10px] font-bold uppercase tracking-wider text-blue-400">Escribiendo Dirección de Origen...</label>
+                        <div class="relative">
+                            <input type="text" id="unified-input" placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-[#161616] border border-[#3b82f6] focus:border-blue-400 rounded-xl px-3 py-2.5 text-white outline-none transition" autocomplete="off">
+                            <div id="unified-suggestions" class="custom-suggestions-list hidden"></div>
                         </div>
-                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-blue-500/10 transition">Copiar</button>
+                    </div>
+
+                    <!-- Tarjetas de Resumen (Origen y Destino ya seleccionados) -->
+                    <div class="space-y-2 pt-2 border-t border-[#222222]">
+                        <!-- Origen Registrado -->
+                        <div class="p-2.5 bg-[#161616] rounded-xl border border-[#262626] space-y-1">
+                            <div class="flex justify-between items-center text-[10px] font-bold uppercase text-slate-400">
+                                <span>📍 Origen:</span>
+                                <span id="origin-status" class="text-amber-500 font-medium">Pendiente</span>
+                            </div>
+                            <input type="text" id="campo-libre-origen" placeholder="Sin seleccionar..." class="w-full bg-transparent text-xs text-slate-200 font-medium outline-none" readonly>
+                            <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-[#222222]">
+                                <div><span class="font-bold text-slate-300">Lat:</span> <span id="origin-lat">-</span> | <span class="font-bold text-slate-300">Lon:</span> <span id="origin-lon">-</span></div>
+                                <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-blue-500/10 transition">Copiar</button>
+                            </div>
+                        </div>
+
+                        <!-- Destino Registrado -->
+                        <div class="p-2.5 bg-[#161616] rounded-xl border border-[#262626] space-y-1">
+                            <div class="flex justify-between items-center text-[10px] font-bold uppercase text-slate-400">
+                                <span>🏁 Destino:</span>
+                                <span id="dest-status" class="text-amber-500 font-medium">Pendiente</span>
+                            </div>
+                            <input type="text" id="campo-libre-destino" placeholder="Sin seleccionar..." class="w-full bg-transparent text-xs text-slate-200 font-medium outline-none" readonly>
+                            <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-[#222222]">
+                                <div><span class="font-bold text-slate-300">Lat:</span> <span id="dest-lat">-</span> | <span class="font-bold text-slate-300">Lon:</span> <span id="dest-lon">-</span></div>
+                                <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-blue-500/10 transition">Copiar</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Destino -->
-                <div class="space-y-1 pt-2 border-t border-[#222222] relative">
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dirección de Destino</label>
-                    <div class="relative">
-                        <input type="text" id="destino-input" placeholder="Ej. Vereda del Lago..." class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-white outline-none transition" autocomplete="off">
-                        <div id="destino-suggestions" class="custom-suggestions-list hidden"></div>
-                    </div>
-                    
-                    <div class="space-y-1 mt-1">
-                        <label class="block text-[9px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2.5 py-1 text-[11px] text-slate-300 font-medium" readonly>
-                    </div>
-                    
-                    <div class="p-2 bg-[#161616] rounded-lg border border-[#262626] text-[11px] text-slate-400 flex justify-between items-center">
-                        <div>
-                            <span class="font-bold text-slate-300">Lat:</span> <span id="dest-lat">-</span> | 
-                            <span class="font-bold text-slate-300">Lon:</span> <span id="dest-lon">-</span>
-                        </div>
-                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-blue-500/10 transition">Copiar</button>
-                    </div>
-                </div>
-
-                <!-- Resumen de Ruta -->
-                <div class="bg-[#161616] p-2.5 rounded-xl border border-[#262626] space-y-1 text-xs">
-                    <div class="flex justify-between">
+                <!-- Resumen de Ruta y Botón Google Maps -->
+                <div class="bg-[#161616] p-3 rounded-xl border border-[#262626] space-y-2 mt-3">
+                    <div class="flex justify-between text-xs">
                         <span class="text-slate-400">Distancia:</span>
                         <span id="route-distance" class="font-bold text-slate-200">-</span>
                     </div>
-                    <div class="flex justify-between">
+                    <div class="flex justify-between text-xs">
                         <span class="text-slate-400">Tiempo estimado:</span>
                         <span id="route-duration" class="font-bold text-slate-200">-</span>
                     </div>
+                    <div id="status-msg" class="text-slate-400 italic text-[11px] pt-1 border-t border-[#222222]">Selecciona origen y destino.</div>
+                    <a id="gmaps-link" href="#" target="_blank" class="hidden w-full text-center block px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition shadow-lg shadow-emerald-900/30 text-xs">
+                        Abrir ruta en Google Maps
+                    </a>
                 </div>
 
             </div>
 
             <!-- Panel del Mapa -->
-            <div class="bg-[#111111] border border-[#222222] p-3 sm:p-4 rounded-2xl shadow-2xl lg:col-span-2 flex flex-col justify-between">
-                <div class="rounded-xl overflow-hidden border border-[#262626] mb-3">
+            <div class="bg-[#111111] border border-[#222222] p-3 rounded-2xl shadow-2xl flex flex-col justify-between">
+                <div class="rounded-xl overflow-hidden border border-[#262626] h-full">
                     <div id="map"></div>
-                </div>
-                <div class="flex flex-wrap gap-3 justify-between items-center text-xs">
-                    <div id="status-msg" class="text-slate-400 italic">Selecciona origen y destino para trazar la ruta.</div>
-                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition shadow-lg shadow-emerald-900/30">
-                        Abrir en Google Maps
-                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script principal -->
+    <!-- Script de Control Unificado -->
     <script>
         let map;
         let directionsService;
         let directionsRenderer;
+        let autocompleteService;
+        let placesService;
         let originMarker = null;
         let destMarker = null;
         let origenCoords = null;
         let destCoords = null;
-
+        
+        let currentMode = 'origin'; // 'origin' o 'dest'
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
         window.addEventListener('load', () => {
@@ -165,17 +171,43 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
+                    autocompleteService = new google.maps.places.AutocompleteService();
+                    placesService = new google.maps.places.PlacesService(map);
 
-                    setupModernAutocomplete('origen-input', 'origen-suggestions', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
-                    setupModernAutocomplete('destino-input', 'destino-suggestions', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
+                    setupUnifiedAutocomplete();
                 }
             }, 300);
         });
 
-        function setupModernAutocomplete(inputId, suggestionsId, campoLibreId, latId, lonId, btnCopyId, tipo) {
-            const input = document.getElementById(inputId);
-            const suggestionsBox = document.getElementById(suggestionsId);
-            const campoLibre = document.getElementById(campoLibreId);
+        function setMode(mode) {
+            currentMode = mode;
+            const btnOrigin = document.getElementById('btn-mode-origin');
+            const btnDest = document.getElementById('btn-mode-dest');
+            const searchLabel = document.getElementById('search-label');
+            const input = document.getElementById('unified-input');
+
+            input.value = '';
+            document.getElementById('unified-suggestions').classList.add('hidden');
+
+            if (mode === 'origin') {
+                btnOrigin.className = "flex-1 py-2 text-xs font-bold uppercase rounded-lg transition bg-blue-600 text-white shadow-sm cursor-pointer";
+                btnDest.className = "flex-1 py-2 text-xs font-bold uppercase rounded-lg transition text-slate-400 hover:text-white cursor-pointer";
+                searchLabel.textContent = "Escribiendo Dirección de Origen...";
+                searchLabel.className = "block text-[10px] font-bold uppercase tracking-wider text-blue-400";
+                input.placeholder = "Ej. Centro Comercial Sambil...";
+            } else {
+                btnDest.className = "flex-1 py-2 text-xs font-bold uppercase rounded-lg transition bg-blue-600 text-white shadow-sm cursor-pointer";
+                btnOrigin.className = "flex-1 py-2 text-xs font-bold uppercase rounded-lg transition text-slate-400 hover:text-white cursor-pointer";
+                searchLabel.textContent = "Escribiendo Dirección de Destino...";
+                searchLabel.className = "block text-[10px] font-bold uppercase tracking-wider text-emerald-400";
+                input.placeholder = "Ej. Vereda del Lago...";
+            }
+            input.focus();
+        }
+
+        function setupUnifiedAutocomplete() {
+            const input = document.getElementById('unified-input');
+            const suggestionsBox = document.getElementById('unified-suggestions');
 
             let debounceTimer;
 
@@ -212,7 +244,7 @@
                                 div.textContent = placePrediction.text.toString();
                                 
                                 div.addEventListener('click', async () => {
-                                    input.value = placePrediction.text.toString();
+                                    input.value = '';
                                     suggestionsBox.classList.add('hidden');
                                     suggestionsBox.innerHTML = '';
 
@@ -224,18 +256,28 @@
                                         const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
                                         const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
                                         const direccionFinal = place.formattedAddress || place.displayName;
-
-                                        campoLibre.value = direccionFinal;
-                                        document.getElementById(latId).textContent = lat.toFixed(6);
-                                        document.getElementById(lonId).textContent = lng.toFixed(6);
-                                        document.getElementById(btnCopyId).classList.remove('hidden');
-
                                         const coords = { lat, lng };
-                                        if (tipo === 'origin') {
+
+                                        if (currentMode === 'origin') {
                                             origenCoords = coords;
+                                            document.getElementById('campo-libre-origen').value = direccionFinal;
+                                            document.getElementById('origin-lat').textContent = lat.toFixed(6);
+                                            document.getElementById('origin-lon').textContent = lng.toFixed(6);
+                                            document.getElementById('btn-copy-origin').classList.remove('hidden');
+                                            document.getElementById('origin-status').textContent = "Listo";
+                                            document.getElementById('origin-status').className = "text-emerald-500 font-bold";
                                             updateMarker('origin', coords);
+
+                                            // Cambiar automáticamente a destino para facilitar el flujo
+                                            setMode('dest');
                                         } else {
                                             destCoords = coords;
+                                            document.getElementById('campo-libre-destino').value = direccionFinal;
+                                            document.getElementById('dest-lat').textContent = lat.toFixed(6);
+                                            document.getElementById('dest-lon').textContent = lng.toFixed(6);
+                                            document.getElementById('btn-copy-dest').classList.remove('hidden');
+                                            document.getElementById('dest-status').textContent = "Listo";
+                                            document.getElementById('dest-status').className = "text-emerald-500 font-bold";
                                             updateMarker('dest', coords);
                                         }
 
@@ -264,10 +306,10 @@
         function updateMarker(type, coord) {
             if (type === 'origin') {
                 if (originMarker) originMarker.setMap(null);
-                originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
+                originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen", icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" });
             } else {
                 if (destMarker) destMarker.setMap(null);
-                destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
+                destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino", icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png" });
             }
 
             if (origenCoords && destCoords) {
@@ -306,6 +348,8 @@
                         document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
                     }
                 });
+            } else {
+                document.getElementById('status-msg').textContent = "Falta seleccionar el destino.";
             }
         }
 

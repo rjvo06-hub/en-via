@@ -32,7 +32,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona la dirección en el buscador oficial y haz clic en extraer.</p>
+            <p class="text-slate-600 mt-1">Selecciona una opción del menú desplegable y se reflejará abajo automáticamente.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -43,18 +43,27 @@
                 <div class="space-y-2">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
                     
-                    <!-- Componente oficial seguro contra errores de Google Maps -->
+                    <!-- Componente oficial de Google (Buscador con opciones) -->
                     <gmp-place-autocomplete id="origen-autocomplete">
                         <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
+                    <!-- Campo duplicado y libre abajo para verificar el texto seleccionado -->
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto capturado del menú:</label>
+                        <input type="text" id="campo-libre-origen" placeholder="Aquí aparecerá lo que selecciones..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
+                    </div>
+
                     <button onclick="enviarAlExtractor('origen')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Origen
                     </button>
                     
-                    <div class="p-3 bg-slate-100 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
-                        <div><span class="font-bold">Seleccionado:</span> <span id="duplicado-origen" class="italic text-slate-500">Ninguno</span></div>
-                        <div><span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | <span class="font-bold">Lon:</span> <span id="origin-lon">-</span></div>
+                    <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | 
+                            <span class="font-bold">Lon:</span> <span id="origin-lon">-</span>
+                        </div>
+                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-600 hover:underline font-medium">Copiar</button>
                     </div>
                 </div>
 
@@ -62,18 +71,27 @@
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
                     
-                    <!-- Componente oficial seguro contra errores de Google Maps -->
+                    <!-- Componente oficial de Google (Buscador con opciones) -->
                     <gmp-place-autocomplete id="destino-autocomplete">
                         <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
+                    <!-- Campo duplicado y libre abajo para verificar el texto seleccionado -->
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto capturado del menú:</label>
+                        <input type="text" id="campo-libre-destino" placeholder="Aquí aparecerá lo que selecciones..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
+                    </div>
+
                     <button onclick="enviarAlExtractor('destino')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Destino
                     </button>
                     
-                    <div class="p-3 bg-slate-100 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
-                        <div><span class="font-bold">Seleccionado:</span> <span id="duplicado-destino" class="italic text-slate-500">Ninguno</span></div>
-                        <div><span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | <span class="font-bold">Lon:</span> <span id="dest-lon">-</span></div>
+                    <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | 
+                            <span class="font-bold">Lon:</span> <span id="dest-lon">-</span>
+                        </div>
+                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-600 hover:underline font-medium">Copiar</button>
                     </div>
                 </div>
 
@@ -97,13 +115,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Selecciona tu opción en el buscador y haz clic en extraer.
+                    Selecciona una opción del menú desplegable y verás cómo se refleja abajo de inmediato.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script de control con lectura profunda del componente web -->
+    <!-- Script de sincronización con el menú desplegable -->
     <script>
         let map;
         let directionsService;
@@ -122,18 +140,18 @@
                 const res = JSON.parse(datosRegresados);
                 if (res && res.tipo === 'origen') {
                     setAutocompleteValue('origen-autocomplete', res.direccion);
-                    document.getElementById('duplicado-origen').textContent = res.direccion;
-                    document.getElementById('duplicado-origen').className = "font-medium text-slate-900";
+                    document.getElementById('campo-libre-origen').value = res.direccion;
                     document.getElementById('origin-lat').textContent = res.lat;
                     document.getElementById('origin-lon').textContent = res.lng;
+                    document.getElementById('btn-copy-origin').classList.remove('hidden');
                     origenCoords = { lat: parseFloat(res.lat), lng: parseFloat(res.lng) };
                     updateMarker('origin', origenCoords);
                 } else if (res && res.tipo === 'destino') {
                     setAutocompleteValue('destino-autocomplete', res.direccion);
-                    document.getElementById('duplicado-destino').textContent = res.direccion;
-                    document.getElementById('duplicado-destino').className = "font-medium text-slate-900";
+                    document.getElementById('campo-libre-destino').value = res.direccion;
                     document.getElementById('dest-lat').textContent = res.lat;
                     document.getElementById('dest-lon').textContent = res.lng;
+                    document.getElementById('btn-copy-dest').classList.remove('hidden');
                     destCoords = { lat: parseFloat(res.lat), lng: parseFloat(res.lng) };
                     updateMarker('dest', destCoords);
                 }
@@ -154,45 +172,63 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
+
+                    // 2. Escuchar cuando el usuario hace clic en una opción del menú desplegable de Google
+                    configurarCapturaMenu('origen-autocomplete', 'campo-libre-origen');
+                    configurarCapturaMenu('destino-autocomplete', 'campo-libre-destino');
                 }
             }, 300);
         });
 
-        // Función para rellenar el componente de Google al regresar
+        // Capturar el evento exacto del menú desplegable de Google Maps
+        function configurarCapturaMenu(autocompleteId, campoLibreId) {
+            const autocompleteEl = document.getElementById(autocompleteId);
+            const campoLibreEl = document.getElementById(campoLibreId);
+
+            if (autocompleteEl) {
+                autocompleteEl.addEventListener('gmp-placeselect', async (e) => {
+                    const place = e.detail.place;
+                    if (place) {
+                        if (typeof place.fetchFields === 'function') {
+                            await place.fetchFields({ fields: ['displayName', 'formattedAddress'] });
+                        }
+                        const textoSeleccionado = place.displayName || place.formattedAddress || autocompleteEl.querySelector('input').value;
+                        
+                        // Mostrarlo inmediatamente en el campo libre de abajo
+                        campoLibreEl.value = textoSeleccionado;
+                    }
+                });
+            }
+        }
+
         function setAutocompleteValue(containerId, text) {
             const container = document.getElementById(containerId);
             if (container) {
                 const input = container.querySelector('input');
-                if (input) {
-                    input.value = text;
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                }
+                if (input) input.value = text;
             }
         }
 
-        // 2. Función infalible que extrae el texto del componente web moderno de Google
+        // 3. Función que envía el texto capturado al extractor con total seguridad
         function enviarAlExtractor(tipo) {
-            const containerId = tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete';
-            const duplicadoId = tipo === 'origen' ? 'duplicado-origen' : 'duplicado-destino';
-            const container = document.getElementById(containerId);
+            const campoLibreId = tipo === 'origen' ? 'campo-libre-origen' : 'campo-libre-destino';
+            const autocompleteId = tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete';
             
-            let direccion = "";
-            if (container) {
-                const input = container.querySelector('input');
-                if (input) {
-                    direccion = input.value.trim();
+            let direccion = document.getElementById(campoLibreId).value.trim();
+
+            // Si por alguna razón no hizo clic en el menú pero escribió algo directo, intentamos rescatarlo
+            if (!direccion) {
+                const container = document.getElementById(autocompleteId);
+                if (container) {
+                    const input = container.querySelector('input');
+                    if (input) direccion = input.value.trim();
                 }
             }
 
             if (!direccion) {
-                alert("Por favor escribe o selecciona una dirección primero.");
+                alert("Por favor selecciona una opción del menú desplegable primero.");
                 return;
             }
-
-            // Mostrar duplicado visual abajo
-            const dupEl = document.getElementById(duplicadoId);
-            dupEl.textContent = direccion;
-            dupEl.className = "font-medium text-slate-900";
 
             // Guardar objetivo y viajar al geo-extractor.html
             localStorage.setItem('en_via_objetivo', JSON.stringify({ direccion, tipo }));
@@ -235,6 +271,17 @@
                     }
                 });
             }
+        }
+
+        function copyCoords(type) {
+            const lat = document.getElementById(`${type}-lat`).textContent;
+            const lon = document.getElementById(`${type}-lon`).textContent;
+            navigator.clipboard.writeText(`${lat}, ${lon}`).then(() => {
+                const btn = document.getElementById(`btn-copy-${type}`);
+                const originalText = btn.textContent;
+                btn.textContent = "¡Copiado!";
+                setTimeout(() => { btn.textContent = originalText; }, 2000);
+            });
         }
     </script>
 </body>

@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EN-VIA - Panel de Rutas</title>
-    <!-- Tailwind CSS para diseño limpio -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API con Places (New) y Geometry -->
+    <!-- Google Maps API con Places y Geometry -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <!-- SDK de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -15,20 +15,27 @@
     
     <style>
         #map { height: 450px; width: 100%; }
-        gmp-place-autocomplete { width: 100%; }
-        gmp-place-autocomplete input {
-            width: 100%;
-            background-color: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: #1e293b;
-            outline: none;
-        }
-        gmp-place-autocomplete input:focus {
+        .pac-container {
             background-color: #ffffff;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            font-family: inherit;
+            border-radius: 0.75rem;
+            margin-top: 4px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #cbd5e1;
+            z-index: 999999;
+        }
+        .pac-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            color: #1e293b;
+            border-top: 1px solid #f1f5f9;
+        }
+        .pac-item:hover {
+            background-color: #f8fafc;
+        }
+        .pac-matched {
+            font-weight: 600;
+            color: #2563eb;
         }
     </style>
 </head>
@@ -47,9 +54,8 @@
                 <!-- Origen -->
                 <div class="space-y-2">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
-                    <gmp-place-autocomplete id="origen-autocomplete">
-                        <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
-                    </gmp-place-autocomplete>
+                    <input type="text" id="origen-input" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off"
+                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition">
                     
                     <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
@@ -62,9 +68,8 @@
                 <!-- Destino -->
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
-                    <gmp-place-autocomplete id="destino-autocomplete">
-                        <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
-                    </gmp-place-autocomplete>
+                    <input type="text" id="destino-input" placeholder="Ej. Vereda del Lago..." autocomplete="off"
+                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition">
                     
                     <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
@@ -121,6 +126,13 @@
 
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
+        const maracaiboBounds = {
+            north: 10.8500,
+            south: 10.4500,
+            west: -71.8500,
+            east: -71.4000
+        };
+
         window.addEventListener('load', () => {
             const checkMapsInterval = setInterval(() => {
                 if (typeof google !== 'undefined' && google.maps) {
@@ -139,54 +151,49 @@
                         suppressMarkers: false 
                     });
 
-                    // Inicializamos los componentes de autocompletado con sesgo y restricciones hacia Maracaibo / Venezuela
-                    configurarLugarRestringido('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
-                    configurarLugarRestringido('destino-autocomplete', 'dest-lat', 'dest-lon', 'dest');
+                    configurarAutocomplete('origen-input', 'origin-lat', 'origin-lon', 'origin');
+                    configurarAutocomplete('destino-input', 'dest-lat', 'dest-lon', 'dest');
                 }
             }, 300);
         });
 
-        function configurarLugarRestringido(autocompleteId, latId, lonId, tipo) {
-            const autocompleteEl = document.getElementById(autocompleteId);
+        function configurarAutocomplete(inputId, latId, lonId, tipo) {
+            const inputElement = document.getElementById(inputId);
 
-            if (autocompleteEl) {
-                // Configuramos restricciones geográficas para priorizar Maracaibo / Venezuela
-                autocompleteEl.options = {
-                    componentRestrictions: { country: 've' },
-                    locationBias: { 
-                        center: maracaiboCenter, 
-                        radius: 50000 // Sesgo de 50 km alrededor de Maracaibo para priorizar cercanía
-                    }
-                };
+            const options = {
+                bounds: maracaiboBounds,
+                strictBounds: false,
+                componentRestrictions: { country: 've' },
+                fields: ['geometry', 'name', 'formatted_address']
+            };
 
-                autocompleteEl.addEventListener('gmp-select', async ({ placePrediction }) => {
-                    if (!placePrediction) return;
+            const autocomplete = new google.maps.places.Autocomplete(inputElement, options);
+            autocomplete.bindTo('bounds', map);
 
-                    const place = placePrediction.toPlace();
-                    await place.fetchFields({ fields: ['location'] });
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
 
-                    const location = place.location;
+                if (!place.geometry || !place.geometry.location) {
+                    return;
+                }
 
-                    if (location) {
-                        const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
-                        const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+                const lat = place.geometry.location.lat();
+                const lng = place.geometry.location.lng();
 
-                        document.getElementById(latId).textContent = lat.toFixed(6);
-                        document.getElementById(lonId).textContent = lng.toFixed(6);
+                document.getElementById(latId).textContent = lat.toFixed(6);
+                document.getElementById(lonId).textContent = lng.toFixed(6);
 
-                        const coords = { lat, lng };
-                        if (tipo === 'origin') {
-                            origenCoords = coords;
-                            updateMarker('origin', coords);
-                        } else {
-                            destCoords = coords;
-                            updateMarker('dest', coords);
-                        }
+                const coords = { lat, lng };
+                if (tipo === 'origin') {
+                    origenCoords = coords;
+                    updateMarker('origin', coords);
+                } else {
+                    destCoords = coords;
+                    updateMarker('dest', coords);
+                }
 
-                        verificarYCalcularRuta();
-                    }
-                });
-            }
+                verificarYCalcularRuta();
+            });
         }
 
         function updateMarker(type, coord) {
@@ -239,6 +246,7 @@
                         gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
                         gmapsLink.classList.remove('hidden');
 
+                        // Habilitar botón de guardar
                         rutaCalculada = true;
                         const btnGuardar = document.getElementById('btn-guardar');
                         btnGuardar.disabled = false;
@@ -257,8 +265,8 @@
             btnGuardar.disabled = true;
             btnGuardar.textContent = "Guardando...";
 
-            const origenDir = document.getElementById('origen-autocomplete').querySelector('input').value;
-            const destinoDir = document.getElementById('destino-autocomplete').querySelector('input').value;
+            const origenDir = document.getElementById('origen-input').value;
+            const destinoDir = document.getElementById('destino-input').value;
             const distancia = document.getElementById('route-distance').textContent;
             const duracion = document.getElementById('route-duration').textContent;
 
@@ -282,6 +290,7 @@
                 alert('Hubo un error al guardar la ruta: ' + error.message);
                 btnGuardar.disabled = false;
                 btnGuardar.textContent = "Guardar Ruta en Base de Datos";
+                btnGuardar.className = "w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-sm cursor-pointer";
             } else {
                 alert('¡Ruta guardada exitosamente en la base de datos!');
                 btnGuardar.textContent = "¡Guardado con éxito!";

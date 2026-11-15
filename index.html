@@ -75,15 +75,15 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Distancia (Automática)</label>
-                        <!-- Campo bloqueado -->
-                        <input type="text" id="distancia" readonly placeholder="Calculando..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-slate-600 font-medium cursor-not-allowed">
+                        <!-- Campo bloqueado y limpio al inicio -->
+                        <input type="text" id="distancia" readonly placeholder="Pendiente..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-slate-600 font-medium cursor-not-allowed">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Precio Acordado ($ - Automático)</label>
-                    <!-- Campo bloqueado -->
-                    <input type="text" id="precio" readonly placeholder="Calculando..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-emerald-700 font-bold cursor-not-allowed">
+                    <!-- Campo bloqueado y limpio al inicio -->
+                    <input type="text" id="precio" readonly placeholder="Pendiente..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-emerald-700 font-bold cursor-not-allowed">
                 </div>
 
                 <div>
@@ -116,7 +116,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script de Captura Directa y Cálculo Automático de Distancia -->
+    <!-- Script de Captura por gmp-placeselect y Cálculo Automático -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -141,48 +141,44 @@
                     };
 
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
-                    const inputOrigen = document.getElementById('origen');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
-                    const inputDestino = document.getElementById('destino');
 
-                    // 1. Capturar Origen por Autocompletado
+                    // 1. Evento cuando el usuario selecciona el Origen en el componente web
                     if (origenAutocomplete) {
                         origenAutocomplete.locationRestriction = maracaiboBounds;
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
                             await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
+                            
                             if (place.location) {
-                                origenCoords = { lat: place.location.lat(), lng: place.location.lng() };
+                                origenCoords = {
+                                    lat: place.location.lat(),
+                                    lng: place.location.lng()
+                                };
+                                console.log("📍 Origen Lat/Lng capturado:", origenCoords);
                             }
-                            if (inputOrigen) {
-                                inputOrigen.value = place.formattedAddress || place.displayName || '';
-                            }
-                            verificarYCalcularRuta();
+                            
+                            intentarCalcularDistancia();
                         });
                     }
 
-                    // 2. Capturar Destino por Autocompletado
+                    // 2. Evento cuando el usuario selecciona el Destino en el componente web
                     if (destinoAutocomplete) {
                         destinoAutocomplete.locationRestriction = maracaiboBounds;
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
                             await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
+                            
                             if (place.location) {
-                                destinoCoords = { lat: place.location.lat(), lng: place.location.lng() };
+                                destinoCoords = {
+                                    lat: place.location.lat(),
+                                    lng: place.location.lng()
+                                };
+                                console.log("📍 Destino Lat/Lng capturado:", destinoCoords);
                             }
-                            if (inputDestino) {
-                                inputDestino.value = place.formattedAddress || place.displayName || '';
-                            }
-                            verificarYCalcularRuta();
+                            
+                            intentarCalcularDistancia();
                         });
-                    }
-
-                    // Eventos de respaldo (blur / change) por si escriben y salen del campo
-                    if (inputOrigen) {
-                        inputOrigen.addEventListener('blur', verificarYCalcularRuta);
-                    }
-                    if (inputDestino) {
-                        inputDestino.addEventListener('blur', verificarYCalcularRuta);
                     }
 
                     // Hora actual por defecto
@@ -192,7 +188,7 @@
                     const inputHora = document.getElementById('hora');
                     if (inputHora) inputHora.value = `${hours}:${minutes}`;
 
-                    console.log("✅ Sistema de cálculo automático bloqueado listo.");
+                    console.log("✅ Sistema de captura por gmp-placeselect activo.");
                 }
             }, 300);
 
@@ -201,26 +197,25 @@
             }, 8000);
         });
 
-        // Función central para calcular la distancia y bloquear/llenar los campos
-        function verificarYCalcularRuta() {
-            const origenVal = document.getElementById('origen').value.trim();
-            const destinoVal = document.getElementById('destino').value.trim();
-
-            // Si falta alguno de los dos campos, limpiar y salir
-            if (!origenVal || !destinoVal || origenVal.length < 3 || destinoVal.length < 3) {
+        // Función que verifica si ya tenemos ambas coordenadas y calcula la distancia real
+        function intentarCalcularDistancia() {
+            if (!origenCoords || !destinoCoords) {
+                console.log("⏳ Faltan coordenadas. Origen:", origenCoords, "| Destino:", destinoCoords);
                 return;
             }
 
-            // Usar coordenadas exactas si están disponibles, de lo contrario usar el texto de los inputs
-            const origenParam = origenCoords ? new google.maps.LatLng(origenCoords.lat, origenCoords.lng) : origenVal;
-            const destinoParam = destinoCoords ? new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng) : destinoVal;
+            document.getElementById('distancia').value = "Calculando...";
+            document.getElementById('precio').value = "Calculando...";
 
-            console.log("🚀 Solicitando cálculo de ruta entre:", origenVal, "y", destinoVal);
+            const origenLatLng = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
+            const destinoLatLng = new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng);
+
+            console.log("🚀 Solicitando cálculo de ruta a DirectionsService con Lat/Lng exactos...");
 
             directionsService.route(
                 {
-                    origin: origenParam,
-                    destination: destinoParam,
+                    origin: origenLatLng,
+                    destination: destinoLatLng,
                     travelMode: google.maps.TravelMode.DRIVING
                 },
                 (response, status) => {
@@ -230,7 +225,7 @@
                         const distanciaMetros = route.distance.value;
                         const kmValor = distanciaMetros / 1000;
                         
-                        // Rellenar campo de distancia bloqueado
+                        // Rellenar distancia
                         document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
 
                         // Regla de cobro: $1 por kilómetro, mínimo $3
@@ -239,11 +234,13 @@
                             precioCalculado = 3.00;
                         }
 
-                        // Rellenar campo de precio bloqueado
+                        // Rellenar precio
                         document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
-                        console.log(`✅ Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
+                        console.log(`✅ ¡Cálculo exitoso! Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
                     } else {
-                        console.warn("⚠️ No se pudo calcular la ruta con DirectionsService:", status);
+                        console.error("❌ Error al calcular la ruta en DirectionsService:", status);
+                        document.getElementById('distancia').value = "Error al calcular";
+                        document.getElementById('precio').value = "Error";
                     }
                 }
             );

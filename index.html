@@ -56,9 +56,9 @@
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
                     <gmp-place-autocomplete id="origen-autocomplete" class="block w-full">
-                        <input type="text" id="origen" required placeholder="Ej. Conjunto Residencial, Galerías..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                        <input type="text" id="origen" required placeholder="Ej. Galerías Mall, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                     </gmp-place-autocomplete>
-                    <p class="text-[10px] text-slate-400 mt-1">Escribe la dirección, conjunto o lugar y presiona Enter o sal del campo.</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Selecciona una opción del menú desplegable de Google.</p>
                 </div>
 
                 <!-- Destino -->
@@ -67,14 +67,14 @@
                     <gmp-place-autocomplete id="destino-autocomplete" class="block w-full">
                         <input type="text" id="destino" required placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                     </gmp-place-autocomplete>
-                    <p class="text-[10px] text-slate-400 mt-1">Escribe el destino y presiona Enter o sal del campo.</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Selecciona una opción del menú desplegable de Google.</p>
                 </div>
 
-                <!-- Visualización de Coordenadas y Código Postal Capturados -->
+                <!-- Visualización en tiempo real de Coordenadas -->
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs text-slate-600">
                     <div class="font-semibold text-slate-700 border-b border-slate-200 pb-1 flex justify-between">
-                        <span>📍 Información de Localización Geográfica</span>
-                        <span id="estadoGeo" class="text-blue-600 font-medium">Esperando datos...</span>
+                        <span>📍 Coordenadas Detectadas al Seleccionar</span>
+                        <span id="estadoGeo" class="text-amber-600 font-medium">Esperando selección...</span>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                         <div>
@@ -134,7 +134,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script Integrado con Geocoding API, Extracción de Código Postal y Cálculo de Distancias -->
+    <!-- Script Corregido para Captura Instantánea de Coordenadas desde gmp-place-autocomplete -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -153,45 +153,21 @@
                     directionsService = new google.maps.DirectionsService();
                     geocoder = new google.maps.Geocoder();
 
-                    const maracaiboBounds = {
-                        north: 10.7500,
-                        south: 10.5800,
-                        east: -71.5500,
-                        west: -71.7200
-                    };
-
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
-                    const inputOrigen = document.getElementById('origen');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
-                    const inputDestino = document.getElementById('destino');
 
-                    // Asignar restricciones geográficas a los componentes
-                    if (origenAutocomplete) origenAutocomplete.locationRestriction = maracaiboBounds;
-                    if (destinoAutocomplete) destinoAutocomplete.locationRestriction = maracaiboBounds;
-
-                    // 1. Capturar Origen (Autocomplete web component)
+                    // 1. Captura directa de Origen al hacer clic en una opción del menú desplegable
                     if (origenAutocomplete) {
-                        origenAutocomplete.addEventListener('place_changed', async () => {
-                            const place = origenAutocomplete.place;
-                            if (place && place.geometry && place.geometry.location) {
-                                origenCoords = {
-                                    lat: place.geometry.location.lat(),
-                                    lng: place.geometry.location.lng()
-                                };
-                                actualizarVisualizadorCoords();
-                                intentarCalcularDistancia();
-                            }
-                        });
-
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
                             if (place) {
-                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName', 'address_components'] });
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
                                 if (place.location) {
                                     origenCoords = {
                                         lat: place.location.lat(),
                                         lng: place.location.lng()
                                     };
+                                    console.log("📍 Origen capturado desde menú:", origenCoords);
                                     actualizarVisualizadorCoords();
                                     intentarCalcularDistancia();
                                 }
@@ -199,29 +175,18 @@
                         });
                     }
 
-                    // 2. Capturar Destino (Autocomplete web component)
+                    // 2. Captura directa de Destino al hacer clic en una opción del menú desplegable
                     if (destinoAutocomplete) {
-                        destinoAutocomplete.addEventListener('place_changed', async () => {
-                            const place = destinoAutocomplete.place;
-                            if (place && place.geometry && place.geometry.location) {
-                                destinoCoords = {
-                                    lat: place.geometry.location.lat(),
-                                    lng: place.geometry.location.lng()
-                                };
-                                actualizarVisualizadorCoords();
-                                intentarCalcularDistancia();
-                            }
-                        });
-
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
                             const place = event.detail.place;
                             if (place) {
-                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName', 'address_components'] });
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
                                 if (place.location) {
                                     destinoCoords = {
                                         lat: place.location.lat(),
                                         lng: place.location.lng()
                                     };
+                                    console.log("📍 Destino capturado desde menú:", destinoCoords);
                                     actualizarVisualizadorCoords();
                                     intentarCalcularDistancia();
                                 }
@@ -229,68 +194,20 @@
                         });
                     }
 
-                    // --- INTEGRACIÓN DE GEOCODING API CON CÓDIGO POSTAL Y BÚSQUEDA LIBRE ---
-                    
-                    function resolverConGeocoder(inputElement, esOrigen) {
-                        const query = inputElement.value.trim();
-                        if (!query || query.length < 3) return;
+                    // Respaldo por Geocoder en caso de que escriban y presionen Enter o salgan del campo sin tocar la lista
+                    const inputOrigen = document.getElementById('origen');
+                    const inputDestino = document.getElementById('destino');
 
-                        let searchAddress = query;
-                        if (!searchAddress.toLowerCase().includes('maracaibo')) {
-                            searchAddress = `${searchAddress}, Maracaibo, Zulia, Venezuela`;
-                        }
-
-                        console.log(`🔍 Consultando Geocoding API para: "${searchAddress}"`);
-
-                        geocoder.geocode({
-                            address: searchAddress,
-                            componentRestrictions: { country: 'VE' }
-                        }, (results, status) => {
-                            if (status === 'OK' && results && results[0]) {
-                                const result = results[0];
-                                const location = result.geometry.location;
-                                const coords = {
-                                    lat: location.lat(),
-                                    lng: location.lng()
-                                };
-
-                                // Extraer código postal de la respuesta de Google
-                                let codigoPostal = "";
-                                for (const component of result.address_components) {
-                                    if (component.types.includes('postal_code')) {
-                                        codigoPostal = component.long_name;
-                                        break;
-                                    }
-                                }
-
-                                console.log(`📮 Código postal detectado: ${codigoPostal || "No asignado en esta zona"}`);
-
-                                if (esOrigen) {
-                                    origenCoords = coords;
-                                } else {
-                                    destinoCoords = coords;
-                                }
-
-                                actualizarVisualizadorCoords();
-                                intentarCalcularDistancia();
-                            } else {
-                                console.warn("⚠️ Geocoding no encontró resultados exactos para:", query);
-                            }
-                        });
-                    }
-
-                    // Eventos para disparar Geocoding API al presionar Enter o perder el foco
                     if (inputOrigen) {
                         inputOrigen.addEventListener('keydown', (e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
-                                resolverConGeocoder(inputOrigen, true);
-                                inputOrigen.blur();
+                                resolverPorTexto(inputOrigen.value, true);
                             }
                         });
                         inputOrigen.addEventListener('blur', () => {
-                            if (!origenCoords && inputOrigen.value.trim().length > 2) {
-                                resolverConGeocoder(inputOrigen, true);
+                            if (!origenCoords && inputOrigen.value.trim().length > 3) {
+                                resolverPorTexto(inputOrigen.value, true);
                             }
                         });
                     }
@@ -299,13 +216,12 @@
                         inputDestino.addEventListener('keydown', (e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
-                                resolverConGeocoder(inputDestino, false);
-                                inputDestino.blur();
+                                resolverPorTexto(inputDestino.value, false);
                             }
                         });
                         inputDestino.addEventListener('blur', () => {
-                            if (!destinoCoords && inputDestino.value.trim().length > 2) {
-                                resolverConGeocoder(inputDestino, false);
+                            if (!destinoCoords && inputDestino.value.trim().length > 3) {
+                                resolverPorTexto(inputDestino.value, false);
                             }
                         });
                     }
@@ -317,7 +233,7 @@
                     const inputHora = document.getElementById('hora');
                     if (inputHora) inputHora.value = `${hours}:${minutes}`;
 
-                    console.log("✅ Geocoding API, Código Postal y Places configurados correctamente.");
+                    console.log("✅ Componentes de autocompletado configurados correctamente.");
                 }
             }, 300);
 
@@ -326,7 +242,30 @@
             }, 8000);
         });
 
-        // 3. Actualizar la visualización de coordenadas en pantalla
+        // Función de respaldo por texto usando Geocoder
+        function resolverPorTexto(texto, esOrigen) {
+            let address = texto;
+            if (!address.toLowerCase().includes('maracaibo')) {
+                address = `${address}, Maracaibo, Zulia, Venezuela`;
+            }
+
+            geocoder.geocode({ address: address }, (results, status) => {
+                if (status === 'OK' && results && results[0]) {
+                    const loc = results[0].geometry.location;
+                    const coords = { lat: loc.lat(), lng: loc.lng() };
+
+                    if (esOrigen) {
+                        origenCoords = coords;
+                    } else {
+                        destinoCoords = coords;
+                    }
+                    actualizarVisualizadorCoords();
+                    intentarCalcularDistancia();
+                }
+            });
+        }
+
+        // Actualizar la interfaz visual de las coordenadas
         function actualizarVisualizadorCoords() {
             const estadoGeo = document.getElementById('estadoGeo');
             const lblOrigen = document.getElementById('lblOrigenCoords');
@@ -343,16 +282,14 @@
                 estadoGeo.textContent = "¡Coordenadas listas!";
                 estadoGeo.className = "text-emerald-600 font-semibold";
             } else {
-                estadoGeo.textContent = "Faltan puntos de ruta";
+                estadoGeo.textContent = "Falta un punto de ruta";
                 estadoGeo.className = "text-amber-600 font-medium";
             }
         }
 
-        // 4. Función de cálculo basada estrictamente en coordenadas lat/lng
+        // Cálculo de ruta y precio mediante coordenadas exactas
         function intentarCalcularDistancia() {
-            if (!origenCoords || !destinoCoords) {
-                return;
-            }
+            if (!origenCoords || !destinoCoords) return;
 
             document.getElementById('distancia').value = "Calculando...";
             document.getElementById('precio').value = "Calculando...";
@@ -369,24 +306,19 @@
                 (response, status) => {
                     if (status === 'OK') {
                         const route = response.routes[0].legs[0];
-                        
                         const distanciaMetros = route.distance.value;
                         const kmValor = distanciaMetros / 1000;
                         
-                        // Rellenar campo de distancia bloqueado
                         document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
 
-                        // Regla de cobro: $1 por kilómetro, mínimo $3
                         let precioCalculado = kmValor * 1.0; 
                         if (precioCalculado < 3) {
                             precioCalculado = 3.00;
                         }
 
-                        // Rellenar campo de precio bloqueado
                         document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
                     } else {
-                        console.error("❌ Error en DirectionsService:", status);
-                        document.getElementById('distancia').value = "Error al calcular";
+                        document.getElementById('distancia').value = "Error al calcular ruta";
                         document.getElementById('precio').value = "Error";
                     }
                 }

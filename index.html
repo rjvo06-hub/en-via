@@ -123,7 +123,10 @@
                     });
 
                     directionsService = new google.maps.DirectionsService();
-                    directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
+                    directionsRenderer = new google.maps.DirectionsRenderer({ 
+                        map: map, 
+                        suppressMarkers: false // Muestra los marcadores oficiales de la ruta de Google
+                    });
 
                     configurarLugar('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
                     configurarLugar('destino-autocomplete', 'dest-lat', 'dest-lon', 'dest');
@@ -166,6 +169,9 @@
         }
 
         function updateMarker(type, coord) {
+            // Si ya hay una ruta trazada, limpiamos el renderizador para que no interfiera con los marcadores individuales
+            directionsRenderer.set('directions', null);
+
             if (type === 'origin') {
                 if (originMarker) originMarker.setMap(null);
                 originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
@@ -173,13 +179,22 @@
                 if (destMarker) destMarker.setMap(null);
                 destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
             }
-            map.setCenter(coord);
-            map.setZoom(15);
+
+            // Si ambos puntos existen, ajustamos los límites para ver ambos; si solo hay uno, centramos en ese
+            if (origenCoords && destCoords) {
+                const bounds = new google.maps.LatLngBounds();
+                bounds.extend(origenCoords);
+                bounds.extend(destCoords);
+                map.fitBounds(bounds);
+            } else {
+                map.setCenter(coord);
+                map.setZoom(15);
+            }
         }
 
         function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
-                // 1. Calcular distancia en línea recta de inmediato usando la librería geometry
+                // 1. Calcular distancia en línea recta inicial
                 const p1 = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
                 const p2 = new google.maps.LatLng(destCoords.lat, destCoords.lng);
                 const distanciaMetros = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
@@ -202,12 +217,14 @@
 
                 directionsService.route(request, (response, status) => {
                     if (status === 'OK') {
+                        // Ocultamos los marcadores individuales para que Google Maps muestre los de la ruta completa
                         if (originMarker) originMarker.setMap(null);
                         if (destMarker) destMarker.setMap(null);
+                        
                         directionsRenderer.setDirections(response);
+                        // El propio DirectionsRenderer ajusta automáticamente el zoom y los límites (bounds) para mostrar toda la ruta y ambos puntos.
 
                         const route = response.routes[0].legs[0];
-                        // Actualizar con la distancia real por carretera
                         document.getElementById('route-distance').textContent = route.distance.text;
                         document.getElementById('route-duration').textContent = route.duration.text;
                         document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";

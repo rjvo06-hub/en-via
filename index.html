@@ -11,7 +11,7 @@
     <style>
         #map { height: 450px; width: 100%; }
         
-        /* Contenedor del autocompletado limpio y adaptable */
+        /* Contenedor y fuente más pequeña, elegante y compacta tipo app */
         gmp-place-autocomplete {
             width: 100%;
             display: block;
@@ -20,12 +20,12 @@
             box-shadow: none !important;
         }
         
-        /* Limpieza profunda de los elementos internos que genera Google para evitar marcos dobles */
         gmp-place-autocomplete::part(input) {
             background-color: #161616 !important;
             border: 1px solid #2e2e2e !important;
-            border-radius: 0.85rem !important;
-            padding: 0.85rem 1rem !important;
+            border-radius: 0.65rem !important;
+            padding: 0.55rem 0.85rem !important;
+            font-size: 0.85rem !important;
             color: #ffffff !important;
             font-family: inherit !important;
             box-shadow: none !important;
@@ -34,86 +34,86 @@
 
         gmp-place-autocomplete::part(input):focus {
             border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
         }
 
-        /* Fallback directo por si el navegador renderiza el input de forma plana */
         gmp-place-autocomplete input {
             width: 100%;
             background-color: #161616 !important;
             border: 1px solid #2e2e2e !important;
-            border-radius: 0.85rem;
-            padding: 0.85rem 1rem;
+            border-radius: 0.65rem;
+            padding: 0.55rem 0.85rem;
+            font-size: 0.85rem;
             color: #ffffff !important;
             outline: none;
         }
         gmp-place-autocomplete input:focus {
             border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
 <body class="bg-black min-h-screen text-slate-100 antialiased">
 
-    <div class="max-w-6xl mx-auto px-4 py-6">
-        <header class="mb-6 text-center">
+    <div class="max-w-6xl mx-auto px-4 py-4 sm:py-8">
+        <header class="mb-5 text-center">
             <h1 class="text-2xl font-extrabold text-blue-500 tracking-tight">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-400 text-xs sm:text-sm mt-1">Selecciona origen y destino para trazar tu ruta automáticamente.</p>
+            <p class="text-slate-400 text-xs mt-1">Selecciona origen y destino para trazar tu ruta automáticamente.</p>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <!-- Panel de Controles -->
-            <div class="bg-[#111111] border border-[#222222] p-5 rounded-2xl shadow-2xl space-y-5 lg:col-span-1">
+            <div id="control-panel" class="bg-[#111111] border border-[#222222] p-4 sm:p-5 rounded-2xl shadow-2xl space-y-4 lg:col-span-1">
                 
                 <!-- Origen -->
-                <div class="space-y-2">
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Dirección de Origen</label>
+                <div class="space-y-1.5">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dirección de Origen</label>
                     <gmp-place-autocomplete id="origen-autocomplete">
                         <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
                     <div class="space-y-1">
-                        <label class="block text-[10px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-xl px-3 py-2 text-xs text-slate-300 font-medium" readonly>
+                        <label class="block text-[9px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
+                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-medium" readonly>
                     </div>
                     
-                    <div class="p-2.5 bg-[#161616] rounded-xl border border-[#262626] text-xs text-slate-400 flex justify-between items-center">
+                    <div class="p-2 bg-[#161616] rounded-lg border border-[#262626] text-[11px] text-slate-400 flex justify-between items-center">
                         <div>
                             <span class="font-bold text-slate-300">Lat:</span> <span id="origin-lat">-</span> | 
                             <span class="font-bold text-slate-300">Lon:</span> <span id="origin-lon">-</span>
                         </div>
-                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-1 rounded bg-blue-500/10 transition">Copiar</button>
+                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-blue-500/10 transition">Copiar</button>
                     </div>
                 </div>
 
                 <!-- Destino -->
-                <div class="space-y-2 pt-3 border-t border-[#222222]">
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Dirección de Destino</label>
+                <div class="space-y-1.5 pt-2 border-t border-[#222222]">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dirección de Destino</label>
                     <gmp-place-autocomplete id="destino-autocomplete">
                         <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
                     <div class="space-y-1">
-                        <label class="block text-[10px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-xl px-3 py-2 text-xs text-slate-300 font-medium" readonly>
+                        <label class="block text-[9px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
+                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-medium" readonly>
                     </div>
                     
-                    <div class="p-2.5 bg-[#161616] rounded-xl border border-[#262626] text-xs text-slate-400 flex justify-between items-center">
+                    <div class="p-2 bg-[#161616] rounded-lg border border-[#262626] text-[11px] text-slate-400 flex justify-between items-center">
                         <div>
                             <span class="font-bold text-slate-300">Lat:</span> <span id="dest-lat">-</span> | 
                             <span class="font-bold text-slate-300">Lon:</span> <span id="dest-lon">-</span>
                         </div>
-                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-1 rounded bg-blue-500/10 transition">Copiar</button>
+                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-blue-500/10 transition">Copiar</button>
                     </div>
                 </div>
 
                 <!-- Resumen de Ruta -->
-                <div class="bg-[#161616] p-4 rounded-xl border border-[#262626] space-y-2">
-                    <div class="flex justify-between text-xs sm:text-sm">
+                <div class="bg-[#161616] p-3 rounded-xl border border-[#262626] space-y-1.5 text-xs">
+                    <div class="flex justify-between">
                         <span class="text-slate-400">Distancia:</span>
                         <span id="route-distance" class="font-bold text-slate-200">-</span>
                     </div>
-                    <div class="flex justify-between text-xs sm:text-sm">
+                    <div class="flex justify-between">
                         <span class="text-slate-400">Tiempo estimado:</span>
                         <span id="route-duration" class="font-bold text-slate-200">-</span>
                     </div>
@@ -122,13 +122,13 @@
             </div>
 
             <!-- Panel del Mapa -->
-            <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-2xl lg:col-span-2 flex flex-col justify-between">
-                <div class="rounded-xl overflow-hidden border border-[#262626] mb-4">
+            <div class="bg-[#111111] border border-[#222222] p-3 sm:p-4 rounded-2xl shadow-2xl lg:col-span-2 flex flex-col justify-between">
+                <div class="rounded-xl overflow-hidden border border-[#262626] mb-3">
                     <div id="map"></div>
                 </div>
-                <div class="flex flex-wrap gap-3 justify-between items-center text-xs sm:text-sm">
+                <div class="flex flex-wrap gap-3 justify-between items-center text-xs">
                     <div id="status-msg" class="text-slate-400 italic">Selecciona origen y destino para trazar la ruta.</div>
-                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition shadow-lg shadow-emerald-900/30">
+                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition shadow-lg shadow-emerald-900/30">
                         Abrir en Google Maps
                     </a>
                 </div>
@@ -168,9 +168,24 @@
 
                     configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
                     configurarLugar('destino-autocomplete', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
+
+                    // Solución para móviles: hacer scroll automático al enfocar los inputs para que no los tape el teclado/sugerencias
+                    setupMobileScroll('origen-autocomplete');
+                    setupMobileScroll('destino-autocomplete');
                 }
             }, 300);
         });
+
+        function setupMobileScroll(autocompleteId) {
+            const el = document.getElementById(autocompleteId);
+            if (el) {
+                el.addEventListener('focusin', () => {
+                    setTimeout(() => {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                });
+            }
+        }
 
         function configurarSesgoBusqueda(autocompleteId) {
             const autocompleteEl = document.getElementById(autocompleteId);

@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Google Maps API con librerías de places y geometry -->
+    <!-- Google Maps API con la nueva Places API (librerías places y geometry) -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ&libraries=places,geometry" async defer></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -52,16 +52,20 @@
                     </div>
                 </div>
 
-                <!-- Punto de Origen con Autocompletado Clásico -->
+                <!-- Punto de Origen con la Nueva Places API (gmp-place-autocomplete) -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
-                    <input type="text" id="origen" required placeholder="Ej. Galerías Mall, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <gmp-place-autocomplete id="origen-autocomplete" class="block w-full">
+                        <input type="text" id="origen" required placeholder="Ej. Galerías Mall, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </gmp-place-autocomplete>
                 </div>
 
-                <!-- Destino con Autocompletado Clásico -->
+                <!-- Destino con la Nueva Places API (gmp-place-autocomplete) -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
-                    <input type="text" id="destino" required placeholder="Ej. Centro Comercial Sambil, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <gmp-place-autocomplete id="destino-autocomplete" class="block w-full">
+                        <input type="text" id="destino" required placeholder="Ej. Centro Comercial Sambil, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </gmp-place-autocomplete>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -112,7 +116,7 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script de Autocompletado Clásico y Cálculo Preciso de Distancia -->
+    <!-- Script de Integración con la Nueva Places API y Cálculo Automático -->
     <script>
         window.gm_authFailure = function() {
             console.error("⚠️ Error de autenticación en Google Maps.");
@@ -130,52 +134,65 @@
                     directionsService = new google.maps.DirectionsService();
 
                     // Delimitador geográfico para Maracaibo, Zulia
-                    const maracaiboBounds = new google.maps.LatLngBounds(
-                        new google.maps.LatLng(10.5800, -71.7200), // Suroeste
-                        new google.maps.LatLng(10.7500, -71.5500)  // Noreste
-                    );
-
-                    const options = {
-                        bounds: maracaiboBounds,
-                        componentRestrictions: { country: 've' },
-                        fields: ['geometry', 'formatted_address', 'name']
+                    const maracaiboBounds = {
+                        north: 10.7500,
+                        south: 10.5800,
+                        east: -71.5500,
+                        west: -71.7200
                     };
 
-                    // 1. Inicializar Autocompletado Clásico en el input de Origen
+                    const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const inputOrigen = document.getElementById('origen');
-                    const autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, options);
-
-                    autocompleteOrigen.addListener('place_changed', () => {
-                        const place = autocompleteOrigen.getPlace();
-                        if (place.geometry && place.geometry.location) {
-                            origenCoords = {
-                                lat: place.geometry.location.lat(),
-                                lng: place.geometry.location.lng()
-                            };
-                            console.log("📍 Origen Lat/Lng capturado:", origenCoords);
-                            intentarCalcularDistancia();
-                        } else {
-                            console.warn("⚠️ No se obtuvieron coordenadas para el origen.");
-                        }
-                    });
-
-                    // 2. Inicializar Autocompletado Clásico en el input de Destino
+                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
                     const inputDestino = document.getElementById('destino');
-                    const autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, options);
 
-                    autocompleteDestino.addListener('place_changed', () => {
-                        const place = autocompleteDestino.getPlace();
-                        if (place.geometry && place.geometry.location) {
-                            destinoCoords = {
-                                lat: place.geometry.location.lat(),
-                                lng: place.geometry.location.lng()
-                            };
-                            console.log("📍 Destino Lat/Lng capturado:", destinoCoords);
-                            intentarCalcularDistancia();
-                        } else {
-                            console.warn("⚠️ No se obtuvieron coordenadas para el destino.");
-                        }
-                    });
+                    // 1. Configurar Origen con la Nueva Places API (gmp-placeselect)
+                    if (origenAutocomplete) {
+                        origenAutocomplete.locationRestriction = maracaiboBounds;
+                        
+                        origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
+                            
+                            if (place.location) {
+                                origenCoords = {
+                                    lat: place.location.lat(),
+                                    lng: place.location.lng()
+                                };
+                                console.log("📍 [Nueva Places API] Origen Lat/Lng capturado:", origenCoords);
+                            }
+
+                            if (inputOrigen) {
+                                inputOrigen.value = place.formattedAddress || place.displayName || '';
+                            }
+
+                            verificarYCalcularRuta();
+                        });
+                    }
+
+                    // 2. Configurar Destino con la Nueva Places API (gmp-placeselect)
+                    if (destinoAutocomplete) {
+                        destinoAutocomplete.locationRestriction = maracaiboBounds;
+                        
+                        destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            await place.fetchFields({ fields: ['formatted_address', 'displayName', 'location'] });
+                            
+                            if (place.location) {
+                                destinoCoords = {
+                                    lat: place.location.lat(),
+                                    lng: place.location.lng()
+                                };
+                                console.log("📍 [Nueva Places API] Destino Lat/Lng capturado:", destinoCoords);
+                            }
+
+                            if (inputDestino) {
+                                inputDestino.value = place.formattedAddress || place.displayName || '';
+                            }
+
+                            verificarYCalcularRuta();
+                        });
+                    }
 
                     // Hora actual por defecto
                     const now = new Date();
@@ -184,7 +201,7 @@
                     const inputHora = document.getElementById('hora');
                     if (inputHora) inputHora.value = `${hours}:${minutes}`;
 
-                    console.log("✅ Autocompletado clásico de Google Maps configurado con éxito.");
+                    console.log("✅ Nueva Places API configurada correctamente.");
                 }
             }, 300);
 
@@ -193,10 +210,10 @@
             }, 8000);
         });
 
-        // 3. Función que toma ambas coordenadas y calcula la distancia por carretera
-        function intentarCalcularDistancia() {
+        // 3. Función que verifica si tenemos ambas coordenadas y calcula la distancia y el precio bloqueado
+        function verificarYCalcularRuta() {
             if (!origenCoords || !destinoCoords) {
-                console.log("⏳ Esperando ambas coordenadas. Origen:", origenCoords ? "OK" : "Falta", "| Destino:", destinoCoords ? "OK" : "Falta");
+                console.log("⏳ Faltan coordenadas. Origen:", origenCoords ? "OK" : "Pendiente", "| Destino:", destinoCoords ? "OK" : "Pendiente");
                 return;
             }
 
@@ -206,7 +223,7 @@
             const origenLatLng = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
             const destinoLatLng = new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng);
 
-            console.log("🚀 Solicitando ruta al DirectionsService con coordenadas exactas...");
+            console.log("🚀 Solicitando ruta con lat/lng de la nueva Places API...");
 
             directionsService.route(
                 {
@@ -221,7 +238,7 @@
                         const distanciaMetros = route.distance.value;
                         const kmValor = distanciaMetros / 1000;
                         
-                        // Rellenar campo distancia bloqueado
+                        // Rellenar campo de distancia bloqueado
                         document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
 
                         // Regla de cobro: $1 por kilómetro, mínimo $3
@@ -230,9 +247,9 @@
                             precioCalculado = 3.00;
                         }
 
-                        // Rellenar campo precio bloqueado
+                        // Rellenar campo de precio bloqueado
                         document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
-                        console.log(`✅ ¡Cálculo exitoso! Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
+                        console.log(`✅ Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
                     } else {
                         console.error("❌ Error en DirectionsService:", status);
                         document.getElementById('distancia').value = "Error al calcular";

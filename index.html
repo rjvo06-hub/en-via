@@ -32,7 +32,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona una opción del menú desplegable y se reflejará abajo automáticamente.</p>
+            <p class="text-slate-600 mt-1">Escribe tu dirección, selecciónala y haz clic en extraer.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -43,15 +43,14 @@
                 <div class="space-y-2">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
                     
-                    <!-- Componente oficial de Google (Buscador con opciones) -->
                     <gmp-place-autocomplete id="origen-autocomplete">
                         <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
-                    <!-- Campo duplicado y libre abajo para verificar el texto seleccionado -->
+                    <!-- Campo duplicado para mostrar lo que lee el botón -->
                     <div class="space-y-1">
-                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto capturado del menú:</label>
-                        <input type="text" id="campo-libre-origen" placeholder="Aquí aparecerá lo que selecciones..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto detectado:</label>
+                        <input type="text" id="campo-libre-origen" placeholder="Aquí aparecerá el texto leído..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
                     </div>
 
                     <button onclick="enviarAlExtractor('origen')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
@@ -71,15 +70,14 @@
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
                     
-                    <!-- Componente oficial de Google (Buscador con opciones) -->
                     <gmp-place-autocomplete id="destino-autocomplete">
                         <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
-                    <!-- Campo duplicado y libre abajo para verificar el texto seleccionado -->
+                    <!-- Campo duplicado para mostrar lo que lee el botón -->
                     <div class="space-y-1">
-                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto capturado del menú:</label>
-                        <input type="text" id="campo-libre-destino" placeholder="Aquí aparecerá lo que selecciones..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto detectado:</label>
+                        <input type="text" id="campo-libre-destino" placeholder="Aquí aparecerá el texto leído..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
                     </div>
 
                     <button onclick="enviarAlExtractor('destino')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
@@ -115,13 +113,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Selecciona una opción del menú desplegable y verás cómo se refleja abajo de inmediato.
+                    Escribe tu dirección, selecciónala del menú y haz clic en extraer.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script de sincronización con el menú desplegable -->
+    <!-- Script con el extractor de Shadow DOM integrado -->
     <script>
         let map;
         let directionsService;
@@ -172,34 +170,9 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
-
-                    // 2. Escuchar cuando el usuario hace clic en una opción del menú desplegable de Google
-                    configurarCapturaMenu('origen-autocomplete', 'campo-libre-origen');
-                    configurarCapturaMenu('destino-autocomplete', 'campo-libre-destino');
                 }
             }, 300);
         });
-
-        // Capturar el evento exacto del menú desplegable de Google Maps
-        function configurarCapturaMenu(autocompleteId, campoLibreId) {
-            const autocompleteEl = document.getElementById(autocompleteId);
-            const campoLibreEl = document.getElementById(campoLibreId);
-
-            if (autocompleteEl) {
-                autocompleteEl.addEventListener('gmp-placeselect', async (e) => {
-                    const place = e.detail.place;
-                    if (place) {
-                        if (typeof place.fetchFields === 'function') {
-                            await place.fetchFields({ fields: ['displayName', 'formattedAddress'] });
-                        }
-                        const textoSeleccionado = place.displayName || place.formattedAddress || autocompleteEl.querySelector('input').value;
-                        
-                        // Mostrarlo inmediatamente en el campo libre de abajo
-                        campoLibreEl.value = textoSeleccionado;
-                    }
-                });
-            }
-        }
 
         function setAutocompleteValue(containerId, text) {
             const container = document.getElementById(containerId);
@@ -209,26 +182,42 @@
             }
         }
 
-        // 3. Función que envía el texto capturado al extractor con total seguridad
-        function enviarAlExtractor(tipo) {
-            const campoLibreId = tipo === 'origen' ? 'campo-libre-origen' : 'campo-libre-destino';
-            const autocompleteId = tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete';
-            
-            let direccion = document.getElementById(campoLibreId).value.trim();
+        // 2. Función infalible que penetra el Shadow DOM de Google para leer el texto exacto
+        function obtenerTextoAutocomplete(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return "";
 
-            // Si por alguna razón no hizo clic en el menú pero escribió algo directo, intentamos rescatarlo
-            if (!direccion) {
-                const container = document.getElementById(autocompleteId);
-                if (container) {
-                    const input = container.querySelector('input');
-                    if (input) direccion = input.value.trim();
-                }
+            // Intento A: Buscar el input directamente o dentro de shadowRoot
+            let input = container.querySelector('input');
+            if (!input && container.shadowRoot) {
+                input = container.shadowRoot.querySelector('input');
+            }
+            if (input && input.value) {
+                return input.value.trim();
             }
 
+            // Intento B: Leer el valor expuesto por el componente web de Google
+            if (typeof container.value === 'string' && container.value.trim()) {
+                return container.value.trim();
+            }
+
+            return "";
+        }
+
+        // 3. Función al hacer clic en el botón de extraer
+        function enviarAlExtractor(tipo) {
+            const containerId = tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete';
+            const campoLibreId = tipo === 'origen' ? 'campo-libre-origen' : 'campo-libre-destino';
+            
+            let direccion = obtenerTextoAutocomplete(containerId);
+
             if (!direccion) {
-                alert("Por favor selecciona una opción del menú desplegable primero.");
+                alert("Por favor escribe o selecciona una dirección primero.");
                 return;
             }
+
+            // Reflejarlo inmediatamente en el campo de abajo
+            document.getElementById(campoLibreId).value = direccion;
 
             // Guardar objetivo y viajar al geo-extractor.html
             localStorage.setItem('en_via_objetivo', JSON.stringify({ direccion, tipo }));

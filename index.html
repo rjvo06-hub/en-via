@@ -9,6 +9,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        /* Estilo personalizado para adaptar el buscador nativo de Google */
+        gmp-place-picker {
+            width: 100%;
+            height: 48px;
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-between">
@@ -18,7 +23,7 @@
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador de Coordenadas</h1>
-                <p class="text-indigo-200 text-sm mt-1">Optimizado con Maps JavaScript API y Places API (New)</p>
+                <p class="text-indigo-200 text-sm mt-1">Usando Places API (New) con componentes nativos</p>
             </div>
             <span class="bg-indigo-700 text-indigo-100 text-xs font-medium px-3 py-1.5 rounded-full border border-indigo-500">
                 API Key Conectada
@@ -34,13 +39,16 @@
             
             <!-- Columna de Búsqueda y Resultados -->
             <div class="space-y-6">
-                <!-- Buscador de Ubicación moderno -->
+                <!-- Buscador de Ubicación moderno con Places API (New) -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-                    <label for="placeSearchInput" class="block text-sm font-semibold text-slate-700">Buscar Centro Comercial o Lugar</label>
-                    <div class="relative">
-                        <input type="text" id="placeSearchInput" placeholder="Escribe un centro comercial, ej: Andino..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+                    <label class="block text-sm font-semibold text-slate-700">Buscar Centro Comercial o Lugar</label>
+                    
+                    <!-- Componente web oficial de Google para Places API (New) -->
+                    <div id="picker-container">
+                        <gmp-place-picker id="place-picker" placeholder="Escribe un centro comercial, ej: Andino..."></gmp-place-picker>
                     </div>
-                    <p class="text-xs text-slate-500">Escribe el nombre y haz clic en la opción que despliegue Google.</p>
+
+                    <p class="text-xs text-slate-500">Selecciona una opción de la lista desplegable sugerida por Google.</p>
                 </div>
 
                 <!-- Tarjeta de Resultados -->
@@ -107,7 +115,7 @@
             }, 3000);
         }
 
-        // Cargador asíncrono oficial moderno
+        // Cargador asíncrono oficial moderno con soporte para places (new)
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t.toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&`+e;d[q]=f;a.onerror=()=>n(new Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?fn:d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
             key: apiKey,
             v: "weekly"
@@ -121,20 +129,20 @@
         };
 
         async function initMap() {
-            // Importar librerías modernas requeridas
+            // Importar librerías modernas requeridas incluyendo 'places' para el componente gmp-place-picker
             const { Map } = await google.maps.importLibrary("maps");
             const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-            const { Autocomplete } = await google.maps.importLibrary("places");
+            await google.maps.importLibrary("places");
 
             const mapContainer = document.getElementById('map');
             mapContainer.innerHTML = '';
 
-            const defaultLocation = { lat: 4.6097, lng: -74.0817 }; // Coordenadas iniciales
+            const defaultLocation = { lat: 4.6097, lng: -74.0817 }; // Coordenadas iniciales (Bogotá)
 
             map = new Map(mapContainer, {
                 center: defaultLocation,
                 zoom: 13,
-                mapId: "EN_VIA_MAP_ID_MODERN" // Requerido para AdvancedMarkerElement
+                mapId: "EN_VIA_MAP_ID_MODERN"
             });
 
             marker = new AdvancedMarkerElement({
@@ -142,29 +150,28 @@
                 position: defaultLocation
             });
 
-            const input = document.getElementById('placeSearchInput');
+            const placePicker = document.getElementById('place-picker');
 
-            // Usar el componente moderno de Autocompletado de Places
-            const autocomplete = new Autocomplete(input, {
-                fields: ["formatted_address", "geometry", "name"]
-            });
+            // Escuchar el evento de selección del nuevo componente Places (New)
+            placePicker.addEventListener('gmp-select', async ({ place }) => {
+                if (!place) return;
 
-            autocomplete.addListener('place_changed', () => {
-                const place = autocomplete.getPlace();
+                // Solicitar los campos necesarios usando la API moderna de Place
+                await place.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
 
-                if (!place.geometry || !place.geometry.location) {
+                if (!place.location) {
                     showToast('No se encontraron coordenadas para este lugar.');
                     return;
                 }
 
-                const lat = place.geometry.location.lat();
-                const lng = place.geometry.location.lng();
-                const address = place.formatted_address || place.name;
+                const lat = place.location.lat();
+                const lng = place.location.lng();
+                const address = place.formattedAddress || place.displayName;
 
-                // Actualizar vista del mapa y marcador avanzado
-                map.setCenter(place.geometry.location);
+                // Actualizar la vista del mapa y el marcador
+                map.setCenter(place.location);
                 map.setZoom(16);
-                marker.position = place.geometry.location;
+                marker.position = place.location;
 
                 // Mostrar en pantalla la tarjeta de resultados
                 document.getElementById('resAddress').textContent = address;

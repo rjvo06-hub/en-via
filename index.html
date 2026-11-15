@@ -97,13 +97,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Escribe la dirección, selecciónala del menú y haz clic en extraer.
+                    Selecciona la dirección y haz clic en extraer.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script con captura directa en tiempo real -->
+    <!-- Script con extracción directa del componente web -->
     <script>
         let map;
         let directionsService;
@@ -113,10 +113,6 @@
         let origenCoords = null;
         let destCoords = null;
 
-        // Variables globales para almacenar el texto exacto capturado
-        let textoOrigenCapturado = "";
-        let textoDestinoCapturado = "";
-
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
         window.addEventListener('load', () => {
@@ -125,16 +121,14 @@
             if (datosRegresados) {
                 const res = JSON.parse(datosRegresados);
                 if (res && res.tipo === 'origen') {
-                    document.getElementById('origen').value = res.direccion;
-                    textoOrigenCapturado = res.direccion;
+                    setAutocompleteValue('origen-autocomplete', res.direccion);
                     document.getElementById('origin-lat').textContent = res.lat;
                     document.getElementById('origin-lon').textContent = res.lng;
                     document.getElementById('btn-copy-origin').classList.remove('hidden');
                     origenCoords = { lat: parseFloat(res.lat), lng: parseFloat(res.lng) };
                     updateMarker('origin', origenCoords);
                 } else if (res && res.tipo === 'destino') {
-                    document.getElementById('destino').value = res.direccion;
-                    textoDestinoCapturado = res.direccion;
+                    setAutocompleteValue('destino-autocomplete', res.direccion);
                     document.getElementById('dest-lat').textContent = res.lat;
                     document.getElementById('dest-lon').textContent = res.lng;
                     document.getElementById('btn-copy-dest').classList.remove('hidden');
@@ -158,31 +152,38 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
-
-                    // 2. Escuchar en tiempo real cualquier escritura o selección en los inputs internos
-                    const inputOrigen = document.getElementById('origen');
-                    const inputDestino = document.getElementById('destino');
-
-                    if (inputOrigen) {
-                        inputOrigen.addEventListener('input', (e) => { textoOrigenCapturado = e.target.value; });
-                        inputOrigen.addEventListener('change', (e) => { textoOrigenCapturado = e.target.value; });
-                    }
-                    if (inputDestino) {
-                        inputDestino.addEventListener('input', (e) => { textoDestinoCapturado = e.target.value; });
-                        inputDestino.addEventListener('change', (e) => { textoDestinoCapturado = e.target.value; });
-                    }
                 }
             }, 300);
         });
 
-        // 3. Función blindada que envía el texto guardado directamente al extractor
-        function enviarAlExtractor(tipo) {
-            let direccion = (tipo === 'origen') ? textoOrigenCapturado : textoDestinoCapturado;
+        // Función auxiliar para asignar valor al componente web de forma segura
+        function setAutocompleteValue(containerId, text) {
+            const container = document.getElementById(containerId);
+            if (container) {
+                const input = container.querySelector('input');
+                if (input) input.value = text;
+            }
+        }
 
-            // Respaldo de lectura directa si la variable global estuviera vacía
+        // 2. Función que extrae el texto directamente del input interno del componente web al hacer clic
+        function enviarAlExtractor(tipo) {
+            const containerId = tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete';
+            const container = document.getElementById(containerId);
+            
+            let direccion = "";
+            if (container) {
+                const input = container.querySelector('input');
+                if (input) {
+                    direccion = input.value.trim();
+                }
+            }
+
+            // Respaldo por ID normal si no lo encuentra en el contenedor
             if (!direccion) {
-                const inputEl = document.getElementById(tipo === 'origen' ? 'origen' : 'destino');
-                if (inputEl) direccion = inputEl.value.trim();
+                const fallbackInput = document.getElementById(tipo);
+                if (fallbackInput) {
+                    direccion = fallbackInput.value.trim();
+                }
             }
 
             if (!direccion) {

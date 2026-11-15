@@ -32,7 +32,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona origen y destino para activar la navegación.</p>
+            <p class="text-slate-600 mt-1">Selecciona origen y destino para mostrar coordenadas y trazar la ruta en vehículo automáticamente.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -69,13 +69,8 @@
                     </div>
                 </div>
 
-                <!-- Botón de Navegar (Oculto hasta tener ambos puntos) -->
-                <button id="btn-navegar" onclick="iniciarNavegacion()" class="hidden w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition cursor-pointer text-center">
-                    Navegar
-                </button>
-
                 <!-- Resumen de Ruta -->
-                <div id="route-summary" class="hidden bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
                     <div class="flex justify-between text-sm">
                         <span class="text-slate-600">Distancia (vial):</span>
                         <span id="route-distance" class="font-bold text-slate-800">-</span>
@@ -88,15 +83,15 @@
 
             </div>
 
-            <!-- Panel del Mapa (Oculto inicialmente) -->
-            <div id="map-container" class="hidden bg-white p-4 rounded-xl shadow-md lg:col-span-2 flex flex-col justify-between">
+            <!-- Panel del Mapa -->
+            <div class="bg-white p-4 rounded-xl shadow-md lg:col-span-2 flex flex-col justify-between">
                 <div class="rounded-lg overflow-hidden border border-slate-200 mb-4">
                     <div id="map"></div>
                 </div>
                 <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
-                    <div id="status-msg" class="text-slate-600 italic">Ruta lista para mostrarse.</div>
+                    <div id="status-msg" class="text-slate-600 italic">Selecciona origen y destino para trazar la ruta.</div>
                     <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition shadow-sm">
-                        Abrir en Google Maps externo
+                        Abrir ruta en Google Maps
                     </a>
                 </div>
             </div>
@@ -108,6 +103,8 @@
         let map;
         let directionsService;
         let directionsRenderer;
+        let originMarker = null;
+        let destMarker = null;
         let origenCoords = null;
         let destCoords = null;
 
@@ -159,56 +156,81 @@
                         const coords = { lat, lng };
                         if (tipo === 'origin') {
                             origenCoords = coords;
+                            updateMarker('origin', coords);
                         } else {
                             destCoords = coords;
+                            updateMarker('dest', coords);
                         }
 
-                        // Si ya tenemos ambos puntos, mostramos el botón de Navegar
-                        if (origenCoords && destCoords) {
-                            document.getElementById('btn-navegar').classList.remove('hidden');
-                        }
+                        verificarYCalcularRuta();
                     }
                 });
             }
         }
 
-        function iniciarNavegacion() {
-            if (!origenCoords || !destCoords) return;
+        function updateMarker(type, coord) {
+            directionsRenderer.set('directions', null);
 
-            // 1. Mostrar el contenedor del mapa y el resumen
-            document.getElementById('map-container').classList.remove('hidden');
-            document.getElementById('route-summary').classList.remove('hidden');
-            
-            // 2. CRUCIAL: Forzar al mapa a actualizar su renderizado ahora que ya es visible
-            google.maps.event.trigger(map, 'resize');
+            if (type === 'origin') {
+                if (originMarker) originMarker.setMap(null);
+                originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
+            } else {
+                if (destMarker) destMarker.setMap(null);
+                destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
+            }
 
-            document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
+            if (origenCoords && destCoords) {
+                const bounds = new google.maps.LatLngBounds();
+                bounds.extend(origenCoords);
+                bounds.extend(destCoords);
+                map.fitBounds(bounds);
+            } else {
+                map.setCenter(coord);
+                map.setZoom(15);
+            }
+        }
 
-            const p1 = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
-            const p2 = new google.maps.LatLng(destCoords.lat, destCoords.lng);
+        function verificarYCalcularRuta() {
+            if (origenCoords && destCoords) {
+                const p1 = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
+                const p2 = new google.maps.LatLng(destCoords.lat, destCoords.lng);
 
-            const request = {
-                origin: p1,
-                destination: p2,
-                travelMode: google.maps.TravelMode.DRIVING // Ruta en vehículo utilizando Routes API / Directions Service
-            };
+                // Distancia preliminar en línea recta mientras responde Google
+                const distanciaMetros = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
+                document.getElementById('route-distance').textContent = distanciaMetros >= 1000 
+                    ? (distanciaMetros / 1000).toFixed(2) + " km (calculando...)" 
+                    : Math.round(distanciaMetros) + " m (calculando...)";
 
-            directionsService.route(request, (response, status) => {
-                if (status === 'OK') {
-                    directionsRenderer.setDirections(response);
+                document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
+                
+                const request = {
+                    origin: p1,
+                    destination: p2,
+                    travelMode: google.maps.TravelMode.DRIVING // <-- Ruta en vehículo
+                };
 
-                    const route = response.routes[0].legs[0];
-                    document.getElementById('route-distance').textContent = route.distance.text;
-                    document.getElementById('route-duration').textContent = route.duration.text;
-                    document.getElementById('status-msg').textContent = "¡Navegando en ruta!";
+                directionsService.route(request, (response, status) => {
+                    if (status === 'OK') {
+                        if (originMarker) originMarker.setMap(null);
+                        if (destMarker) destMarker.setMap(null);
+                        
+                        // Dibuja la ruta en el mapa y ajusta el zoom para mostrar ambos puntos
+                        directionsRenderer.setDirections(response);
 
-                    const gmapsLink = document.getElementById('gmaps-link');
-                    gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
-                    gmapsLink.classList.remove('hidden');
-                } else {
-                    document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
-                }
-            });
+                        const route = response.routes[0].legs[0];
+                        // Distancia real manejando y tiempo estimado
+                        document.getElementById('route-distance').textContent = route.distance.text;
+                        document.getElementById('route-duration').textContent = route.duration.text;
+                        document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
+
+                        const gmapsLink = document.getElementById('gmaps-link');
+                        gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
+                        gmapsLink.classList.remove('hidden');
+                    } else {
+                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
+                    }
+                });
+            }
         }
     </script>
 </body>

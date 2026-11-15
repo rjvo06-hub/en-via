@@ -11,37 +11,34 @@
     <style>
         #map { height: 450px; width: 100%; }
         gmp-place-autocomplete { width: 100%; }
+        /* Mantenemos y fundimos el input nativo con el mismo tono exacto */
         gmp-place-autocomplete input {
             width: 100%;
-            background-color: #0f172a; /* Fondo oscuro exacto para combinar con el campo nativo */
-            border: 1px solid #334155;
+            background-color: #161616 !important;
+            border: 1px solid #2a2a2a !important;
             border-radius: 0.75rem;
             padding: 0.75rem 1rem;
-            color: #ffffff;
+            color: #ffffff !important;
             outline: none;
         }
         gmp-place-autocomplete input:focus {
-            background-color: #020617;
-            border-color: #38bdf8;
-            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
-        }
-        /* Ajustar icono de búsqueda nativo si lo renderiza el navegador */
-        gmp-place-autocomplete input::placeholder {
-            color: #94a3b8;
+            background-color: #1a1a1a !important;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
-<body class="bg-slate-950 min-h-screen text-slate-100">
+<body class="bg-black min-h-screen text-slate-100">
 
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold text-sky-400">EN-VIA - Panel de Rutas</h1>
+            <h1 class="text-3xl font-extrabold text-blue-500">EN-VIA - Panel de Rutas</h1>
             <p class="text-slate-400 mt-1">Selecciona origen y destino para mostrar coordenadas y trazar la ruta automáticamente.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Panel de Controles -->
-            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl space-y-6 lg:col-span-1">
+            <div class="bg-[#121212] border border-[#222222] p-6 rounded-xl shadow-2xl space-y-6 lg:col-span-1">
                 
                 <!-- Origen -->
                 <div class="space-y-2">
@@ -52,20 +49,20 @@
                     
                     <div class="space-y-1">
                         <label class="block text-[10px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 font-medium" readonly>
+                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#2a2a2a] rounded-lg px-3 py-2 text-xs text-slate-200 font-medium" readonly>
                     </div>
                     
-                    <div class="p-2 bg-slate-950/50 rounded border border-slate-800 text-xs text-slate-400 flex justify-between items-center">
+                    <div class="p-2 bg-[#161616] rounded border border-[#2a2a2a] text-xs text-slate-400 flex justify-between items-center">
                         <div>
                             <span class="font-bold text-slate-300">Lat:</span> <span id="origin-lat">-</span> | 
                             <span class="font-bold text-slate-300">Lon:</span> <span id="origin-lon">-</span>
                         </div>
-                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-sky-400 hover:text-sky-300 font-medium cursor-pointer">Copiar</button>
+                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-400 hover:text-blue-300 font-medium cursor-pointer">Copiar</button>
                     </div>
                 </div>
 
                 <!-- Destino -->
-                <div class="space-y-2 pt-2 border-t border-slate-800">
+                <div class="space-y-2 pt-2 border-t border-[#222222]">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Dirección de Destino</label>
                     <gmp-place-autocomplete id="destino-autocomplete">
                         <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
@@ -73,35 +70,35 @@
                     
                     <div class="space-y-1">
                         <label class="block text-[10px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 font-medium" readonly>
+                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#2a2a2a] rounded-lg px-3 py-2 text-xs text-slate-200 font-medium" readonly>
                     </div>
                     
-                    <div class="p-2 bg-slate-950/50 rounded border border-slate-800 text-xs text-slate-400 flex justify-between items-center">
+                    <div class="p-2 bg-[#161616] rounded border border-[#2a2a2a] text-xs text-slate-400 flex justify-between items-center">
                         <div>
                             <span class="font-bold text-slate-300">Lat:</span> <span id="dest-lat">-</span> | 
                             <span class="font-bold text-slate-300">Lon:</span> <span id="dest-lon">-</span>
                         </div>
-                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-sky-400 hover:text-sky-300 font-medium cursor-pointer">Copiar</button>
+                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-400 hover:text-blue-300 font-medium cursor-pointer">Copiar</button>
                     </div>
                 </div>
 
                 <!-- Resumen de Ruta -->
-                <div class="bg-sky-950/40 p-4 rounded-xl border border-sky-900/50 space-y-2">
+                <div class="bg-[#161616] p-4 rounded-xl border border-[#2a2a2a] space-y-2">
                     <div class="flex justify-between text-sm">
                         <span class="text-slate-400">Distancia:</span>
-                        <span id="route-distance" class="font-bold text-sky-200">-</span>
+                        <span id="route-distance" class="font-bold text-slate-200">-</span>
                     </div>
                     <div class="flex justify-between text-sm">
                         <span class="text-slate-400">Tiempo estimado:</span>
-                        <span id="route-duration" class="font-bold text-sky-200">-</span>
+                        <span id="route-duration" class="font-bold text-slate-200">-</span>
                     </div>
                 </div>
 
             </div>
 
             <!-- Panel del Mapa -->
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-xl lg:col-span-2 flex flex-col justify-between">
-                <div class="rounded-lg overflow-hidden border border-slate-800 mb-4">
+            <div class="bg-[#121212] border border-[#222222] p-4 rounded-xl shadow-2xl lg:col-span-2 flex flex-col justify-between">
+                <div class="rounded-lg overflow-hidden border border-[#2a2a2a] mb-4">
                     <div id="map"></div>
                 </div>
                 <div class="flex flex-wrap gap-3 justify-between items-center text-sm">

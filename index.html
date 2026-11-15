@@ -10,20 +10,20 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
-        gmp-place-autocomplete { width: 100%; }
-        gmp-place-autocomplete input {
-            width: 100%;
-            background-color: #f8fafc;
-            border: 1px solid #cbd5e1;
+        /* Estilos limpios para el autocompletable clásico de Google */
+        .pac-container {
             border-radius: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: #1e293b;
-            outline: none;
+            margin-top: 5px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #cbd5e1;
+            font-family: inherit;
         }
-        gmp-place-autocomplete input:focus {
-            background-color: #ffffff;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        .pac-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .pac-item:hover {
+            background-color: #f1f5f9;
         }
     </style>
 </head>
@@ -32,7 +32,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona la dirección y haz clic en extraer para obtener sus coordenadas.</p>
+            <p class="text-slate-600 mt-1">Escribe la dirección, selecciónala del menú y haz clic en extraer.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -42,9 +42,8 @@
                 <!-- Origen -->
                 <div class="space-y-2">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
-                    <gmp-place-autocomplete id="origen-autocomplete">
-                        <input type="text" id="origen" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
-                    </gmp-place-autocomplete>
+                    <input type="text" id="origen" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm">
+                    
                     <button onclick="enviarAlExtractor('origen')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Origen
                     </button>
@@ -61,9 +60,8 @@
                 <!-- Destino -->
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
-                    <gmp-place-autocomplete id="destino-autocomplete">
-                        <input type="text" id="destino" placeholder="Ej. Vereda del Lago..." autocomplete="off">
-                    </gmp-place-autocomplete>
+                    <input type="text" id="destino" placeholder="Ej. Vereda del Lago..." autocomplete="off" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm">
+                    
                     <button onclick="enviarAlExtractor('destino')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Destino
                     </button>
@@ -97,13 +95,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Selecciona la dirección y haz clic en extraer.
+                    Escribe la dirección, selecciónala del menú desplegable y haz clic en extraer.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script con extracción directa del componente web -->
+    <!-- Script de control transparente -->
     <script>
         let map;
         let directionsService;
@@ -121,14 +119,14 @@
             if (datosRegresados) {
                 const res = JSON.parse(datosRegresados);
                 if (res && res.tipo === 'origen') {
-                    setAutocompleteValue('origen-autocomplete', res.direccion);
+                    document.getElementById('origen').value = res.direccion;
                     document.getElementById('origin-lat').textContent = res.lat;
                     document.getElementById('origin-lon').textContent = res.lng;
                     document.getElementById('btn-copy-origin').classList.remove('hidden');
                     origenCoords = { lat: parseFloat(res.lat), lng: parseFloat(res.lng) };
                     updateMarker('origin', origenCoords);
                 } else if (res && res.tipo === 'destino') {
-                    setAutocompleteValue('destino-autocomplete', res.direccion);
+                    document.getElementById('destino').value = res.direccion;
                     document.getElementById('dest-lat').textContent = res.lat;
                     document.getElementById('dest-lon').textContent = res.lng;
                     document.getElementById('btn-copy-dest').classList.remove('hidden');
@@ -140,7 +138,7 @@
             }
 
             const checkMapsInterval = setInterval(() => {
-                if (typeof google !== 'undefined' && google.maps) {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                     clearInterval(checkMapsInterval);
 
                     map = new google.maps.Map(document.getElementById('map'), {
@@ -152,39 +150,26 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
+
+                    // Inicializar el autocompletado clásico y transparente de Google Maps
+                    const inputOrigen = document.getElementById('origen');
+                    const inputDestino = document.getElementById('destino');
+
+                    const options = {
+                        componentRestrictions: { country: "ve" },
+                        fields: ["formatted_address", "geometry", "name"]
+                    };
+
+                    new google.maps.places.Autocomplete(inputOrigen, options);
+                    new google.maps.places.Autocomplete(inputDestino, options);
                 }
             }, 300);
         });
 
-        // Función auxiliar para asignar valor al componente web de forma segura
-        function setAutocompleteValue(containerId, text) {
-            const container = document.getElementById(containerId);
-            if (container) {
-                const input = container.querySelector('input');
-                if (input) input.value = text;
-            }
-        }
-
-        // 2. Función que extrae el texto directamente del input interno del componente web al hacer clic
+        // 2. Función limpia que lee directamente el input de texto normal
         function enviarAlExtractor(tipo) {
-            const containerId = tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete';
-            const container = document.getElementById(containerId);
-            
-            let direccion = "";
-            if (container) {
-                const input = container.querySelector('input');
-                if (input) {
-                    direccion = input.value.trim();
-                }
-            }
-
-            // Respaldo por ID normal si no lo encuentra en el contenedor
-            if (!direccion) {
-                const fallbackInput = document.getElementById(tipo);
-                if (fallbackInput) {
-                    direccion = fallbackInput.value.trim();
-                }
-            }
+            const inputEl = document.getElementById(tipo);
+            const direccion = inputEl ? inputEl.value.trim() : '';
 
             if (!direccion) {
                 alert("Por favor escribe o selecciona una dirección primero.");

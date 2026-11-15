@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Coordenadas - Maracaibo</title>
+    <title>Buscador Global de Coordenadas</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS -->
@@ -29,8 +29,8 @@
 
     <div class="max-w-4xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold text-blue-600">Coordenadas de Direcciones</h1>
-            <p class="text-slate-600 mt-1">Busca cualquier punto en Maracaibo y obtén su latitud y longitud al instante.</p>
+            <h1 class="text-3xl font-extrabold text-blue-600">Buscador Global de Coordenadas</h1>
+            <p class="text-slate-600 mt-1">Busca cualquier dirección o ciudad del mundo (con centro inicial en Maracaibo).</p>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -40,7 +40,7 @@
                 <!-- Origen -->
                 <div class="relative">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Origen</label>
-                    <input type="text" id="origin-input" placeholder="Ej. Galerías Mall, C2, Bella Vista..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="origin-input" placeholder="Ej. Sambil, Madrid, Tokio..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
                     <div id="origin-suggestions" class="autocomplete-list hidden mt-1"></div>
                     
                     <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
@@ -55,7 +55,7 @@
                 <!-- Destino -->
                 <div class="relative">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Destino</label>
-                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago, Hospital Coromoto..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago, Nueva York..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
                     <div id="dest-suggestions" class="autocomplete-list hidden mt-1"></div>
                     
                     <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
@@ -68,7 +68,7 @@
                 </div>
 
                 <div class="text-xs text-slate-500 italic text-center">
-                    * Las sugerencias priorizan Maracaibo, Zulia y zonas aledañas.
+                    * Escribe las primeras letras para buscar en cualquier parte del mundo.
                 </div>
             </div>
 
@@ -78,15 +78,18 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-sm text-slate-600 text-center">
-                    Escribe una dirección para visualizarla en el mapa.
+                    Mapa centrado en Maracaibo. Escribe cualquier ubicación.
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Coordenadas iniciales centradas en Maracaibo
-        const map = L.map('map').setView([10.6549, -71.6146], 13);
+        // Coordenadas iniciales centradas exactamente en Maracaibo
+        const maracaiboLat = 10.6549;
+        const maracaiboLon = -71.6146;
+
+        const map = L.map('map').setView([maracaiboLat, maracaiboLon], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
@@ -99,22 +102,22 @@
         const originSuggestions = document.getElementById('origin-suggestions');
         const destSuggestions = document.getElementById('dest-suggestions');
 
-        // Búsqueda inteligente con autocompletado ampliado para todo Maracaibo y Zulia
+        // Autocompletado global sin restricciones geográficas
         function setupAutocomplete(inputElement, suggestionsElement, type) {
             let timeout = null;
 
             inputElement.addEventListener('input', function() {
                 clearTimeout(timeout);
-                const query = this.value;
-                if (query.length < 3) {
+                const query = this.value.trim();
+                
+                if (query.length < 2) {
                     suggestionsElement.classList.add('hidden');
                     return;
                 }
 
                 timeout = setTimeout(() => {
-                    // Se añade "Maracaibo Zulia" a la consulta para asegurar que priorice la zona local sin bloquear resultados lejanos
-                    const searchQuery = encodeURIComponent(query + " Maracaibo Zulia");
-                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&limit=6`;
+                    // Búsqueda abierta a nivel mundial, pero utilizando las coordenadas de Maracaibo como punto de referencia (near)
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&lat=${maracaiboLat}&lon=${maracaiboLon}&limit=6`;
                     
                     fetch(url)
                         .then(response => response.json())
@@ -154,7 +157,7 @@
                             suggestionsElement.classList.remove('hidden');
                         })
                         .catch(err => console.error("Error buscando direcciones:", err));
-                }, 300);
+                }, 250);
             });
 
             // Ocultar sugerencias al hacer clic fuera
@@ -176,15 +179,14 @@
                     .bindPopup(`<b>Origen:</b><br>${title}`).openPopup();
             } else {
                 if (destMarker) map.removeLayer(destMarker);
-                destMarker = L.marker([lat, lon], {
-                    // Icono distintivo o color por defecto de Leaflet
-                }).addTo(map).bindPopup(`<b>Destino:</b><br>${title}`).openPopup();
+                destMarker = L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`<b>Destino:</b><br>${title}`).openPopup();
             }
-            map.setView([lat, lon], 15);
+            map.setView([lat, lon], 14);
             document.getElementById('status-msg').textContent = `Ubicación de ${type === 'origin' ? 'Origen' : 'Destino'} actualizada.`;
         }
 
-        // Función para copiar coordenadas de forma rápida
+        // Función para copiar coordenadas
         function copyCoords(type) {
             const lat = document.getElementById(`${type}-lat`).textContent;
             const lon = document.getElementById(`${type}-lon`).textContent;

@@ -11,25 +11,34 @@
     <style>
         #map { height: 450px; width: 100%; }
         
-        /* Contenedor y fuente más pequeña, elegante y compacta tipo app */
+        /* Contenedor compacto y adaptado para que no se desborde en móviles */
         gmp-place-autocomplete {
-            width: 100%;
+            width: 100% !important;
+            max-width: 100% !important;
             display: block;
+            box-sizing: border-box;
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
         }
+
+        gmp-place-autocomplete::part(container) {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
         
         gmp-place-autocomplete::part(input) {
+            width: 100% !important;
             background-color: #161616 !important;
             border: 1px solid #2e2e2e !important;
-            border-radius: 0.65rem !important;
-            padding: 0.55rem 0.85rem !important;
-            font-size: 0.85rem !important;
+            border-radius: 0.6rem !important;
+            padding: 0.45rem 0.75rem !important;
+            font-size: 0.8rem !important;
             color: #ffffff !important;
             font-family: inherit !important;
             box-shadow: none !important;
-            transition: all 0.2s ease;
+            box-sizing: border-box !important;
         }
 
         gmp-place-autocomplete::part(input):focus {
@@ -38,14 +47,15 @@
         }
 
         gmp-place-autocomplete input {
-            width: 100%;
+            width: 100% !important;
             background-color: #161616 !important;
             border: 1px solid #2e2e2e !important;
-            border-radius: 0.65rem;
-            padding: 0.55rem 0.85rem;
-            font-size: 0.85rem;
+            border-radius: 0.6rem;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.8rem;
             color: #ffffff !important;
             outline: none;
+            box-sizing: border-box;
         }
         gmp-place-autocomplete input:focus {
             border-color: #3b82f6 !important;
@@ -53,20 +63,20 @@
         }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased">
+<body class="bg-black min-h-screen text-slate-100 antialiased overflow-x-hidden">
 
-    <div class="max-w-6xl mx-auto px-4 py-4 sm:py-8">
-        <header class="mb-5 text-center">
-            <h1 class="text-2xl font-extrabold text-blue-500 tracking-tight">EN-VIA - Panel de Rutas</h1>
+    <div class="max-w-6xl mx-auto px-3 py-4 sm:py-8">
+        <header class="mb-4 text-center">
+            <h1 class="text-xl sm:text-2xl font-extrabold text-blue-500 tracking-tight">EN-VIA - Panel de Rutas</h1>
             <p class="text-slate-400 text-xs mt-1">Selecciona origen y destino para trazar tu ruta automáticamente.</p>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <!-- Panel de Controles -->
-            <div id="control-panel" class="bg-[#111111] border border-[#222222] p-4 sm:p-5 rounded-2xl shadow-2xl space-y-4 lg:col-span-1">
+            <div id="control-panel" class="bg-[#111111] border border-[#222222] p-3.5 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 lg:col-span-1">
                 
                 <!-- Origen -->
-                <div class="space-y-1.5">
+                <div class="space-y-1">
                     <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dirección de Origen</label>
                     <gmp-place-autocomplete id="origen-autocomplete">
                         <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
@@ -74,7 +84,7 @@
                     
                     <div class="space-y-1">
                         <label class="block text-[9px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-medium" readonly>
+                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2 py-1 text-[11px] text-slate-300 font-medium" readonly>
                     </div>
                     
                     <div class="p-2 bg-[#161616] rounded-lg border border-[#262626] text-[11px] text-slate-400 flex justify-between items-center">
@@ -87,7 +97,7 @@
                 </div>
 
                 <!-- Destino -->
-                <div class="space-y-1.5 pt-2 border-t border-[#222222]">
+                <div class="space-y-1 pt-2 border-t border-[#222222]">
                     <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dirección de Destino</label>
                     <gmp-place-autocomplete id="destino-autocomplete">
                         <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
@@ -95,7 +105,7 @@
                     
                     <div class="space-y-1">
                         <label class="block text-[9px] font-bold uppercase text-slate-500">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-medium" readonly>
+                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-[#161616] border border-[#262626] rounded-lg px-2 py-1 text-[11px] text-slate-300 font-medium" readonly>
                     </div>
                     
                     <div class="p-2 bg-[#161616] rounded-lg border border-[#262626] text-[11px] text-slate-400 flex justify-between items-center">
@@ -108,7 +118,7 @@
                 </div>
 
                 <!-- Resumen de Ruta -->
-                <div class="bg-[#161616] p-3 rounded-xl border border-[#262626] space-y-1.5 text-xs">
+                <div class="bg-[#161616] p-2.5 rounded-xl border border-[#262626] space-y-1 text-xs">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Distancia:</span>
                         <span id="route-distance" class="font-bold text-slate-200">-</span>
@@ -169,7 +179,6 @@
                     configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
                     configurarLugar('destino-autocomplete', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
 
-                    // Solución para móviles: hacer scroll automático al enfocar los inputs para que no los tape el teclado/sugerencias
                     setupMobileScroll('origen-autocomplete');
                     setupMobileScroll('destino-autocomplete');
                 }

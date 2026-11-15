@@ -103,7 +103,7 @@
         </div>
     </div>
 
-    <!-- Script corregido para leer correctamente el input -->
+    <!-- Script de control y retorno -->
     <script>
         let map;
         let directionsService;
@@ -156,19 +156,27 @@
             }, 300);
         });
 
-        // 2. Función robusta que extrae el texto exacto del input (incluyendo componentes web)
+        // 2. Función infalible para extraer el texto directamente del input interno del componente web
         function enviarAlExtractor(tipo) {
-            const inputEl = document.getElementById(tipo === 'origen' ? 'origen' : 'destino');
+            const inputId = tipo === 'origen' ? 'origen' : 'destino';
+            const autocompleteId = tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete';
             
-            // Buscar también dentro del componente web si el input directo está vacío
-            let direccion = inputEl ? inputEl.value.trim() : '';
+            let direccion = '';
+
+            // Intentar leer desde el componente web y el input interno
+            const container = document.getElementById(autocompleteId);
+            if (container) {
+                const innerInput = container.querySelector('input');
+                if (innerInput) {
+                    direccion = innerInput.value.trim();
+                }
+            }
+
+            // Si por alguna razón sigue vacío, intentamos con el ID directo
             if (!direccion) {
-                const autocompleteComponent = document.getElementById(tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete');
-                if (autocompleteComponent) {
-                    const innerInput = autocompleteComponent.querySelector('input');
-                    if (innerInput) {
-                        direccion = innerInput.value.trim();
-                    }
+                const fallbackInput = document.getElementById(inputId);
+                if (fallbackInput) {
+                    direccion = fallbackInput.value.trim();
                 }
             }
 
@@ -206,7 +214,7 @@
                 directionsService.route(request, (response, status) => {
                     if (status === 'OK') {
                         if (originMarker) originMarker.setMap(null);
-                        if (destMarker) destMarker.setMap(null);
+                        if (destMarker) destMarker.setMarker(null);
                         directionsRenderer.setDirections(response);
 
                         const route = response.routes[0].legs[0];

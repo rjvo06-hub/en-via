@@ -6,12 +6,11 @@
     <title>EN-VIA - Panel de Rutas</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API con Places (New) y Geometry -->
+    <!-- Google Maps API con Places y Geometry -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
-        gmp-place-autocomplete { width: 100%; }
-        gmp-place-autocomplete input {
+        .search-input {
             width: 100%;
             background-color: #f8fafc;
             border: 1px solid #cbd5e1;
@@ -20,7 +19,7 @@
             color: #1e293b;
             outline: none;
         }
-        gmp-place-autocomplete input:focus {
+        .search-input:focus {
             background-color: #ffffff;
             border-color: #3b82f6;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
@@ -42,9 +41,7 @@
                 <!-- Origen -->
                 <div class="space-y-2">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
-                    <gmp-place-autocomplete id="origen-autocomplete">
-                        <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
-                    </gmp-place-autocomplete>
+                    <input type="text" id="origen-input" class="search-input" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     
                     <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
@@ -57,9 +54,7 @@
                 <!-- Destino -->
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
-                    <gmp-place-autocomplete id="destino-autocomplete">
-                        <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
-                    </gmp-place-autocomplete>
+                    <input type="text" id="destino-input" class="search-input" placeholder="Ej. Vereda del Lago..." autocomplete="off">
                     
                     <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
@@ -103,7 +98,7 @@
         </div>
     </div>
 
-    <!-- Script principal corregido -->
+    <!-- Script principal con Autocomplete clásico seguro -->
     <script>
         let map;
         let directionsService;
@@ -131,55 +126,58 @@
                         suppressMarkers: false 
                     });
 
-                    configurarLugar('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
-                    configurarLugar('destino-autocomplete', 'dest-lat', 'dest-lon', 'dest');
+                    // Inicializar Autocompletado clásico de Google Places
+                    const origenInput = document.getElementById('origen-input');
+                    const destinoInput = document.getElementById('destino-input');
+
+                    const autocompleteOrigen = new google.maps.places.Autocomplete(origenInput);
+                    const autocompleteDestino = new google.maps.places.Autocomplete(destinoInput);
+
+                    autocompleteOrigen.addListener('place_changed', () => {
+                        const place = autocompleteOrigen.getPlace();
+                        if (place.geometry && place.geometry.location) {
+                            const lat = place.geometry.location.lat();
+                            const lng = place.geometry.location.lng();
+
+                            document.getElementById('origin-lat').textContent = lat.toFixed(6);
+                            document.getElementById('origin-lon').textContent = lng.toFixed(6);
+
+                            origenCoords = { lat, lng };
+                            verificarPuntosListos();
+                        }
+                    });
+
+                    autocompleteDestino.addListener('place_changed', () => {
+                        const place = autocompleteDestino.getPlace();
+                        if (place.geometry && place.geometry.location) {
+                            const lat = place.geometry.location.lat();
+                            const lng = place.geometry.location.lng();
+
+                            document.getElementById('dest-lat').textContent = lat.toFixed(6);
+                            document.getElementById('dest-lon').textContent = lng.toFixed(6);
+
+                            destCoords = { lat, lng };
+                            verificarPuntosListos();
+                        }
+                    });
                 }
             }, 300);
         });
 
-        function configurarLugar(autocompleteId, latId, lonId, tipo) {
-            const autocompleteEl = document.getElementById(autocompleteId);
-
-            if (autocompleteEl) {
-                // Escuchamos el evento correcto de la API de Google Places Component
-                autocompleteEl.addEventListener('gmp-placeselect', async (event) => {
-                    const place = event.place;
-                    if (!place) return;
-
-                    await place.fetchFields({ fields: ['location', 'formattedAddress'] });
-                    const location = place.location;
-
-                    if (location) {
-                        const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
-                        const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
-
-                        document.getElementById(latId).textContent = lat.toFixed(6);
-                        document.getElementById(lonId).textContent = lng.toFixed(6);
-
-                        const coords = { lat, lng };
-                        if (tipo === 'origin') {
-                            origenCoords = coords;
-                        } else {
-                            destCoords = coords;
-                        }
-
-                        // Si ambos puntos ya tienen coordenadas, habilitamos el botón de Navegar
-                        if (origenCoords && destCoords) {
-                            document.getElementById('btn-navegar').classList.remove('hidden');
-                        }
-                    }
-                });
+        function verificarPuntosListos() {
+            if (origenCoords && destCoords) {
+                document.getElementById('btn-navegar').classList.remove('hidden');
             }
         }
 
         function iniciarNavegacion() {
             if (!origenCoords || !destCoords) return;
 
-            // 1. Mostrar contenedores ocultos
+            // 1. Mostrar contenedor del mapa y resumen
             document.getElementById('map-container').classList.remove('hidden');
             document.getElementById('route-summary').classList.remove('hidden');
             
-            // 2. Forzar redibujado del mapa
+            // 2. Forzar actualización del mapa oculto
             google.maps.event.trigger(map, 'resize');
 
             document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";

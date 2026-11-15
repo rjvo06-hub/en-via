@@ -7,8 +7,6 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Google Maps API con las librerías places y geometry necesarias para autocompletado y rutas -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ&libraries=places,geometry" async defer></script>
     <!-- Leaflet para el mapa visual -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -41,7 +39,7 @@
                 <span>Nueva Solicitud y Coordenadas</span>
                 <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">Panel Operativo</span>
             </h2>
-            <p class="text-xs text-slate-500 mb-4">Escribe el lugar y selecciónalo del menú desplegable de Google para capturar sus coordenadas automáticamente.</p>
+            <p class="text-xs text-slate-500 mb-4">Escribe el lugar y selecciónalo del menú desplegable para capturar latitud, longitud y código postal al instante.</p>
             
             <form id="formCarrera" class="space-y-3.5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -55,13 +53,13 @@
                     </div>
                 </div>
 
-                <!-- Punto de Origen con Autocompletado de Google -->
+                <!-- Punto de Origen con Autocompletado Moderno -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
                     <input type="text" id="origen" required placeholder="Ej: Galerías Mall, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                 </div>
 
-                <!-- Destino con Autocompletado de Google -->
+                <!-- Destino con Autocompletado Moderno -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
                     <input type="text" id="destino" required placeholder="Ej: CC Sambil, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
@@ -139,99 +137,32 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script con Autocompletado de Google Places Inteligente -->
+    <!-- Script con protocolo moderno de Google Maps importLibrary -->
     <script>
+        const apiKey = "AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ";
         let origenCoords = null;
         let destinoCoords = null;
-        let map;
+        let mapLeaflet;
         let markerOrigen = null;
         let markerDestino = null;
         let directionsService;
 
+        // Cargador asíncrono oficial moderno de Google Maps
+        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t.toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&`+e;d[q]=f;a.onerror=()=>n(new Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?fn:d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+            key: apiKey,
+            v: "weekly"
+        });
+
         window.addEventListener('DOMContentLoaded', () => {
-            // Inicializar Mapa Leaflet centrado en Maracaibo
-            map = L.map('map').setView([10.6549, -71.6430], 13);
+            // Inicializar Mapa Visual Leaflet centrado en Maracaibo
+            mapLeaflet = L.map('map').setView([10.6549, -71.6430], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
-            }).addTo(map);
+            }).addTo(mapLeaflet);
 
-            // Esperar a que cargue la API de Google Maps para activar el Autocompletado y el calculador de rutas
-            const checkGoogleMaps = setInterval(() => {
-                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-                    clearInterval(checkGoogleMaps);
-                    directionsService = new google.maps.DirectionsService();
-
-                    // Configurar Autocompletado de Google para Origen
-                    const inputOrigen = document.getElementById('origen');
-                    const autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
-                        componentRestrictions: { country: "ve" }
-                    });
-
-                    autocompleteOrigen.addListener('place_changed', () => {
-                        const place = autocompleteOrigen.getPlace();
-                        if (place.geometry && place.geometry.location) {
-                            const lat = place.geometry.location.lat();
-                            const lng = place.geometry.location.lng();
-                            origenCoords = { lat: lat, lng: lng };
-
-                            // Extraer código postal si existe
-                            let postalCode = "N/D";
-                            if (place.address_components) {
-                                for (const comp of place.address_components) {
-                                    if (comp.types.includes('postal_code')) {
-                                        postalCode = comp.long_name;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            document.getElementById('lblOrigenCoords').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                            document.getElementById('lblOrigenPostal').textContent = `CP: ${postalCode}`;
-
-                            if (markerOrigen) map.removeLayer(markerOrigen);
-                            markerOrigen = L.marker([lat, lng]).addTo(map);
-                            map.setView([lat, lng], 15);
-
-                            verificarRutaYCalcular();
-                        }
-                    });
-
-                    // Configurar Autocompletado de Google para Destino
-                    const inputDestino = document.getElementById('destino');
-                    const autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
-                        componentRestrictions: { country: "ve" }
-                    });
-
-                    autocompleteDestino.addListener('place_changed', () => {
-                        const place = autocompleteDestino.getPlace();
-                        if (place.geometry && place.geometry.location) {
-                            const lat = place.geometry.location.lat();
-                            const lng = place.geometry.location.lng();
-                            destinoCoords = { lat: lat, lng: lng };
-
-                            let postalCode = "N/D";
-                            if (place.address_components) {
-                                for (const comp of place.address_components) {
-                                    if (comp.types.includes('postal_code')) {
-                                        postalCode = comp.long_name;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            document.getElementById('lblDestinoCoords').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                            document.getElementById('lblDestinoPostal').textContent = `CP: ${postalCode}`;
-
-                            if (markerDestino) map.removeLayer(markerDestino);
-                            markerDestino = L.marker([lat, lng]).addTo(map);
-                            map.setView([lat, lng], 15);
-
-                            verificarRutaYCalcular();
-                        }
-                    });
-                }
-            }, 300);
+            // Inicializar Google Maps usando importLibrary nativo moderno
+            initGoogleServices();
 
             // Hora actual por defecto
             const now = new Date();
@@ -241,7 +172,85 @@
             if (inputHora) inputHora.value = `${hours}:${minutes}`;
         });
 
-        // Verificar si ambos puntos están listos para calcular distancia y precio
+        async function initGoogleServices() {
+            try {
+                // Importar las librerías modernas requeridas
+                const { Autocomplete } = await google.maps.importLibrary("places");
+                const { DirectionsService } = await google.maps.importLibrary("routes");
+
+                directionsService = new DirectionsService();
+
+                // Configurar Autocompletado de Origen
+                const inputOrigen = document.getElementById('origen');
+                const autocompleteOrigen = new Autocomplete(inputOrigen, {
+                    componentRestrictions: { country: "ve" },
+                    fields: ["geometry", "formatted_address", "address_components", "name"]
+                });
+
+                autocompleteOrigen.addListener('place_changed', () => {
+                    const place = autocompleteOrigen.getPlace();
+                    if (place.geometry && place.geometry.location) {
+                        const lat = place.geometry.location.lat();
+                        const lng = place.geometry.location.lng();
+                        origenCoords = { lat: lat, lng: lng };
+
+                        let postalCode = extraerCodigoPostal(place.address_components);
+
+                        document.getElementById('lblOrigenCoords').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                        document.getElementById('lblOrigenPostal').textContent = `CP: ${postalCode}`;
+
+                        if (markerOrigen) mapLeaflet.removeLayer(markerOrigen);
+                        markerOrigen = L.marker([lat, lng]).addTo(mapLeaflet);
+                        mapLeaflet.setView([lat, lng], 15);
+
+                        verificarRutaYCalcular();
+                    }
+                });
+
+                // Configurar Autocompletado de Destino
+                const inputDestino = document.getElementById('destino');
+                const autocompleteDestino = new Autocomplete(inputDestino, {
+                    componentRestrictions: { country: "ve" },
+                    fields: ["geometry", "formatted_address", "address_components", "name"]
+                });
+
+                autocompleteDestino.addListener('place_changed', () => {
+                    const place = autocompleteDestino.getPlace();
+                    if (place.geometry && place.geometry.location) {
+                        const lat = place.geometry.location.lat();
+                        const lng = place.geometry.location.lng();
+                        destinoCoords = { lat: lat, lng: lng };
+
+                        let postalCode = extraerCodigoPostal(place.address_components);
+
+                        document.getElementById('lblDestinoCoords').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                        document.getElementById('lblDestinoPostal').textContent = `CP: ${postalCode}`;
+
+                        if (markerDestino) mapLeaflet.removeLayer(markerDestino);
+                        markerDestino = L.marker([lat, lng]).addTo(mapLeaflet);
+                        mapLeaflet.setView([lat, lng], 15);
+
+                        verificarRutaYCalcular();
+                    }
+                });
+
+                console.log("✅ Servicios de Google Maps inicializados con protocolo moderno.");
+            } catch (error) {
+                console.error("Error al cargar las librerías de Google Maps:", error);
+            }
+        }
+
+        function extraerCodigoPostal(components) {
+            if (!components) return "N/D";
+            for (const comp of components) {
+                if (comp.types.includes('postal_code')) {
+                    return comp.long_name;
+                }
+            }
+            return "N/D";
+        }
+
+        // Verificar ruta y calcular distancia y precio
         function verificarRutaYCalcular() {
             if (origenCoords && destinoCoords && directionsService) {
                 document.getElementById('distancia').value = "Calculando...";

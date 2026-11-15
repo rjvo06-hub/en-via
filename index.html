@@ -32,7 +32,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona origen y destino para mostrar coordenadas y trazar la ruta automáticamente.</p>
+            <p class="text-slate-600 mt-1">Selecciona origen y destino para mostrar coordenadas y trazar la ruta en vehículo automáticamente.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -72,7 +72,7 @@
                 <!-- Resumen de Ruta -->
                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
                     <div class="flex justify-between text-sm">
-                        <span class="text-slate-600">Distancia:</span>
+                        <span class="text-slate-600">Distancia (vial):</span>
                         <span id="route-distance" class="font-bold text-slate-800">-</span>
                     </div>
                     <div class="flex justify-between text-sm">
@@ -125,7 +125,7 @@
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ 
                         map: map, 
-                        suppressMarkers: false // Muestra los marcadores oficiales de la ruta de Google
+                        suppressMarkers: false 
                     });
 
                     configurarLugar('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
@@ -169,7 +169,6 @@
         }
 
         function updateMarker(type, coord) {
-            // Si ya hay una ruta trazada, limpiamos el renderizador para que no interfiera con los marcadores individuales
             directionsRenderer.set('directions', null);
 
             if (type === 'origin') {
@@ -180,7 +179,6 @@
                 destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
             }
 
-            // Si ambos puntos existen, ajustamos los límites para ver ambos; si solo hay uno, centramos en ese
             if (origenCoords && destCoords) {
                 const bounds = new google.maps.LatLngBounds();
                 bounds.extend(origenCoords);
@@ -194,37 +192,33 @@
 
         function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
-                // 1. Calcular distancia en línea recta inicial
                 const p1 = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
                 const p2 = new google.maps.LatLng(destCoords.lat, destCoords.lng);
-                const distanciaMetros = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
-                
-                let distanciaTexto = "";
-                if (distanciaMetros >= 1000) {
-                    distanciaTexto = (distanciaMetros / 1000).toFixed(2) + " km (línea recta)";
-                } else {
-                    distanciaTexto = Math.round(distanciaMetros) + " m (línea recta)";
-                }
-                document.getElementById('route-distance').textContent = distanciaTexto;
 
-                // 2. Solicitar ruta vial oficial a Google Maps
+                // Distancia preliminar en línea recta mientras responde Google
+                const distanciaMetros = google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
+                document.getElementById('route-distance').textContent = distanciaMetros >= 1000 
+                    ? (distanciaMetros / 1000).toFixed(2) + " km (calculando...)" 
+                    : Math.round(distanciaMetros) + " m (calculando...)";
+
                 document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
+                
                 const request = {
                     origin: p1,
                     destination: p2,
-                    travelMode: google.maps.TravelMode.DRIVING
+                    travelMode: google.maps.TravelMode.DRIVING // <-- Ruta en vehículo
                 };
 
                 directionsService.route(request, (response, status) => {
                     if (status === 'OK') {
-                        // Ocultamos los marcadores individuales para que Google Maps muestre los de la ruta completa
                         if (originMarker) originMarker.setMap(null);
                         if (destMarker) destMarker.setMap(null);
                         
+                        // Dibuja la ruta en el mapa y ajusta el zoom para mostrar ambos puntos
                         directionsRenderer.setDirections(response);
-                        // El propio DirectionsRenderer ajusta automáticamente el zoom y los límites (bounds) para mostrar toda la ruta y ambos puntos.
 
                         const route = response.routes[0].legs[0];
+                        // Distancia real manejando y tiempo estimado
                         document.getElementById('route-distance').textContent = route.distance.text;
                         document.getElementById('route-duration').textContent = route.duration.text;
                         document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";

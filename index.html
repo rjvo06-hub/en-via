@@ -32,7 +32,7 @@
     <div class="max-w-4xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">Buscador de Coordenadas</h1>
-            <p class="text-slate-600 mt-1">Escribe una dirección para desplegar las opciones y obtener su latitud y longitud.</p>
+            <p class="text-slate-600 mt-1">Escribe una dirección, selecciona del menú y obtén su latitud y longitud exacta.</p>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -85,7 +85,7 @@
         </div>
     </div>
 
-    <!-- Script reforzado para captura inmediata de coordenadas -->
+    <!-- Script de control y captura de coordenadas -->
     <script>
         let map;
         let originMarker = null;
@@ -107,51 +107,53 @@
                     const origenAutocomplete = document.getElementById('origen-autocomplete');
                     const destinoAutocomplete = document.getElementById('destino-autocomplete');
 
-                    // Función auxiliar para procesar la selección del lugar
-                    async function procesarLugar(place, type) {
-                        if (!place) return;
-                        
-                        // Si el objeto place es un Place object moderno, obtenemos los campos
-                        if (typeof place.fetchFields === 'function') {
-                            await place.fetchFields({ fields: ['location', 'displayName', 'formattedAddress'] });
-                        }
+                    // Función central para extraer la lat/lng del componente web Place
+                    async function procesarSeleccionPlace(placeObj, type) {
+                        if (!placeObj) return;
 
-                        const location = place.location || (place.geometry && place.geometry.location);
-                        if (location) {
-                            const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
-                            const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
-
-                            if (type === 'origin') {
-                                document.getElementById('origin-lat').textContent = lat.toFixed(6);
-                                document.getElementById('origin-lon').textContent = lng.toFixed(6);
-                                document.getElementById('btn-copy-origin').classList.remove('hidden');
-                                updateMarker('origin', { lat, lng });
-                            } else {
-                                document.getElementById('dest-lat').textContent = lat.toFixed(6);
-                                document.getElementById('dest-lon').textContent = lng.toFixed(6);
-                                document.getElementById('btn-copy-dest').classList.remove('hidden');
-                                updateMarker('dest', { lat, lng });
+                        try {
+                            // Bitácora obligatoria: solicitar explícitamente los campos de ubicación a Google
+                            if (typeof placeObj.fetchFields === 'function') {
+                                await placeObj.fetchFields({ fields: ["location", "displayName", "formattedAddress"] });
                             }
+
+                            // Extraer la ubicación geográfica según la estructura que devuelva el objeto
+                            const location = placeObj.location || (placeObj.geometry && placeObj.geometry.location);
+                            
+                            if (location) {
+                                const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+                                const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+
+                                console.log(`📍 Coordenadas obtenidas para ${type}:`, lat, lng);
+
+                                if (type === 'origin') {
+                                    document.getElementById('origin-lat').textContent = lat.toFixed(6);
+                                    document.getElementById('origin-lon').textContent = lng.toFixed(6);
+                                    document.getElementById('btn-copy-origin').classList.remove('hidden');
+                                    updateMarker('origin', { lat, lng });
+                                } else {
+                                    document.getElementById('dest-lat').textContent = lat.toFixed(6);
+                                    document.getElementById('dest-lon').textContent = lng.toFixed(6);
+                                    document.getElementById('btn-copy-dest').classList.remove('hidden');
+                                    updateMarker('dest', { lat, lng });
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error al obtener los campos del lugar:", error);
                         }
                     }
 
-                    // Escuchas para Origen
+                    // Eventos para Origen
                     if (origenAutocomplete) {
                         origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
-                            await procesarLugar(event.detail.place, 'origin');
-                        });
-                        origenAutocomplete.addEventListener('place_changed', async () => {
-                            await procesarLugar(origenAutocomplete.place, 'origin');
+                            await procesarSeleccionPlace(event.detail.place, 'origin');
                         });
                     }
 
-                    // Escuchas para Destino
+                    // Eventos para Destino
                     if (destinoAutocomplete) {
                         destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
-                            await procesarLugar(event.detail.place, 'dest');
-                        });
-                        destinoAutocomplete.addEventListener('place_changed', async () => {
-                            await procesarLugar(destinoAutocomplete.place, 'dest');
+                            await procesarSeleccionPlace(event.detail.place, 'dest');
                         });
                     }
                 }
@@ -160,7 +162,6 @@
 
         function updateMarker(type, coord) {
             if (type === 'origin') {
-                if (originMarker) map.removeLayer(originMarker);
                 if (originMarker) originMarker.setMap(null);
                 originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
             } else {

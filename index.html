@@ -17,11 +17,11 @@
     <header class="bg-indigo-600 text-white shadow-md py-6 px-4">
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador de Coordenadas</h1>
-                <p class="text-indigo-200 text-sm mt-1">Geocodificación y Mapas integrados</p>
+                <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador Libre de Coordenadas</h1>
+                <p class="text-indigo-200 text-sm mt-1">Busca direcciones, conjuntos residenciales, lugares y más</p>
             </div>
             <span class="bg-indigo-700 text-indigo-100 text-xs font-medium px-3 py-1.5 rounded-full border border-indigo-500">
-                APIs Activas OK
+                Places & Maps Activo
             </span>
         </div>
     </header>
@@ -35,17 +35,17 @@
             <!-- Panel izquierdo: Buscador y Coordenadas -->
             <div class="space-y-6 md:col-span-1">
                 
-                <!-- Caja de Búsqueda -->
+                <!-- Caja de Búsqueda Libre -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3">
-                    <label for="addressInput" class="block text-xs font-semibold uppercase tracking-wider text-indigo-600">Buscar Lugar o Dirección</label>
+                    <label for="searchQuery" class="block text-xs font-semibold uppercase tracking-wider text-indigo-600">Buscar Dirección o Lugar</label>
                     <div class="space-y-2">
-                        <input id="addressInput" type="text" placeholder="Ej: Galería Mall, Bogotá..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
-                        <button onclick="searchAddress()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-2">
+                        <input id="searchQuery" type="text" placeholder="Ej: Conjunto Cerrado Alameda, Calle 100..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        <button onclick="performSearch()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                             Buscar Coordenadas
                         </button>
                     </div>
-                    <p class="text-[11px] text-slate-500">Escribe lo que buscas o haz clic directamente sobre el mapa.</p>
+                    <p class="text-[11px] text-slate-500">Escribe cualquier texto libre o dirección y presiona buscar.</p>
                 </div>
 
                 <!-- Tarjeta de Resultados -->
@@ -54,7 +54,7 @@
                     
                     <div class="space-y-3 text-sm">
                         <div>
-                            <span class="text-slate-400 block text-xs font-medium">Dirección / Lugar:</span>
+                            <span class="text-slate-400 block text-xs font-medium">Lugar / Dirección:</span>
                             <span id="resAddress" class="font-medium text-slate-800 text-xs">-</span>
                         </div>
                         <div class="space-y-2 pt-2 border-t border-slate-100">
@@ -90,7 +90,7 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        EN-VIA App • Geocodificación en vivo
+        EN-VIA App • Búsqueda Libre y Coordenadas
     </footer>
 
     <!-- Notificación Toast -->
@@ -103,7 +103,7 @@
         const apiKey = "AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I";
         let map;
         let marker;
-        let geocoder;
+        let placesService;
 
         function showToast(message) {
             const toast = document.getElementById('toast');
@@ -130,7 +130,7 @@
         async function initMap() {
             const { Map } = await google.maps.importLibrary("maps");
             const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-            const { Geocoder } = await google.maps.importLibrary("geocoding");
+            await google.maps.importLibrary("places");
 
             const mapContainer = document.getElementById('map');
             mapContainer.innerHTML = '';
@@ -140,7 +140,7 @@
             map = new Map(mapContainer, {
                 center: defaultLocation,
                 zoom: 14,
-                mapId: "EN_VIA_GEOCODING_ID"
+                mapId: "EN_VIA_FREE_SEARCH_ID"
             });
 
             marker = new AdvancedMarkerElement({
@@ -148,62 +148,61 @@
                 position: defaultLocation
             });
 
-            geocoder = new Geocoder();
+            // Inicializar PlacesService utilizando el mapa actual
+            placesService = new google.maps.places.PlacesService(map);
 
-            // Buscar al presionar Enter en el input
-            document.getElementById('addressInput').addEventListener('keypress', function (e) {
+            // Permitir buscar al presionar la tecla Enter
+            document.getElementById('searchQuery').addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
-                    searchAddress();
+                    performSearch();
                 }
             });
 
-            // Permitir clic directo en el mapa para obtener geocodificación inversa
-            map.addListener('click', async (event) => {
+            // Permitir clic directo en el mapa
+            map.addListener('click', (event) => {
                 const clickedLocation = event.latLng;
-                try {
-                    const response = await geocoder.geocode({ location: clickedLocation });
-                    const address = response.results[0] ? response.results[0].formatted_address : "Punto seleccionado";
-                    updateLocation(clickedLocation, address, clickedLocation.lat(), clickedLocation.lng());
-                    showToast('¡Coordenadas obtenidas del mapa!');
-                } catch (e) {
-                    updateLocation(clickedLocation, "Punto en el mapa", clickedLocation.lat(), clickedLocation.lng());
-                }
+                updateLocation(clickedLocation, `Punto en mapa (${clickedLocation.lat().toFixed(4)}, ${clickedLocation.lng().toFixed(4)})`, clickedLocation.lat(), clickedLocation.lng());
+                showToast('¡Coordenadas obtenidas del mapa!');
             });
 
             updateLocation(new google.maps.LatLng(defaultLocation.lat, defaultLocation.lng), "Bogotá, Colombia", defaultLocation.lat, defaultLocation.lng);
         }
 
-        // Función para buscar direcciones mediante Geocoding API
-        async function searchAddress() {
-            const query = document.getElementById('addressInput').value.trim();
+        // Búsqueda abierta mediante textSearch para cualquier texto o lugar
+        function performSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
             if (!query) {
-                showToast('Por favor escribe un lugar o dirección.');
+                showToast('Por favor escribe algo para buscar.');
                 return;
             }
 
-            try {
-                const response = await geocoder.geocode({ address: query });
-                if (response.results && response.results.length > 0) {
-                    const result = response.results[0];
-                    const location = result.geometry.location;
-                    
-                    updateLocation(location, result.formatted_address, location.lat(), location.lng());
+            const request = {
+                query: query,
+                location: map.getCenter(),
+                radius: 50000 // Busca en un radio amplio alrededor de la vista actual
+            };
+
+            placesService.textSearch(request, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+                    const place = results[0];
+                    const lat = place.geometry.location.lat();
+                    const lng = place.geometry.location.lng();
+                    const name = place.name || place.formatted_address || query;
+
+                    updateLocation(place.geometry.location, name, lat, lng);
                     showToast('¡Lugar encontrado con éxito!');
                 } else {
-                    showToast('No se encontró el lugar especificado.');
+                    showToast('No se encontraron resultados para: ' + query);
                 }
-            } catch (error) {
-                console.error(error);
-                showToast('Error al buscar la dirección. Revisa la consola.');
-            }
+            });
         }
 
-        function updateLocation(latLng, address, lat, lng) {
+        function updateLocation(latLng, name, lat, lng) {
             map.setCenter(latLng);
             map.setZoom(16);
             marker.position = latLng;
 
-            document.getElementById('resAddress').textContent = address;
+            document.getElementById('resAddress').textContent = name;
             document.getElementById('resLat').textContent = lat.toFixed(6);
             document.getElementById('resLng').textContent = lng.toFixed(6);
         }

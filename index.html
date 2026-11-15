@@ -93,7 +93,7 @@
                                 <span>📍 Origen:</span>
                                 <span id="origin-status" class="text-amber-500 font-medium">Pendiente</span>
                             </div>
-                            <input type="text" id="campo-libre-origen" placeholder="Sin seleccionar..." class="w-full bg-transparent text-xs text-slate-200 font-medium outline-none" readonly>
+                            <input type="text" id="campo-libre-origen" placeholder="Sin seleccionar..." class="w-full bg-transparent text-xs text-slate-200 font-medium outline-none truncate" readonly>
                             <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-[#222222]">
                                 <div><span class="font-bold text-slate-300">Lat:</span> <span id="origin-lat">-</span> | <span class="font-bold text-slate-300">Lon:</span> <span id="origin-lon">-</span></div>
                                 <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-blue-500/10 transition">Copiar</button>
@@ -106,7 +106,7 @@
                                 <span>🏁 Destino:</span>
                                 <span id="dest-status" class="text-amber-500 font-medium">Pendiente</span>
                             </div>
-                            <input type="text" id="campo-libre-destino" placeholder="Sin seleccionar..." class="w-full bg-transparent text-xs text-slate-200 font-medium outline-none" readonly>
+                            <input type="text" id="campo-libre-destino" placeholder="Sin seleccionar..." class="w-full bg-transparent text-xs text-slate-200 font-medium outline-none truncate" readonly>
                             <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-[#222222]">
                                 <div><span class="font-bold text-slate-300">Lat:</span> <span id="dest-lat">-</span> | <span class="font-bold text-slate-300">Lon:</span> <span id="dest-lon">-</span></div>
                                 <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-400 hover:text-blue-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-blue-500/10 transition">Copiar</button>
@@ -115,11 +115,11 @@
                     </div>
                 </div>
 
-                <!-- Resumen de Ruta y Botón Google Maps -->
+                <!-- Resumen de Ruta por Carretera y Botón Google Maps -->
                 <div class="bg-[#161616] p-3 rounded-xl border border-[#262626] space-y-2 mt-3">
                     <div class="flex justify-between text-xs">
-                        <span class="text-slate-400">Distancia:</span>
-                        <span id="route-distance" class="font-bold text-slate-200">-</span>
+                        <span class="text-slate-400">Distancia por carretera:</span>
+                        <span id="route-distance" class="font-bold text-emerald-400">-</span>
                     </div>
                     <div class="flex justify-between text-xs">
                         <span class="text-slate-400">Tiempo estimado:</span>
@@ -154,7 +154,7 @@
         let origenCoords = null;
         let destCoords = null;
         
-        let currentMode = 'origin'; // 'origin' o 'dest'
+        let currentMode = 'origin';
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
         window.addEventListener('load', () => {
@@ -255,7 +255,9 @@
                                     if (location) {
                                         const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
                                         const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
-                                        const direccionFinal = place.formattedAddress || place.displayName;
+                                        
+                                        // Asegurar una dirección limpia basada en texto legible por carretera
+                                        const direccionFinal = place.formattedAddress || place.displayName || placePrediction.text.toString();
                                         const coords = { lat, lng };
 
                                         if (currentMode === 'origin') {
@@ -268,7 +270,6 @@
                                             document.getElementById('origin-status').className = "text-emerald-500 font-bold";
                                             updateMarker('origin', coords);
 
-                                            // Cambiar automáticamente a destino para facilitar el flujo
                                             setMode('dest');
                                         } else {
                                             destCoords = coords;
@@ -339,13 +340,13 @@
                         const route = response.routes[0].legs[0];
                         document.getElementById('route-distance').textContent = route.distance.text;
                         document.getElementById('route-duration').textContent = route.duration.text;
-                        document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
+                        document.getElementById('status-msg').textContent = "¡Ruta por carretera trazada con éxito!";
 
                         const gmapsLink = document.getElementById('gmaps-link');
                         gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
                         gmapsLink.classList.remove('hidden');
                     } else {
-                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta para estos puntos.";
+                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta por carretera para estos puntos.";
                     }
                 });
             } else {

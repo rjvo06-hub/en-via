@@ -32,7 +32,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Escribe o selecciona una dirección y presiona Enter para extraer coordenadas.</p>
+            <p class="text-slate-600 mt-1">Selecciona la dirección y haz clic en extraer para obtener sus coordenadas.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -40,13 +40,16 @@
             <div class="bg-white p-6 rounded-xl shadow-md space-y-6 lg:col-span-1">
                 
                 <!-- Origen -->
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Dirección de Origen</label>
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
                     <gmp-place-autocomplete id="origen-autocomplete">
                         <input type="text" id="origen" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     </gmp-place-autocomplete>
+                    <button onclick="enviarAlExtractor('origen')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5">
+                        <span>🔍</span> Extraer Coordenadas de Origen
+                    </button>
                     
-                    <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                    <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
                             <span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | 
                             <span class="font-bold">Lon:</span> <span id="origin-lon">-</span>
@@ -56,13 +59,16 @@
                 </div>
 
                 <!-- Destino -->
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Dirección de Destino</label>
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
                     <gmp-place-autocomplete id="destino-autocomplete">
                         <input type="text" id="destino" placeholder="Ej. Vereda del Lago..." autocomplete="off">
                     </gmp-place-autocomplete>
+                    <button onclick="enviarAlExtractor('destino')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5">
+                        <span>🔍</span> Extraer Coordenadas de Destino
+                    </button>
                     
-                    <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                    <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
                             <span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | 
                             <span class="font-bold">Lon:</span> <span id="dest-lon">-</span>
@@ -91,13 +97,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Selecciona o escribe una dirección y presiona Enter para procesar.
+                    Escribe la dirección, selecciónala del menú y haz clic en el botón de extraer.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script con disparador directo al extractor -->
+    <!-- Script de control y retorno -->
     <script>
         let map;
         let directionsService;
@@ -110,7 +116,7 @@
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
 
         window.addEventListener('load', () => {
-            // 1. Revisar si regresamos del geo-extractor con las coordenadas listas
+            // 1. Recibir datos cuando regresa del geo-extractor
             const datosRegresados = localStorage.getItem('en_via_resultado_coord');
             if (datosRegresados) {
                 const res = JSON.parse(datosRegresados);
@@ -146,42 +152,24 @@
 
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
-
-                    const inputOrigen = document.getElementById('origen');
-                    const inputDestino = document.getElementById('destino');
-
-                    // Función para empaquetar y saltar al extractor autónomo
-                    function dispararExtractor(inputElement, tipo) {
-                        const direccion = inputElement.value.trim();
-                        if (direccion.length > 3) {
-                            localStorage.setItem('en_via_objetivo', JSON.stringify({ direccion, tipo }));
-                            window.location.href = 'geo-extractor.html';
-                        }
-                    }
-
-                    // 2. Al presionar Enter o al cambiar el foco del input, salta automáticamente al extractor
-                    if (inputOrigen) {
-                        inputOrigen.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                dispararExtractor(inputOrigen, 'origen');
-                            }
-                        });
-                        inputOrigen.addEventListener('change', () => dispararExtractor(inputOrigen, 'origen'));
-                    }
-
-                    if (inputDestino) {
-                        inputDestino.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                dispararExtractor(inputDestino, 'destino');
-                            }
-                        });
-                        inputDestino.addEventListener('change', () => dispararExtractor(inputDestino, 'destino'));
-                    }
                 }
             }, 300);
         });
+
+        // 2. Función que toma el texto actual del input y viaja al extractor
+        function enviarAlExtractor(tipo) {
+            const inputEl = document.getElementById(tipo === 'origen' ? 'origen' : 'destino');
+            const direccion = inputEl.value.trim();
+
+            if (!direccion) {
+                alert("Por favor escribe o selecciona una dirección primero.");
+                return;
+            }
+
+            // Guardar objetivo y viajar al geo-extractor.html
+            localStorage.setItem('en_via_objetivo', JSON.stringify({ direccion, tipo }));
+            window.location.href = 'geo-extractor.html';
+        }
 
         function updateMarker(type, coord) {
             if (type === 'origin') {
@@ -197,7 +185,7 @@
 
         function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
-                document.getElementById('status-msg').textContent = "Calculando ruta vial...";
+                document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
                 const request = {
                     origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
                     destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),

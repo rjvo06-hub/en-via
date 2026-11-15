@@ -7,8 +7,9 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Google Maps API con Places, Geometry y Geocoding integrados -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ&libraries=places,geometry,geocoding" async defer></script>
+    <!-- Leaflet CSS y JS (Mapa interactivo rápido y ligero) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
 
@@ -19,7 +20,6 @@
                 <span>🚕</span> EN-VIA
             </h1>
             <div class="flex items-center gap-2">
-                <!-- Enlace directo al capturador de conductores en la carpeta admin/ -->
                 <a href="admin/conductores.html" class="text-xs bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5 font-medium">
                     <span>👥</span> Conductores
                 </a>
@@ -55,35 +55,35 @@
                 <!-- Punto de Origen -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
-                    <gmp-place-autocomplete id="origen-autocomplete" class="block w-full">
-                        <input type="text" id="origen" required placeholder="Ej. Galerías Mall, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                    </gmp-place-autocomplete>
-                    <p class="text-[10px] text-slate-400 mt-1">Selecciona una opción del menú desplegable de Google.</p>
+                    <input type="text" id="origen" required placeholder="Haz clic en el mapa o escribe aquí..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                 </div>
 
                 <!-- Destino -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
-                    <gmp-place-autocomplete id="destino-autocomplete" class="block w-full">
-                        <input type="text" id="destino" required placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                    </gmp-place-autocomplete>
-                    <p class="text-[10px] text-slate-400 mt-1">Selecciona una opción del menú desplegable de Google.</p>
+                    <input type="text" id="destino" required placeholder="Selecciona el destino en el mapa..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                 </div>
 
-                <!-- Visualización en tiempo real de Coordenadas -->
+                <!-- Mapa Interactivo Visual -->
+                <div class="space-y-1">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Seleccionar en el Mapa (Haz clic para Origen)</label>
+                    <div id="map" class="w-full h-48 rounded-xl border border-slate-200 z-10"></div>
+                </div>
+
+                <!-- Panel de Coordenadas y Código Postal en Tiempo Real -->
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs text-slate-600">
                     <div class="font-semibold text-slate-700 border-b border-slate-200 pb-1 flex justify-between">
-                        <span>📍 Coordenadas Detectadas al Seleccionar</span>
-                        <span id="estadoGeo" class="text-amber-600 font-medium">Esperando selección...</span>
+                        <span>📍 Datos Geográficos Detectados</span>
+                        <span id="estadoGeo" class="text-blue-600 font-medium">Haz clic en el mapa</span>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <div class="grid grid-cols-2 gap-2 pt-1">
                         <div>
                             <span class="block text-[10px] uppercase text-slate-400 font-semibold">Origen (Lat, Lng):</span>
                             <span id="lblOrigenCoords" class="font-mono text-slate-800">-</span>
                         </div>
                         <div>
-                            <span class="block text-[10px] uppercase text-slate-400 font-semibold">Destino (Lat, Lng):</span>
-                            <span id="lblDestinoCoords" class="font-mono text-slate-800">-</span>
+                            <span class="block text-[10px] uppercase text-slate-400 font-semibold">Código Postal:</span>
+                            <span id="lblOrigenPostal" class="font-mono text-slate-800 font-bold">-</span>
                         </div>
                     </div>
                 </div>
@@ -134,196 +134,79 @@
     <script src="js/supabaseClient.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Script Corregido para Captura Instantánea de Coordenadas desde gmp-place-autocomplete -->
+    <!-- Script de Integración con OpenStreetMap (Nominatim Reverse Geocoding) -->
     <script>
-        window.gm_authFailure = function() {
-            console.error("⚠️ Error de autenticación en Google Maps.");
-        };
-
         let origenCoords = null;
         let destinoCoords = null;
-        let directionsService;
-        let geocoder;
+        let map;
+        let marker;
 
-        window.addEventListener('load', () => {
-            const checkMapsInterval = setInterval(() => {
-                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-                    clearInterval(checkMapsInterval);
+        window.addEventListener('DOMContentLoaded', () => {
+            // Inicializar Mapa centrado en Maracaibo
+            map = L.map('map').setView([10.6549, -71.6430], 13);
 
-                    directionsService = new google.maps.DirectionsService();
-                    geocoder = new google.maps.Geocoder();
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
 
-                    const origenAutocomplete = document.getElementById('origen-autocomplete');
-                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
+            // Al hacer clic en el mapa, ejecutamos la misma lógica limpia de tu otro programa (geo-bridge)
+            map.on('click', async (e) => {
+                const lat = e.latlng.lat;
+                const lon = e.latlng.lng;
 
-                    // 1. Captura directa de Origen al hacer clic en una opción del menú desplegable
-                    if (origenAutocomplete) {
-                        origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
-                            const place = event.detail.place;
-                            if (place) {
-                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
-                                if (place.location) {
-                                    origenCoords = {
-                                        lat: place.location.lat(),
-                                        lng: place.location.lng()
-                                    };
-                                    console.log("📍 Origen capturado desde menú:", origenCoords);
-                                    actualizarVisualizadorCoords();
-                                    intentarCalcularDistancia();
-                                }
-                            }
-                        });
-                    }
-
-                    // 2. Captura directa de Destino al hacer clic en una opción del menú desplegable
-                    if (destinoAutocomplete) {
-                        destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
-                            const place = event.detail.place;
-                            if (place) {
-                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
-                                if (place.location) {
-                                    destinoCoords = {
-                                        lat: place.location.lat(),
-                                        lng: place.location.lng()
-                                    };
-                                    console.log("📍 Destino capturado desde menú:", destinoCoords);
-                                    actualizarVisualizadorCoords();
-                                    intentarCalcularDistancia();
-                                }
-                            }
-                        });
-                    }
-
-                    // Respaldo por Geocoder en caso de que escriban y presionen Enter o salgan del campo sin tocar la lista
-                    const inputOrigen = document.getElementById('origen');
-                    const inputDestino = document.getElementById('destino');
-
-                    if (inputOrigen) {
-                        inputOrigen.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                resolverPorTexto(inputOrigen.value, true);
-                            }
-                        });
-                        inputOrigen.addEventListener('blur', () => {
-                            if (!origenCoords && inputOrigen.value.trim().length > 3) {
-                                resolverPorTexto(inputOrigen.value, true);
-                            }
-                        });
-                    }
-
-                    if (inputDestino) {
-                        inputDestino.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                resolverPorTexto(inputDestino.value, false);
-                            }
-                        });
-                        inputDestino.addEventListener('blur', () => {
-                            if (!destinoCoords && inputDestino.value.trim().length > 3) {
-                                resolverPorTexto(inputDestino.value, false);
-                            }
-                        });
-                    }
-
-                    // Hora actual por defecto
-                    const now = new Date();
-                    const hours = String(now.getHours()).padStart(2, '0');
-                    const minutes = String(now.getMinutes()).padStart(2, '0');
-                    const inputHora = document.getElementById('hora');
-                    if (inputHora) inputHora.value = `${hours}:${minutes}`;
-
-                    console.log("✅ Componentes de autocompletado configurados correctamente.");
+                if (marker) {
+                    marker.setLatLng([lat, lon]);
+                } else {
+                    marker = L.marker([lat, lon]).addTo(map);
                 }
-            }, 300);
 
-            setTimeout(() => {
-                clearInterval(checkMapsInterval);
-            }, 8000);
-        });
+                document.getElementById('estadoGeo').textContent = "Consultando dirección...";
 
-        // Función de respaldo por texto usando Geocoder
-        function resolverPorTexto(texto, esOrigen) {
-            let address = texto;
-            if (!address.toLowerCase().includes('maracaibo')) {
-                address = `${address}, Maracaibo, Zulia, Venezuela`;
-            }
+                try {
+                    const apiUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+                    const response = await fetch(apiUrl, {
+                        headers: { 'Accept-Language': 'es' }
+                    });
 
-            geocoder.geocode({ address: address }, (results, status) => {
-                if (status === 'OK' && results && results[0]) {
-                    const loc = results[0].geometry.location;
-                    const coords = { lat: loc.lat(), lng: loc.lng() };
+                    if (!response.ok) throw new Error("Error al conectar con el servicio de mapas.");
 
-                    if (esOrigen) {
-                        origenCoords = coords;
-                    } else {
-                        destinoCoords = coords;
+                    const data = await response.json();
+                    const address = data.address || {};
+                    const street = address.road || address.pedestrian || address.street || address.footway || 'Ubicación seleccionada';
+                    const houseNumber = address.house_number || '';
+                    const postcode = address.postcode || 'Sin código postal';
+
+                    let fullAddress = street;
+                    if (houseNumber && houseNumber !== 'S/N') {
+                        fullAddress += ` #${houseNumber}`;
                     }
-                    actualizarVisualizadorCoords();
-                    intentarCalcularDistancia();
+
+                    // Guardar coordenadas y datos en el origen
+                    origenCoords = { lat: lat, lng: lon };
+                    document.getElementById('origen').value = fullAddress.trim();
+                    document.getElementById('lblOrigenCoords').textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+                    document.getElementById('lblOrigenPostal').textContent = postcode;
+                    document.getElementById('estadoGeo').textContent = "¡Origen capturado!";
+                    document.getElementById('estadoGeo').className = "text-emerald-600 font-semibold";
+
+                } catch (err) {
+                    console.error(err);
+                    origenCoords = { lat: lat, lng: lon };
+                    document.getElementById('origen').value = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+                    document.getElementById('lblOrigenCoords').textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+                    document.getElementById('lblOrigenPostal').textContent = "N/D";
+                    document.getElementById('estadoGeo').textContent = "Ubicación fijada por coordenadas";
                 }
             });
-        }
 
-        // Actualizar la interfaz visual de las coordenadas
-        function actualizarVisualizadorCoords() {
-            const estadoGeo = document.getElementById('estadoGeo');
-            const lblOrigen = document.getElementById('lblOrigenCoords');
-            const lblDestino = document.getElementById('lblDestinoCoords');
-
-            if (origenCoords) {
-                lblOrigen.textContent = `${origenCoords.lat.toFixed(5)}, ${origenCoords.lng.toFixed(5)}`;
-            }
-            if (destinoCoords) {
-                lblDestino.textContent = `${destinoCoords.lat.toFixed(5)}, ${destinoCoords.lng.toFixed(5)}`;
-            }
-
-            if (origenCoords && destinoCoords) {
-                estadoGeo.textContent = "¡Coordenadas listas!";
-                estadoGeo.className = "text-emerald-600 font-semibold";
-            } else {
-                estadoGeo.textContent = "Falta un punto de ruta";
-                estadoGeo.className = "text-amber-600 font-medium";
-            }
-        }
-
-        // Cálculo de ruta y precio mediante coordenadas exactas
-        function intentarCalcularDistancia() {
-            if (!origenCoords || !destinoCoords) return;
-
-            document.getElementById('distancia').value = "Calculando...";
-            document.getElementById('precio').value = "Calculando...";
-
-            const origenLatLng = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
-            const destinoLatLng = new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng);
-
-            directionsService.route(
-                {
-                    origin: origenLatLng,
-                    destination: destinoLatLng,
-                    travelMode: google.maps.TravelMode.DRIVING
-                },
-                (response, status) => {
-                    if (status === 'OK') {
-                        const route = response.routes[0].legs[0];
-                        const distanciaMetros = route.distance.value;
-                        const kmValor = distanciaMetros / 1000;
-                        
-                        document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
-
-                        let precioCalculado = kmValor * 1.0; 
-                        if (precioCalculado < 3) {
-                            precioCalculado = 3.00;
-                        }
-
-                        document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
-                    } else {
-                        document.getElementById('distancia').value = "Error al calcular ruta";
-                        document.getElementById('precio').value = "Error";
-                    }
-                }
-            );
-        }
+            // Hora actual por defecto
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const inputHora = document.getElementById('hora');
+            if (inputHora) inputHora.value = `${hours}:${minutes}`;
+        });
     </script>
 </body>
 </html>

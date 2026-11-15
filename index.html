@@ -3,28 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EN-VIA - Rutas y Coordenadas</title>
+    <title>EN-VIA - Panel de Rutas</title>
     <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API con Places (New) -->
+    <!-- Google Maps API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <style>
         #map { height: 450px; width: 100%; }
-        gmp-place-autocomplete { width: 100%; }
-        gmp-place-autocomplete input {
-            width: 100%;
-            background-color: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: #1e293b;
-            outline: none;
-        }
-        gmp-place-autocomplete input:focus {
-            background-color: #ffffff;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
@@ -32,7 +17,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-extrabold text-blue-600">EN-VIA - Panel de Rutas</h1>
-            <p class="text-slate-600 mt-1">Selecciona la dirección y haz clic en extraer para obtener sus coordenadas.</p>
+            <p class="text-slate-600 mt-1">Escribe o pega la dirección, haz clic en extraer y mira el resultado duplicado abajo.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -42,38 +27,36 @@
                 <!-- Origen -->
                 <div class="space-y-2">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Origen</label>
-                    <gmp-place-autocomplete id="origen-autocomplete">
-                        <input type="text" id="origen-input-text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
-                    </gmp-place-autocomplete>
+                    
+                    <!-- Campo de texto normal y transparente -->
+                    <input type="text" id="input-origen" placeholder="Escribe o pega la dirección aquí..." autocomplete="off" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm">
+                    
                     <button onclick="enviarAlExtractor('origen')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Origen
                     </button>
                     
-                    <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
-                        <div>
-                            <span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | 
-                            <span class="font-bold">Lon:</span> <span id="origin-lon">-</span>
-                        </div>
-                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-600 hover:underline font-medium">Copiar</button>
+                    <!-- Visualización duplicada y coordenadas -->
+                    <div class="p-3 bg-slate-100 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
+                        <div><span class="font-bold">Texto leído:</span> <span id="duplicado-origen" class="italic text-slate-500">Ninguno</span></div>
+                        <div><span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | <span class="font-bold">Lon:</span> <span id="origin-lon">-</span></div>
                     </div>
                 </div>
 
                 <!-- Destino -->
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Dirección de Destino</label>
-                    <gmp-place-autocomplete id="destino-autocomplete">
-                        <input type="text" id="destino-input-text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
-                    </gmp-place-autocomplete>
+                    
+                    <!-- Campo de texto normal y transparente -->
+                    <input type="text" id="input-destino" placeholder="Escribe o pega la dirección aquí..." autocomplete="off" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm">
+                    
                     <button onclick="enviarAlExtractor('destino')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
                         <span>🔍</span> Extraer Coordenadas de Destino
                     </button>
                     
-                    <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
-                        <div>
-                            <span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | 
-                            <span class="font-bold">Lon:</span> <span id="dest-lon">-</span>
-                        </div>
-                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-600 hover:underline font-medium">Copiar</button>
+                    <!-- Visualización duplicada y coordenadas -->
+                    <div class="p-3 bg-slate-100 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
+                        <div><span class="font-bold">Texto leído:</span> <span id="duplicado-destino" class="italic text-slate-500">Ninguno</span></div>
+                        <div><span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | <span class="font-bold">Lon:</span> <span id="dest-lon">-</span></div>
                     </div>
                 </div>
 
@@ -97,13 +80,13 @@
                     <div id="map"></div>
                 </div>
                 <div id="status-msg" class="text-slate-600 text-sm text-center italic">
-                    Selecciona o escribe la dirección y haz clic en extraer.
+                    Escribe o pega la dirección y haz clic en extraer.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script de control integrado con el componente moderno -->
+    <!-- Script de control transparente y duplicación -->
     <script>
         let map;
         let directionsService;
@@ -121,17 +104,19 @@
             if (datosRegresados) {
                 const res = JSON.parse(datosRegresados);
                 if (res && res.tipo === 'origen') {
-                    document.getElementById('origen-input-text').value = res.direccion;
+                    document.getElementById('input-origen').value = res.direccion;
+                    document.getElementById('duplicado-origen').textContent = res.direccion;
+                    document.getElementById('duplicado-origen').className = "font-medium text-slate-900";
                     document.getElementById('origin-lat').textContent = res.lat;
                     document.getElementById('origin-lon').textContent = res.lng;
-                    document.getElementById('btn-copy-origin').classList.remove('hidden');
                     origenCoords = { lat: parseFloat(res.lat), lng: parseFloat(res.lng) };
                     updateMarker('origin', origenCoords);
                 } else if (res && res.tipo === 'destino') {
-                    document.getElementById('destino-input-text').value = res.direccion;
+                    document.getElementById('input-destino').value = res.direccion;
+                    document.getElementById('duplicado-destino').textContent = res.direccion;
+                    document.getElementById('duplicado-destino').className = "font-medium text-slate-900";
                     document.getElementById('dest-lat').textContent = res.lat;
                     document.getElementById('dest-lon').textContent = res.lng;
-                    document.getElementById('btn-copy-dest').classList.remove('hidden');
                     destCoords = { lat: parseFloat(res.lat), lng: parseFloat(res.lng) };
                     updateMarker('dest', destCoords);
                 }
@@ -156,34 +141,23 @@
             }, 300);
         });
 
-        // 2. Función infalible que extrae el texto del componente web moderno
+        // 2. Función que lee el campo transparente, lo duplica abajo y viaja al extractor
         function enviarAlExtractor(tipo) {
-            const inputId = tipo === 'origen' ? 'origen-input-text' : 'destino-input-text';
-            const autocompleteId = tipo === 'origen' ? 'origen-autocomplete' : 'destino-autocomplete';
+            const inputId = tipo === 'origen' ? 'input-origen' : 'input-destino';
+            const duplicadoId = tipo === 'origen' ? 'duplicado-origen' : 'duplicado-destino';
             
-            let direccion = "";
-
-            // Intentar leer desde el input interno del componente web de Google
-            const container = document.getElementById(autocompleteId);
-            if (container) {
-                const innerInput = container.querySelector('input');
-                if (innerInput) {
-                    direccion = innerInput.value.trim();
-                }
-            }
-
-            // Respaldo directo
-            if (!direccion) {
-                const fallbackInput = document.getElementById(inputId);
-                if (fallbackInput) {
-                    direccion = fallbackInput.value.trim();
-                }
-            }
+            const inputEl = document.getElementById(inputId);
+            const direccion = inputEl ? inputEl.value.trim() : '';
 
             if (!direccion) {
-                alert("Por favor escribe o selecciona una dirección primero.");
+                alert("Por favor escribe o pega una dirección primero.");
                 return;
             }
+
+            // Mostrar el texto duplicado inmediatamente
+            const dupEl = document.getElementById(duplicadoId);
+            dupEl.textContent = direccion;
+            dupEl.className = "font-medium text-slate-900";
 
             // Guardar objetivo y viajar al geo-extractor.html
             localStorage.setItem('en_via_objetivo', JSON.stringify({ direccion, tipo }));
@@ -226,17 +200,6 @@
                     }
                 });
             }
-        }
-
-        function copyCoords(type) {
-            const lat = document.getElementById(`${type}-lat`).textContent;
-            const lon = document.getElementById(`${type}-lon`).textContent;
-            navigator.clipboard.writeText(`${lat}, ${lon}`).then(() => {
-                const btn = document.getElementById(`btn-copy-${type}`);
-                const originalText = btn.textContent;
-                btn.textContent = "¡Copiado!";
-                setTimeout(() => { btn.textContent = originalText; }, 2000);
-            });
         }
     </script>
 </body>

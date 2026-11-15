@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EN-VIA • Buscador de Coordenadas</title>
+    <title>EN-VIA • Buscador Libre de Coordenadas</title>
     <!-- Tailwind CSS para diseño moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,11 +17,11 @@
     <header class="bg-indigo-600 text-white shadow-md py-6 px-4">
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador Libre de Coordenadas</h1>
-                <p class="text-indigo-200 text-sm mt-1">Busca direcciones, conjuntos residenciales, lugares y más</p>
+                <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador de Coordenadas</h1>
+                <p class="text-indigo-200 text-sm mt-1">Búsqueda libre por dirección, conjunto o lugar</p>
             </div>
             <span class="bg-indigo-700 text-indigo-100 text-xs font-medium px-3 py-1.5 rounded-full border border-indigo-500">
-                Places & Maps Activo
+                Maps & Geocoding Activo
             </span>
         </div>
     </header>
@@ -39,13 +39,13 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3">
                     <label for="searchQuery" class="block text-xs font-semibold uppercase tracking-wider text-indigo-600">Buscar Dirección o Lugar</label>
                     <div class="space-y-2">
-                        <input id="searchQuery" type="text" placeholder="Ej: Conjunto Cerrado Alameda, Calle 100..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        <input id="searchQuery" type="text" placeholder="Ej: Conjunto Residencial, Calle..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                         <button onclick="performSearch()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                             Buscar Coordenadas
                         </button>
                     </div>
-                    <p class="text-[11px] text-slate-500">Escribe cualquier texto libre o dirección y presiona buscar.</p>
+                    <p class="text-[11px] text-slate-500">Escribe cualquier dirección, conjunto o lugar y presiona enter o buscar.</p>
                 </div>
 
                 <!-- Tarjeta de Resultados -->
@@ -90,7 +90,7 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        EN-VIA App • Búsqueda Libre y Coordenadas
+        EN-VIA App • Geocodificación directa
     </footer>
 
     <!-- Notificación Toast -->
@@ -103,7 +103,6 @@
         const apiKey = "AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I";
         let map;
         let marker;
-        let placesService;
 
         function showToast(message) {
             const toast = document.getElementById('toast');
@@ -130,7 +129,6 @@
         async function initMap() {
             const { Map } = await google.maps.importLibrary("maps");
             const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-            await google.maps.importLibrary("places");
 
             const mapContainer = document.getElementById('map');
             mapContainer.innerHTML = '';
@@ -140,16 +138,13 @@
             map = new Map(mapContainer, {
                 center: defaultLocation,
                 zoom: 14,
-                mapId: "EN_VIA_FREE_SEARCH_ID"
+                mapId: "EN_VIA_HTTP_SEARCH_ID"
             });
 
             marker = new AdvancedMarkerElement({
                 map: map,
                 position: defaultLocation
             });
-
-            // Inicializar PlacesService utilizando el mapa actual
-            placesService = new google.maps.places.PlacesService(map);
 
             // Permitir buscar al presionar la tecla Enter
             document.getElementById('searchQuery').addEventListener('keypress', function (e) {
@@ -168,33 +163,38 @@
             updateLocation(new google.maps.LatLng(defaultLocation.lat, defaultLocation.lng), "Bogotá, Colombia", defaultLocation.lat, defaultLocation.lng);
         }
 
-        // Búsqueda abierta mediante textSearch para cualquier texto o lugar
-        function performSearch() {
-            const query = document.getElementById('searchQuery').value.trim();
+        // Búsqueda directa a través de la API HTTP de Geocoding
+        async function performSearch() {
+            let query = document.getElementById('searchQuery').value.trim();
             if (!query) {
                 showToast('Por favor escribe algo para buscar.');
                 return;
             }
 
-            const request = {
-                query: query,
-                location: map.getCenter(),
-                radius: 50000 // Busca en un radio amplio alrededor de la vista actual
-            };
+            // Añadir contexto de ciudad si no lo incluye para facilitar la búsqueda local
+            if (!query.toLowerCase().includes('bogota') && !query.toLowerCase().includes('colombia')) {
+                query = query + ", Bogotá, Colombia";
+            }
 
-            placesService.textSearch(request, (results, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
-                    const place = results[0];
-                    const lat = place.geometry.location.lat();
-                    const lng = place.geometry.location.lng();
-                    const name = place.name || place.formatted_address || query;
+            try {
+                const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
 
-                    updateLocation(place.geometry.location, name, lat, lng);
+                if (data.status === 'OK' && data.results && data.results.length > 0) {
+                    const result = data.results[0];
+                    const location = result.geometry.location;
+                    const latLng = new google.maps.LatLng(location.lat, location.lng);
+
+                    updateLocation(latLng, result.formatted_address, location.lat, location.lng);
                     showToast('¡Lugar encontrado con éxito!');
                 } else {
                     showToast('No se encontraron resultados para: ' + query);
                 }
-            });
+            } catch (error) {
+                console.error(error);
+                showToast('Error de conexión al buscar el lugar.');
+            }
         }
 
         function updateLocation(latLng, name, lat, lng) {

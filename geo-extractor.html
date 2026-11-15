@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extractor Autónomo de Coordenadas - Google Maps</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Maps API cargando Geocoder y Places -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geocoding" async defer></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-lg p-6 space-y-5">
+        <header class="text-center">
+            <h1 class="text-xl font-bold text-slate-900">Extractor Independiente</h1>
+            <p class="text-xs text-slate-500 mt-1">Escribe la dirección exacta y obtén sus coordenadas de inmediato.</p>
+        </header>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Dirección de Entrada</label>
+                <input type="text" id="input-direccion" placeholder="Ej. Centro Comercial Sambil, Maracaibo..." class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+            </div>
+
+            <button onclick="procesarDireccionExterna()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition text-sm shadow-sm">
+                Extraer Coordenadas
+            </button>
+        </div>
+
+        <!-- Resultado de la Extracción -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+            <div class="flex justify-between">
+                <span class="font-bold text-slate-600">Latitud:</span>
+                <span id="res-lat" class="font-mono text-slate-800">-</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-bold text-slate-600">Longitud:</span>
+                <span id="res-lng" class="font-mono text-slate-800">-</span>
+            </div>
+            <div class="pt-2 border-t border-slate-200 text-center">
+                <span id="status-proceso" class="text-slate-500 italic">Esperando dirección...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let geocoder;
+
+        window.addEventListener('load', () => {
+            const checkGoogle = setInterval(() => {
+                if (typeof google !== 'undefined' && google.maps) {
+                    clearInterval(checkGoogle);
+                    geocoder = new google.maps.Geocoder();
+                    console.log("✅ Geocoder independiente listo.");
+                }
+            }, 200);
+        });
+
+        // Función independiente que sale, consulta y devuelve la lat/lng
+        function procesarDireccionExterna() {
+            const direccionTexto = document.getElementById('input-direccion').value.trim();
+            const statusEl = document.getElementById('status-proceso');
+
+            if (!direccionTexto) {
+                alert("Por favor escribe una dirección.");
+                return;
+            }
+
+            statusEl.textContent = "Consultando con Google Maps...";
+
+            geocoder.geocode({ address: direccionTexto }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                    const location = results[0].geometry.location;
+                    const lat = location.lat();
+                    const lng = location.lng();
+
+                    // Mostrar resultados en pantalla
+                    document.getElementById('res-lat').textContent = lat;
+                    document.getElementById('res-lng').textContent = lng;
+                    statusEl.textContent = "¡Coordenadas extraídas con éxito!";
+
+                    console.log("📍 Datos extraídos:", { direccion: direccionTexto, lat, lng });
+                } else {
+                    statusEl.textContent = "No se pudo ubicar la dirección.";
+                    alert("Error: Google Maps no encontró la dirección especificada (" + status + ")");
+                }
+            });
+        }
+    </script>
+</body>
+</html>

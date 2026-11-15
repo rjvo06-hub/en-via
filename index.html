@@ -2,234 +2,351 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EN-VIA • Buscador Libre de Coordenadas</title>
-    <!-- Tailwind CSS para diseño moderno -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EN-VIA - Panel de Carreras y Coordenadas</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Google Maps API con Places, Geometry y Geocoding integrados -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4uaDGEnYaYHBqxhcCGyKA2uTAyJmwRZQ&libraries=places,geometry,geocoding" async defer></script>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-between">
+<body class="bg-slate-100 min-h-screen">
 
-    <!-- Header -->
-    <header class="bg-indigo-600 text-white shadow-md py-6 px-4">
-        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight">EN-VIA • Buscador de Coordenadas</h1>
-                <p class="text-indigo-200 text-sm mt-1">Búsqueda libre por dirección, conjunto o lugar</p>
+    <!-- Cabecera Adaptativa con Acceso al Gestor de Conductores -->
+    <header class="bg-slate-900 text-white shadow-sm sticky top-0 z-50 py-3 px-4">
+        <div class="app-container flex justify-between items-center !p-0">
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                <span>🚕</span> EN-VIA
+            </h1>
+            <div class="flex items-center gap-2">
+                <!-- Enlace directo al capturador de conductores en la carpeta admin/ -->
+                <a href="admin/conductores.html" class="text-xs bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5 font-medium">
+                    <span>👥</span> Conductores
+                </a>
+                <div class="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-medium text-slate-300">En Vivo</span>
+                </div>
             </div>
-            <span class="bg-indigo-700 text-indigo-100 text-xs font-medium px-3 py-1.5 rounded-full border border-indigo-500">
-                Maps & Geocoding Activo
-            </span>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="max-w-4xl w-full mx-auto p-4 sm:p-6 my-6 flex-grow space-y-6">
-
-        <!-- Grid de Búsqueda, Resultados y Mapa -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <main class="app-container pb-16 pt-4 max-w-xl mx-auto px-4">
+        
+        <!-- Formulario para Registrar/Publicar Solicitud -->
+        <section class="bg-white rounded-2xl shadow-sm p-5 mb-6 border border-slate-200">
+            <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                <span>Nueva Solicitud y Coordenadas</span>
+                <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-medium">Panel Operativo</span>
+            </h2>
             
-            <!-- Panel izquierdo: Buscador y Coordenadas -->
-            <div class="space-y-6 md:col-span-1">
-                
-                <!-- Caja de Búsqueda Libre -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3">
-                    <label for="searchQuery" class="block text-xs font-semibold uppercase tracking-wider text-indigo-600">Buscar Dirección o Lugar</label>
-                    <div class="space-y-2">
-                        <input id="searchQuery" type="text" placeholder="Ej: Conjunto Residencial, Calle..." class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
-                        <button onclick="performSearch()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            Buscar Coordenadas
-                        </button>
+            <form id="formCarrera" class="space-y-3.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Cliente</label>
+                        <input type="text" id="clienteNombre" placeholder="Nombre" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                     </div>
-                    <p class="text-[11px] text-slate-500">Escribe cualquier dirección, conjunto o lugar y presiona enter o buscar.</p>
-                </div>
-
-                <!-- Tarjeta de Resultados -->
-                <div id="resultCard" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-indigo-600">Punto Seleccionado</h3>
-                    
-                    <div class="space-y-3 text-sm">
-                        <div>
-                            <span class="text-slate-400 block text-xs font-medium">Lugar / Dirección:</span>
-                            <span id="resAddress" class="font-medium text-slate-800 text-xs">-</span>
-                        </div>
-                        <div class="space-y-2 pt-2 border-t border-slate-100">
-                            <div>
-                                <span class="text-slate-400 block text-xs font-medium">Latitud:</span>
-                                <span id="resLat" class="font-mono font-semibold text-slate-900 text-sm">-</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block text-xs font-medium">Longitud:</span>
-                                <span id="resLng" class="font-mono font-semibold text-slate-900 text-sm">-</span>
-                            </div>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Teléfono</label>
+                        <input type="tel" id="clienteTelefono" placeholder="Móvil" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
                     </div>
-
-                    <button onclick="copyCoordinates()" class="w-full mt-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                        Copiar Coordenadas
-                    </button>
                 </div>
 
-            </div>
-
-            <!-- Columna del Mapa Visual (Ocupa 2 columnas) -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 h-[500px] md:col-span-2 flex flex-col">
-                <div id="map" class="w-full h-full rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-sm">
-                    Cargando mapa interactivo...
+                <!-- Punto de Origen -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
+                    <gmp-place-autocomplete id="origen-autocomplete" class="block w-full">
+                        <input type="text" id="origen" required placeholder="Ej. Conjunto Residencial, Galerías..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </gmp-place-autocomplete>
+                    <p class="text-[10px] text-slate-400 mt-1">Escribe la dirección o conjunto y presiona Enter o sal del campo.</p>
                 </div>
-            </div>
 
-        </div>
+                <!-- Destino -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Destino</label>
+                    <gmp-place-autocomplete id="destino-autocomplete" class="block w-full">
+                        <input type="text" id="destino" required placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </gmp-place-autocomplete>
+                    <p class="text-[10px] text-slate-400 mt-1">Escribe el destino y presiona Enter o sal del campo.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Hora</label>
+                        <input type="text" id="hora" required placeholder="Ej. 14:30" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Distancia (Automática)</label>
+                        <input type="text" id="distancia" readonly placeholder="Pendiente..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-slate-600 font-medium cursor-not-allowed">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Precio Acordado ($ - Automático)</label>
+                    <input type="text" id="precio" readonly placeholder="Pendiente..." class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-emerald-700 font-bold cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Notas / Observaciones</label>
+                    <input type="text" id="notas" placeholder="Ej. Equipaje grande, vuelo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold py-3.5 px-4 rounded-xl transition shadow-sm mt-2">
+                    Publicar Servicio
+                </button>
+            </form>
+        </section>
+
+        <!-- Listado de Servicios Disponibles -->
+        <section>
+            <div class="flex items-center justify-between mb-3 px-1">
+                <h2 class="text-base font-bold text-slate-900">Servicios Disponibles</h2>
+                <span id="contadorCarreras" class="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">0</span>
+            </div>
+            
+            <div id="listaCarreras" class="space-y-3">
+                <p class="text-slate-400 text-center py-10 bg-white rounded-2xl border border-slate-200 text-sm">Cargando servicios...</p>
+            </div>
+        </section>
 
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        EN-VIA App • Geocodificación directa
-    </footer>
+    <!-- Supabase JS UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/app.js"></script>
 
-    <!-- Notificación Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
-        ¡Acción realizada con éxito!
-    </div>
-
-    <!-- Script principal -->
+    <!-- Script Integrado con Geocoding API y Places -->
     <script>
-        const apiKey = "AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I";
-        let map;
-        let marker;
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
-        }
-
-        // Cargador asíncrono oficial moderno
-        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t.toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&`+e;d[q]=f;a.onerror=()=>n(new Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?fn:d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
-            key: apiKey,
-            v: "weekly"
-        });
-
-        window.onload = function() {
-            initMap().catch(err => {
-                console.error(err);
-                showToast('Error al cargar Google Maps.');
-            });
+        window.gm_authFailure = function() {
+            console.error("⚠️ Error de autenticación en Google Maps.");
         };
 
-        async function initMap() {
-            const { Map } = await google.maps.importLibrary("maps");
-            const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+        let origenCoords = null;
+        let destinoCoords = null;
+        let directionsService;
+        let geocoder;
 
-            const mapContainer = document.getElementById('map');
-            mapContainer.innerHTML = '';
+        window.addEventListener('load', () => {
+            const checkMapsInterval = setInterval(() => {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                    clearInterval(checkMapsInterval);
 
-            const defaultLocation = { lat: 4.6097, lng: -74.0817 }; // Bogotá por defecto
+                    directionsService = new google.maps.DirectionsService();
+                    geocoder = new google.maps.Geocoder();
 
-            map = new Map(mapContainer, {
-                center: defaultLocation,
-                zoom: 14,
-                mapId: "EN_VIA_HTTP_SEARCH_ID"
-            });
+                    const maracaiboBounds = {
+                        north: 10.7500,
+                        south: 10.5800,
+                        east: -71.5500,
+                        west: -71.7200
+                    };
 
-            marker = new AdvancedMarkerElement({
-                map: map,
-                position: defaultLocation
-            });
+                    const maracaiboCenter = new google.maps.LatLng(10.6549, -71.6430);
 
-            // Permitir buscar al presionar la tecla Enter
-            document.getElementById('searchQuery').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    performSearch();
+                    const origenAutocomplete = document.getElementById('origen-autocomplete');
+                    const inputOrigen = document.getElementById('origen');
+                    const destinoAutocomplete = document.getElementById('destino-autocomplete');
+                    const inputDestino = document.getElementById('destino');
+
+                    // Asignar restricciones geográficas a los componentes
+                    if (origenAutocomplete) origenAutocomplete.locationRestriction = maracaiboBounds;
+                    if (destinoAutocomplete) destinoAutocomplete.locationRestriction = maracaiboBounds;
+
+                    // 1. Capturar Origen (Autocomplete web component)
+                    if (origenAutocomplete) {
+                        origenAutocomplete.addEventListener('place_changed', async () => {
+                            const place = origenAutocomplete.place;
+                            if (place && place.geometry && place.geometry.location) {
+                                origenCoords = {
+                                    lat: place.geometry.location.lat(),
+                                    lng: place.geometry.location.lng()
+                                };
+                                console.log("📍 Origen capturado:", origenCoords);
+                                intentarCalcularDistancia();
+                            }
+                        });
+
+                        origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            if (place) {
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
+                                if (place.location) {
+                                    origenCoords = {
+                                        lat: place.location.lat(),
+                                        lng: place.location.lng()
+                                    };
+                                    console.log("📍 Origen capturado (gmp-placeselect):", origenCoords);
+                                    intentarCalcularDistancia();
+                                }
+                            }
+                        });
+                    }
+
+                    // 2. Capturar Destino (Autocomplete web component)
+                    if (destinoAutocomplete) {
+                        destinoAutocomplete.addEventListener('place_changed', async () => {
+                            const place = destinoAutocomplete.place;
+                            if (place && place.geometry && place.geometry.location) {
+                                destinoCoords = {
+                                    lat: place.geometry.location.lat(),
+                                    lng: place.geometry.location.lng()
+                                };
+                                console.log("📍 Destino capturado:", destinoCoords);
+                                intentarCalcularDistancia();
+                            }
+                        });
+
+                        destinoAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            if (place) {
+                                await place.fetchFields({ fields: ['location', 'formatted_address', 'displayName'] });
+                                if (place.location) {
+                                    destinoCoords = {
+                                        lat: place.location.lat(),
+                                        lng: place.location.lng()
+                                    };
+                                    console.log("📍 Destino capturado (gmp-placeselect):", destinoCoords);
+                                    intentarCalcularDistancia();
+                                }
+                            }
+                        });
+                    }
+
+                    // --- INTEGRACIÓN ACTIVA DE GEOCODING API PARA BÚSQUEDA LIBRE ---
+                    
+                    function resolverConGeocoder(inputElement, esOrigen) {
+                        const query = inputElement.value.trim();
+                        if (!query || query.length < 3) return;
+
+                        // Añadir contexto de Maracaibo si el usuario escribe texto libre o un conjunto
+                        let searchAddress = query;
+                        if (!searchAddress.toLowerCase().includes('maracaibo')) {
+                            searchAddress = `${searchAddress}, Maracaibo, Zulia, Venezuela`;
+                        }
+
+                        console.log(`🔍 Consultando Geocoding API para: "${searchAddress}"`);
+
+                        geocoder.geocode({
+                            address: searchAddress,
+                            componentRestrictions: { country: 'VE' }
+                        }, (results, status) => {
+                            if (status === 'OK' && results && results[0]) {
+                                const location = results[0].geometry.location;
+                                const coords = {
+                                    lat: location.lat(),
+                                    lng: location.lng()
+                                };
+
+                                if (esOrigen) {
+                                    origenCoords = coords;
+                                    console.log("✅ Origen resuelto por Geocoding API:", origenCoords);
+                                } else {
+                                    destinoCoords = coords;
+                                    console.log("✅ Destino resuelto por Geocoding API:", destinoCoords);
+                                }
+
+                                intentarCalcularDistancia();
+                            } else {
+                                console.warn("⚠️ Geocoding no encontró resultados exactos para:", query);
+                            }
+                        });
+                    }
+
+                    // Eventos para disparar la Geocoding API al presionar Enter o perder el foco (blur)
+                    if (inputOrigen) {
+                        inputOrigen.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                resolverConGeocoder(inputOrigen, true);
+                                inputOrigen.blur();
+                            }
+                        });
+                        inputOrigen.addEventListener('blur', () => {
+                            if (!origenCoords && inputOrigen.value.trim().length > 2) {
+                                resolverConGeocoder(inputOrigen, true);
+                            }
+                        });
+                    }
+
+                    if (inputDestino) {
+                        inputDestino.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                resolverConGeocoder(inputDestino, false);
+                                inputDestino.blur();
+                            }
+                        });
+                        inputDestino.addEventListener('blur', () => {
+                            if (!destinoCoords && inputDestino.value.trim().length > 2) {
+                                resolverConGeocoder(inputDestino, false);
+                            }
+                        });
+                    }
+
+                    // Hora actual por defecto
+                    const now = new Date();
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    const inputHora = document.getElementById('hora');
+                    if (inputHora) inputHora.value = `${hours}:${minutes}`;
+
+                    console.log("✅ Geocoding API y Places configurados correctamente.");
                 }
-            });
+            }, 300);
 
-            // Permitir clic directo en el mapa
-            map.addListener('click', (event) => {
-                const clickedLocation = event.latLng;
-                updateLocation(clickedLocation, `Punto en mapa (${clickedLocation.lat().toFixed(4)}, ${clickedLocation.lng().toFixed(4)})`, clickedLocation.lat(), clickedLocation.lng());
-                showToast('¡Coordenadas obtenidas del mapa!');
-            });
+            setTimeout(() => {
+                clearInterval(checkMapsInterval);
+            }, 8000);
+        });
 
-            updateLocation(new google.maps.LatLng(defaultLocation.lat, defaultLocation.lng), "Bogotá, Colombia", defaultLocation.lat, defaultLocation.lng);
-        }
-
-        // Búsqueda directa a través de la API HTTP de Geocoding
-        async function performSearch() {
-            let query = document.getElementById('searchQuery').value.trim();
-            if (!query) {
-                showToast('Por favor escribe algo para buscar.');
+        // 3. Función de cálculo basada estrictamente en coordenadas lat/lng
+        function intentarCalcularDistancia() {
+            if (!origenCoords || !destinoCoords) {
+                console.log("⏳ Faltan coordenadas. Origen:", origenCoords ? "OK" : "Pendiente", "| Destino:", destinoCoords ? "OK" : "Pendiente");
                 return;
             }
 
-            // Añadir contexto de ciudad si no lo incluye para facilitar la búsqueda local
-            if (!query.toLowerCase().includes('bogota') && !query.toLowerCase().includes('colombia')) {
-                query = query + ", Bogotá, Colombia";
-            }
+            document.getElementById('distancia').value = "Calculando...";
+            document.getElementById('precio').value = "Calculando...";
 
-            try {
-                const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
-                const response = await fetch(url);
-                const data = await response.json();
+            const origenLatLng = new google.maps.LatLng(origenCoords.lat, origenCoords.lng);
+            const destinoLatLng = new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng);
 
-                if (data.status === 'OK' && data.results && data.results.length > 0) {
-                    const result = data.results[0];
-                    const location = result.geometry.location;
-                    const latLng = new google.maps.LatLng(location.lat, location.lng);
+            console.log("🚀 Solicitando ruta con lat/lng exactos...");
 
-                    updateLocation(latLng, result.formatted_address, location.lat, location.lng);
-                    showToast('¡Lugar encontrado con éxito!');
-                } else {
-                    showToast('No se encontraron resultados para: ' + query);
+            directionsService.route(
+                {
+                    origin: origenLatLng,
+                    destination: destinoLatLng,
+                    travelMode: google.maps.TravelMode.DRIVING
+                },
+                (response, status) => {
+                    if (status === 'OK') {
+                        const route = response.routes[0].legs[0];
+                        
+                        const distanciaMetros = route.distance.value;
+                        const kmValor = distanciaMetros / 1000;
+                        
+                        // Rellenar campo de distancia bloqueado
+                        document.getElementById('distancia').value = `${kmValor.toFixed(2)} km`;
+
+                        // Regla de cobro: $1 por kilómetro, mínimo $3
+                        let precioCalculado = kmValor * 1.0; 
+                        if (precioCalculado < 3) {
+                            precioCalculado = 3.00;
+                        }
+
+                        // Rellenar campo de precio bloqueado
+                        document.getElementById('precio').value = `${precioCalculado.toFixed(2)}`;
+                        console.log(`✅ Distancia: ${kmValor.toFixed(2)} km | Precio: $${precioCalculado.toFixed(2)}`);
+                    } else {
+                        console.error("❌ Error en DirectionsService:", status);
+                        document.getElementById('distancia').value = "Error al calcular";
+                        document.getElementById('precio').value = "Error";
+                    }
                 }
-            } catch (error) {
-                console.error(error);
-                showToast('Error de conexión al buscar el lugar.');
-            }
-        }
-
-        function updateLocation(latLng, name, lat, lng) {
-            map.setCenter(latLng);
-            map.setZoom(16);
-            marker.position = latLng;
-
-            document.getElementById('resAddress').textContent = name;
-            document.getElementById('resLat').textContent = lat.toFixed(6);
-            document.getElementById('resLng').textContent = lng.toFixed(6);
-        }
-
-        // Copiar coordenadas al portapapeles
-        function copyCoordinates() {
-            const lat = document.getElementById('resLat').textContent;
-            const lng = document.getElementById('resLng').textContent;
-            const textToCopy = `${lat}, ${lng}`;
-
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    showToast('¡Coordenadas copiadas: ' + textToCopy + '!');
-                });
-            } else {
-                const textArea = document.createElement("textarea");
-                textArea.value = textToCopy;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    showToast('¡Coordenadas copiadas!');
-                } catch (e) {
-                    showToast('No se pudo copiar.');
-                }
-                document.body.removeChild(textArea);
-            }
+            );
         }
     </script>
 </body>

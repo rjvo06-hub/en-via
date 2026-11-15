@@ -11,33 +11,24 @@
     <style>
         #map { height: 450px; width: 100%; }
         
-        /* Contenedor compacto y adaptado para que no se desborde en móviles */
+        /* Contenedor principal del componente */
         gmp-place-autocomplete {
             width: 100% !important;
-            max-width: 100% !important;
-            display: block;
-            box-sizing: border-box;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
+            display: block !important;
+            position: relative !important;
         }
 
-        gmp-place-autocomplete::part(container) {
-            width: 100% !important;
-            max-width: 100% !important;
-            box-sizing: border-box !important;
-        }
-        
+        /* Estilo minimalista y limpio para el input interno del componente */
         gmp-place-autocomplete::part(input) {
-            width: 100% !important;
             background-color: #161616 !important;
             border: 1px solid #2e2e2e !important;
             border-radius: 0.6rem !important;
-            padding: 0.45rem 0.75rem !important;
-            font-size: 0.8rem !important;
+            padding: 0.5rem 0.75rem !important;
+            font-size: 0.85rem !important;
             color: #ffffff !important;
             font-family: inherit !important;
             box-shadow: none !important;
+            width: 100% !important;
             box-sizing: border-box !important;
         }
 
@@ -46,20 +37,25 @@
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
         }
 
+        /* Forzar al panel de sugerencias flotante a mantener un diseño compacto y oscuro */
+        gmp-place-autocomplete::part(dropdown) {
+            background-color: #141414 !important;
+            border: 1px solid #2e2e2e !important;
+            border-radius: 0.6rem !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8) !important;
+            margin-top: 4px !important;
+        }
+
         gmp-place-autocomplete input {
             width: 100% !important;
             background-color: #161616 !important;
             border: 1px solid #2e2e2e !important;
             border-radius: 0.6rem;
-            padding: 0.45rem 0.75rem;
-            font-size: 0.8rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
             color: #ffffff !important;
             outline: none;
             box-sizing: border-box;
-        }
-        gmp-place-autocomplete input:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
@@ -178,23 +174,9 @@
 
                     configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
                     configurarLugar('destino-autocomplete', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
-
-                    setupMobileScroll('origen-autocomplete');
-                    setupMobileScroll('destino-autocomplete');
                 }
             }, 300);
         });
-
-        function setupMobileScroll(autocompleteId) {
-            const el = document.getElementById(autocompleteId);
-            if (el) {
-                el.addEventListener('focusin', () => {
-                    setTimeout(() => {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }, 300);
-                });
-            }
-        }
 
         function configurarSesgoBusqueda(autocompleteId) {
             const autocompleteEl = document.getElementById(autocompleteId);

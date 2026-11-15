@@ -152,7 +152,6 @@
         function configurarSesgoBusqueda(autocompleteId) {
             const autocompleteEl = document.getElementById(autocompleteId);
             if (autocompleteEl) {
-                // Definir un rectángulo de sesgo/restricción alrededor de Maracaibo para priorizar resultados locales
                 const defaultBounds = {
                     north: 10.8500,
                     south: 10.4500,
@@ -213,8 +212,17 @@
                 if (destMarker) destMarker.setMap(null);
                 destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
             }
-            map.setCenter(coord);
-            map.setZoom(15);
+
+            // Si ambos puntos existen, ajustamos el mapa para mostrar ambos; si no, centramos en el recién seleccionado
+            if (origenCoords && destCoords) {
+                const bounds = new google.maps.LatLngBounds();
+                bounds.extend(origenCoords);
+                bounds.extend(destCoords);
+                map.fitBounds(bounds);
+            } else {
+                map.setCenter(coord);
+                map.setZoom(15);
+            }
         }
 
         function verificarYCalcularRuta() {
@@ -228,8 +236,8 @@
 
                 directionsService.route(request, (response, status) => {
                     if (status === 'OK') {
-                        if (originMarker) originMarker.setMap(null);
-                        if (destMarker) destMarker.setMap(null);
+                        // Al calcular la ruta, DirectionsRenderer dibuja la ruta y sus marcadores. 
+                        // Aseguramos que el mapa encuadre ambos puntos a través de la ruta completa.
                         directionsRenderer.setDirections(response);
 
                         const route = response.routes[0].legs[0];

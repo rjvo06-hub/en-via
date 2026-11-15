@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Rutas y Tarifas - Maracaibo</title>
-    <!-- Tailwind CSS para el diseño moderno -->
+    <title>Buscador de Coordenadas - Maracaibo</title>
+    <!-- Tailwind CSS para diseño limpio -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS para el mapa -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- Leaflet JavaScript -->
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
-        #map { height: 450px; width: 100%; }
+        #map { height: 420px; width: 100%; }
         .autocomplete-list {
             position: absolute;
             z-index: 1000;
@@ -27,100 +27,80 @@
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
 
-    <div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto px-4 py-8">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold text-blue-600">Calculador de Rutas y Tarifas</h1>
-            <p class="text-slate-600 mt-1">Búsqueda inteligente enfocada en Maracaibo, Zulia con coordenadas y cálculo de distancia.</p>
+            <h1 class="text-3xl font-extrabold text-blue-600">Coordenadas de Direcciones</h1>
+            <p class="text-slate-600 mt-1">Busca cualquier punto en Maracaibo y obtén su latitud y longitud al instante.</p>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Panel de Controles -->
-            <div class="bg-white p-6 rounded-xl shadow-md space-y-6 lg:col-span-1">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Panel de Entradas -->
+            <div class="bg-white p-6 rounded-xl shadow-md space-y-6">
                 
                 <!-- Origen -->
                 <div class="relative">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Origen</label>
-                    <input type="text" id="origin-input" placeholder="Ej. Sambil Maracaibo..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="origin-input" placeholder="Ej. Galerías Mall, C2, Bella Vista..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <div id="origin-suggestions" class="autocomplete-list hidden mt-1"></div>
-                    <div class="text-xs text-slate-500 mt-1">Lat: <span id="origin-lat">-</span>, Lon: <span id="origin-lon">-</span></div>
-                </div>
-
-                <!-- Botón de intercambio -->
-                <div class="flex justify-center">
-                    <button onclick="swapLocations()" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition text-slate-600" title="Intercambiar origen y destino">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                        </svg>
-                    </button>
+                    
+                    <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | 
+                            <span class="font-bold">Lon:</span> <span id="origin-lon">-</span>
+                        </div>
+                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-600 hover:underline font-medium">Copiar</button>
+                    </div>
                 </div>
 
                 <!-- Destino -->
                 <div class="relative">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de Destino</label>
-                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago, Hospital Coromoto..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <div id="dest-suggestions" class="autocomplete-list hidden mt-1"></div>
-                    <div class="text-xs text-slate-500 mt-1">Lat: <span id="dest-lat">-</span>, Lon: <span id="dest-lon">-</span></div>
-                </div>
-
-                <!-- Tarifa por Km -->
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">Tarifa por Kilómetro ($)</label>
-                    <input type="number" id="rate-per-km" value="1.5" step="0.1" min="0" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                </div>
-
-                <!-- Resultados del Cálculo -->
-                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-600">Distancia estimada:</span>
-                        <span id="distance-result" class="font-bold text-slate-800">0.00 km</span>
-                    </div>
-                    <div class="flex justify-between text-base border-t border-blue-200 pt-2">
-                        <span class="font-semibold text-blue-900">Tarifa Total:</span>
-                        <span id="price-result" class="font-extrabold text-blue-600">$0.00</span>
+                    
+                    <div class="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | 
+                            <span class="font-bold">Lon:</span> <span id="dest-lon">-</span>
+                        </div>
+                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-600 hover:underline font-medium">Copiar</button>
                     </div>
                 </div>
 
+                <div class="text-xs text-slate-500 italic text-center">
+                    * Las sugerencias priorizan Maracaibo, Zulia y zonas aledañas.
+                </div>
             </div>
 
             <!-- Panel del Mapa -->
-            <div class="bg-white p-4 rounded-xl shadow-md lg:col-span-2 flex flex-col justify-between">
+            <div class="bg-white p-4 rounded-xl shadow-md flex flex-col justify-between">
                 <div class="rounded-lg overflow-hidden border border-slate-200 mb-4">
                     <div id="map"></div>
                 </div>
-                <div class="flex flex-wrap gap-3 justify-between items-center text-sm">
-                    <div id="route-status" class="text-slate-600 italic">Selecciona origen y destino para calcular la ruta.</div>
-                    <a id="gmaps-link" href="#" target="_blank" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition shadow-sm">
-                        Abrir ruta en Google Maps
-                    </a>
+                <div id="status-msg" class="text-sm text-slate-600 text-center">
+                    Escribe una dirección para visualizarla en el mapa.
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Coordenadas de Maracaibo (Bounding Box aproximado para restringir búsquedas: minLon, minLat, maxLon, maxLat)
-        const MARACAIBO_VIEWBOX = "-71.75,10.55,-71.55,10.75";
-
-        // Inicializar Mapa centrado en Maracaibo
+        // Coordenadas iniciales centradas en Maracaibo
         const map = L.map('map').setView([10.6549, -71.6146], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        let originCoord = null;
-        let destCoord = null;
         let originMarker = null;
         let destMarker = null;
-        let routeLine = null;
 
         const originInput = document.getElementById('origin-input');
         const destInput = document.getElementById('dest-input');
         const originSuggestions = document.getElementById('origin-suggestions');
         const destSuggestions = document.getElementById('dest-suggestions');
-        const rateInput = document.getElementById('rate-per-km');
 
-        // Búsqueda con Autocompletado (Nominatim acotado a Maracaibo)
-        function setupAutocomplete(inputElement, suggestionsElement, isOrigin) {
+        // Búsqueda inteligente con autocompletado ampliado para todo Maracaibo y Zulia
+        function setupAutocomplete(inputElement, suggestionsElement, type) {
             let timeout = null;
 
             inputElement.addEventListener('input', function() {
@@ -132,7 +112,9 @@
                 }
 
                 timeout = setTimeout(() => {
-                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${MARACAIBO_VIEWBOX}&bounded=1&limit=5`;
+                    // Se añade "Maracaibo Zulia" a la consulta para asegurar que priorice la zona local sin bloquear resultados lejanos
+                    const searchQuery = encodeURIComponent(query + " Maracaibo Zulia");
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&limit=6`;
                     
                     fetch(url)
                         .then(response => response.json())
@@ -147,142 +129,73 @@
                                 const div = document.createElement('div');
                                 div.className = 'px-4 py-2 hover:bg-slate-100 cursor-pointer text-sm border-b border-slate-100 last:border-none';
                                 div.textContent = item.display_name;
+                                
                                 div.addEventListener('click', () => {
                                     inputElement.value = item.display_name;
                                     suggestionsElement.classList.add('hidden');
                                     
-                                    const coord = { lat: parseFloat(item.lat), lon: parseFloat(item.lon) };
-                                    if (isOrigin) {
-                                        originCoord = coord;
-                                        document.getElementById('origin-lat').textContent = coord.lat.toFixed(4);
-                                        document.getElementById('origin-lon').textContent = coord.lon.toFixed(4);
-                                        updateMarker('origin', coord);
+                                    const lat = parseFloat(item.lat);
+                                    const lon = parseFloat(item.lon);
+
+                                    if (type === 'origin') {
+                                        document.getElementById('origin-lat').textContent = lat.toFixed(6);
+                                        document.getElementById('origin-lon').textContent = lon.toFixed(6);
+                                        document.getElementById('btn-copy-origin').classList.remove('hidden');
+                                        updateMapMarker('origin', lat, lon, item.display_name);
                                     } else {
-                                        destCoord = coord;
-                                        document.getElementById('dest-lat').textContent = coord.lat.toFixed(4);
-                                        document.getElementById('dest-lon').textContent = coord.lon.toFixed(4);
-                                        updateMarker('dest', coord);
+                                        document.getElementById('dest-lat').textContent = lat.toFixed(6);
+                                        document.getElementById('dest-lon').textContent = lon.toFixed(6);
+                                        document.getElementById('btn-copy-dest').classList.remove('hidden');
+                                        updateMapMarker('dest', lat, lon, item.display_name);
                                     }
-                                    calculateRoute();
                                 });
                                 suggestionsElement.appendChild(div);
                             });
                             suggestionsElement.classList.remove('hidden');
                         })
-                        .catch(err => console.error("Error en autocompletado:", err));
+                        .catch(err => console.error("Error buscando direcciones:", err));
                 }, 300);
+            });
+
+            // Ocultar sugerencias al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!inputElement.contains(e.target) && !suggestionsElement.contains(e.target)) {
+                    suggestionsElement.classList.add('hidden');
+                }
             });
         }
 
-        setupAutocomplete(originInput, originSuggestions, true);
-        setupAutocomplete(destInput, destSuggestions, false);
+        setupAutocomplete(originInput, originSuggestions, 'origin');
+        setupAutocomplete(destInput, destSuggestions, 'dest');
 
-        // Actualizar Marcadores en el Mapa
-        function updateMarker(type, coord) {
+        // Actualizar marcador en el mapa
+        function updateMapMarker(type, lat, lon, title) {
             if (type === 'origin') {
                 if (originMarker) map.removeLayer(originMarker);
-                originMarker = L.marker([coord.lat, coord.lon], {title: "Origen"}).addTo(map)
-                    .bindPopup("<b>Origen</b>").openPopup();
+                originMarker = L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`<b>Origen:</b><br>${title}`).openPopup();
             } else {
                 if (destMarker) map.removeLayer(destMarker);
-                destMarker = L.marker([coord.lat, coord.lon], {title: "Destino"}).addTo(map)
-                    .bindPopup("<b>Destino</b>").openPopup();
+                destMarker = L.marker([lat, lon], {
+                    // Icono distintivo o color por defecto de Leaflet
+                }).addTo(map).bindPopup(`<b>Destino:</b><br>${title}`).openPopup();
             }
-
-            if (originCoord && destCoord) {
-                const bounds = L.latLngBounds([
-                    [originCoord.lat, originCoord.lon],
-                    [destCoord.lat, destCoord.lon]
-                ]);
-                map.fitBounds(bounds, { padding: [50, 50] });
-            } else {
-                map.setView([coord.lat, coord.lon], 14);
-            }
+            map.setView([lat, lon], 15);
+            document.getElementById('status-msg').textContent = `Ubicación de ${type === 'origin' ? 'Origen' : 'Destino'} actualizada.`;
         }
 
-        // Calcular Distancia (Fórmula Haversine)
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Radio de la tierra en km
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = 
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        // Calcular Ruta y Tarifas
-        function calculateRoute() {
-            if (!originCoord || !destCoord) return;
-
-            // Distancia en línea recta refinada por factor vial promedio urbano (+20%)
-            const straightDist = calculateDistance(originCoord.lat, originCoord.lon, destCoord.lat, destCoord.lon);
-            const roadDist = straightDist * 1.25; 
-
-            document.getElementById('distance-result').textContent = roadDist.toFixed(2) + " km";
-
-            const rate = parseFloat(rateInput.value) || 0;
-            const totalPrice = roadDist * rate;
-            document.getElementById('price-result').textContent = "$" + totalPrice.toFixed(2);
-
-            // Trazar línea de ruta en el mapa
-            if (routeLine) map.removeLayer(routeLine);
-            routeLine = L.polyline([
-                [originCoord.lat, originCoord.lon],
-                [destCoord.lat, destCoord.lon]
-            ], {color: '#3b82f6', weight: 4, opacity: 0.7, dashArray: '5, 10'}).addTo(map);
-
-            // Actualizar estado y enlace a Google Maps
-            document.getElementById('route-status').textContent = "Ruta calculada correctamente.";
-            const gmapsLink = document.getElementById('gmaps-link');
-            gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${originCoord.lat},${originCoord.lon}&destination=${destCoord.lat},${destCoord.lon}`;
-            gmapsLink.classList.remove('hidden');
-        }
-
-        rateInput.addEventListener('input', calculateRoute);
-
-        // Intercambiar Origen y Destino
-        function swapLocations() {
-            const tempCoord = originCoord;
-            const tempText = originInput.value;
-            const tempLat = document.getElementById('origin-lat').textContent;
-            const tempLon = document.getElementById('origin-lon').textContent;
-
-            originCoord = destCoord;
-            originInput.value = destInput.value;
-            document.getElementById('origin-lat').textContent = document.getElementById('dest-lat').textContent;
-            document.getElementById('origin-lon').textContent = document.getElementById('dest-lon').textContent;
-
-            destCoord = tempCoord;
-            destInput.value = tempText;
-            document.getElementById('dest-lat').textContent = tempLat;
-            document.getElementById('dest-lon').textContent = tempLon;
-
-            if (originCoord) updateMarker('origin', originCoord);
-            else {
-                if (originMarker) map.removeLayer(originMarker);
-                document.getElementById('origin-lat').textContent = '-';
-                document.getElementById('origin-lon').textContent = '-';
-            }
-
-            if (destCoord) updateMarker('dest', destCoord);
-            else {
-                if (destMarker) map.removeLayer(destMarker);
-                document.getElementById('dest-lat').textContent = '-';
-                document.getElementById('dest-lon').textContent = '-';
-            }
-
-            if (originCoord && destCoord) {
-                calculateRoute();
-            } else {
-                if (routeLine) map.removeLayer(routeLine);
-                document.getElementById('distance-result').textContent = "0.00 km";
-                document.getElementById('price-result').textContent = "$0.00";
-                document.getElementById('route-status').textContent = "Selecciona origen y destino para calcular la ruta.";
-                document.getElementById('gmaps-link').classList.add('hidden');
-            }
+        // Función para copiar coordenadas de forma rápida
+        function copyCoords(type) {
+            const lat = document.getElementById(`${type}-lat`).textContent;
+            const lon = document.getElementById(`${type}-lon`).textContent;
+            const textToCopy = `${lat}, ${lon}`;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const btn = document.getElementById(`btn-copy-${type}`);
+                const originalText = btn.textContent;
+                btn.textContent = "¡Copiado!";
+                setTimeout(() => { btn.textContent = originalText; }, 2000);
+            });
         }
     </script>
 </body>

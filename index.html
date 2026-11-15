@@ -46,17 +46,11 @@
                         <input type="text" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
-                    <div class="space-y-1">
-                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-origen" placeholder="Dirección limpia..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
-                    </div>
-                    
                     <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
                             <span class="font-bold">Lat:</span> <span id="origin-lat">-</span> | 
                             <span class="font-bold">Lon:</span> <span id="origin-lon">-</span>
                         </div>
-                        <button onclick="copyCoords('origin')" id="btn-copy-origin" class="hidden text-blue-600 hover:underline font-medium cursor-pointer">Copiar</button>
                     </div>
                 </div>
 
@@ -67,17 +61,11 @@
                         <input type="text" placeholder="Ej. Vereda del Lago..." autocomplete="off">
                     </gmp-place-autocomplete>
                     
-                    <div class="space-y-1">
-                        <label class="block text-[10px] font-bold uppercase text-slate-400">Texto seleccionado:</label>
-                        <input type="text" id="campo-libre-destino" placeholder="Dirección limpia..." class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-medium" readonly>
-                    </div>
-                    
                     <div class="p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 flex justify-between items-center">
                         <div>
                             <span class="font-bold">Lat:</span> <span id="dest-lat">-</span> | 
                             <span class="font-bold">Lon:</span> <span id="dest-lon">-</span>
                         </div>
-                        <button onclick="copyCoords('dest')" id="btn-copy-dest" class="hidden text-blue-600 hover:underline font-medium cursor-pointer">Copiar</button>
                     </div>
                 </div>
 
@@ -137,38 +125,32 @@
                     directionsService = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
 
-                    // Configurar escucha para origen y destino
-                    configurarLugar('origen-autocomplete', 'campo-libre-origen', 'origin-lat', 'origin-lon', 'btn-copy-origin', 'origin');
-                    configurarLugar('destino-autocomplete', 'campo-libre-destino', 'dest-lat', 'dest-lon', 'btn-copy-dest', 'dest');
+                    // Configurar escucha para origen y destino (sin campos libres ni botones de copiar)
+                    configurarLugar('origen-autocomplete', 'origin-lat', 'origin-lon', 'origin');
+                    configurarLugar('destino-autocomplete', 'dest-lat', 'dest-lon', 'dest');
                 }
             }, 300);
         });
 
-        function configurarLugar(autocompleteId, campoLibreId, latId, lonId, btnCopyId, tipo) {
+        function configurarLugar(autocompleteId, latId, lonId, tipo) {
             const autocompleteEl = document.getElementById(autocompleteId);
-            const campoLibreEl = document.getElementById(campoLibreId);
 
             if (autocompleteEl) {
                 autocompleteEl.addEventListener('gmp-select', async ({ placePrediction }) => {
                     if (!placePrediction) return;
 
                     const place = placePrediction.toPlace();
-                    await place.fetchFields({ fields: ['formattedAddress', 'displayName', 'location'] });
+                    await place.fetchFields({ fields: ['location'] });
 
-                    const direccionFinal = place.formattedAddress || place.displayName;
                     const location = place.location;
 
-                    if (direccionFinal && location) {
+                    if (location) {
                         const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
                         const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
 
-                        // Mostrar en el campo duplicado
-                        campoLibreEl.value = direccionFinal;
-
-                        // Mostrar lat y lon
+                        // Mostrar lat y lon como referencia
                         document.getElementById(latId).textContent = lat.toFixed(6);
                         document.getElementById(lonId).textContent = lng.toFixed(6);
-                        document.getElementById(btnCopyId).classList.remove('hidden');
 
                         const coords = { lat, lng };
                         if (tipo === 'origin') {
@@ -225,17 +207,6 @@
                     }
                 });
             }
-        }
-
-        function copyCoords(type) {
-            const lat = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-lat`).textContent;
-            const lon = document.getElementById(`${type === 'origin' ? 'origin' : 'dest'}-lon`).textContent;
-            navigator.clipboard.writeText(`${lat}, ${lon}`).then(() => {
-                const btn = document.getElementById(`btn-copy-${type}`);
-                const originalText = btn.textContent;
-                btn.textContent = "¡Copiado!";
-                setTimeout(() => { btn.textContent = originalText; }, 2000);
-            });
         }
     </script>
 </body>

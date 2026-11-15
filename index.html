@@ -28,13 +28,13 @@
             </div>
 
             <!-- Botón de cálculo -->
-            <button onclick="calcularRuta()" 
+            <button onclick="calcularRutaYMapa()" 
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition duration-200">
                 Obtener Coordenadas y Calcular Ruta
             </button>
         </div>
 
-        <!-- Resultados -->
+        <!-- Resultados de Texto -->
         <div id="resultados" class="mt-6 hidden space-y-3 bg-slate-100 p-4 rounded-lg text-sm text-slate-700">
             <h2 class="font-semibold text-slate-900 border-b pb-1">Resultados:</h2>
             <div id="info-origen"></div>
@@ -42,15 +42,15 @@
             <div id="info-ruta" class="mt-2 pt-2 border-t font-medium text-blue-800"></div>
         </div>
 
-        <!-- Contenedor opcional para mostrar el mapa visualmente -->
-        <div id="map" class="mt-4 w-full h-64 rounded-lg hidden"></div>
+        <!-- Contenedor del Mapa interactivo -->
+        <div id="map" class="mt-6 w-full h-80 rounded-lg shadow-inner hidden"></div>
     </div>
 
-    <!-- Carga la API de Google Maps (Reemplaza TU_API_KEY con tu clave real) -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&libraries=places"></script>
+    <!-- Carga la API de Google Maps con tu clave -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places"></script>
 
     <script>
-        function calcularRuta() {
+        function calcularRutaYMapa() {
             const origenTexto = document.getElementById('origen').value;
             const destinoTexto = document.getElementById('destino').value;
             
@@ -61,6 +61,9 @@
 
             const resultadosDiv = document.getElementById('resultados');
             resultadosDiv.classList.remove('hidden');
+
+            const mapDiv = document.getElementById('map');
+            mapDiv.classList.remove('hidden');
 
             const infoOrigen = document.getElementById('info-origen');
             const infoDestino = document.getElementById('info-destino');
@@ -90,21 +93,30 @@
                 }
             });
 
-            // 3. Calcular la Distancia y Ruta usando DirectionsService
+            // 3. Inicializar el mapa y calcular la ruta con DirectionsService
+            const map = new google.maps.Map(mapDiv, {
+                zoom: 13,
+                center: { lat: 10.6549, lng: -71.6146 } // Maracaibo por defecto
+            });
+
             const directionsService = new google.maps.DirectionsService();
+            const directionsRenderer = new google.maps.DirectionsRenderer();
+            
+            directionsRenderer.setMap(map);
 
             directionsService.route(
                 {
                     origin: origenTexto,
                     destination: destinoTexto,
-                    travelMode: google.maps.TravelMode.DRIVING // Puedes cambiar a WALKING, TRANSIT, etc.
+                    travelMode: google.maps.TravelMode.DRIVING
                 },
                 (response, status) => {
                     if (status === 'OK') {
+                        directionsRenderer.setDirections(response);
                         const route = response.routes[0].legs[0];
                         infoRuta.innerHTML = `🚗 <strong>Distancia:</strong> ${route.distance.text} <br>⏱️ <strong>Tiempo estimado:</strong> ${route.duration.text}`;
                     } else {
-                        infoRuta.innerHTML = `⚠️ No se pudo calcular la ruta entre los puntos (${status}).`;
+                        infoRuta.innerHTML = `⚠️ No se pudo calcular la ruta en el mapa (${status}).`;
                     }
                 }
             );

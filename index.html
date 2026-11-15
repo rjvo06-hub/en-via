@@ -11,11 +11,11 @@
     <style>
         #map { height: 450px; width: 100%; }
         gmp-place-autocomplete { width: 100%; }
-        /* Mantenemos y fundimos el input nativo con el mismo tono exacto */
+        /* Añadido un borde claro y visible al campo nativo para que destaque sobre el fondo */
         gmp-place-autocomplete input {
             width: 100%;
             background-color: #161616 !important;
-            border: 1px solid #2a2a2a !important;
+            border: 1px solid #3b82f6 !important; /* Borde azul sutil y elegante (o usa #383838 si prefieres gris) */
             border-radius: 0.75rem;
             padding: 0.75rem 1rem;
             color: #ffffff !important;
@@ -23,8 +23,8 @@
         }
         gmp-place-autocomplete input:focus {
             background-color: #1a1a1a !important;
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
         }
     </style>
 </head>

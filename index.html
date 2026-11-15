@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Direcciones Estilo Google Maps</title>
+    <title>Calculador de Rutas y Coordenadas - Origen y Destino</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS for Interactive Map -->
@@ -14,20 +14,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Custom scrollbar for suggestions dropdown */
-        .suggestions-scroll::-webkit-scrollbar {
-            width: 6px;
-        }
-        .suggestions-scroll::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .suggestions-scroll::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 9999px;
-        }
-        .suggestions-scroll::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+        .suggestions-scroll::-webkit-scrollbar { width: 6px; }
+        .suggestions-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .suggestions-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .suggestions-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="h-full bg-slate-50 text-slate-800 flex flex-col">
@@ -37,11 +27,11 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                    <i class="fa-solid fa-map-location-dot text-xl"></i>
+                    <i class="fa-solid fa-route text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-900">GeoLocator Maps</h1>
-                    <p class="text-xs text-slate-500 hidden sm:block">Buscador de coordenadas y lugares en tiempo real</p>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900">GeoRoute Calc</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">Calculadora de Rutas, Coordenadas y Tarifas</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3">
@@ -55,115 +45,156 @@
     <!-- Main Content Layout -->
     <main class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
         
-        <!-- Sidebar Panel for Search & Coordinates -->
-        <section class="w-full lg:w-[420px] bg-white border-r border-slate-200 z-10 flex flex-col shadow-lg lg:shadow-none flex-shrink-0">
-            <div class="p-5 sm:p-6 flex-1 overflow-y-auto">
+        <!-- Sidebar Panel for Inputs & Route Details -->
+        <section class="w-full lg:w-[460px] bg-white border-r border-slate-200 z-10 flex flex-col shadow-lg lg:shadow-none flex-shrink-0">
+            <div class="p-4 sm:p-6 flex-1 overflow-y-auto space-y-6">
                 
-                <!-- Search Box Container -->
-                <div class="relative mb-6">
-                    <label for="search-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-                        Buscar Lugar o Dirección
-                    </label>
+                <!-- Inputs Container (Origen & Destino) -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 relative space-y-4">
+                    
+                    <!-- Origen Input Group -->
                     <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                            <i class="fa-solid fa-magnifying-glass"></i>
+                        <label for="origin-input" class="block text-xs font-bold uppercase tracking-wider text-emerald-600 mb-1.5 flex items-center">
+                            <i class="fa-solid fa-circle-dot mr-1.5 text-emerald-500"></i> Dirección Origen
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                            </div>
+                            <input 
+                                type="text" 
+                                id="origin-input" 
+                                autocomplete="off"
+                                placeholder="Ej. Aeropuerto, Calle Principal..." 
+                                class="w-full pl-9 pr-9 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-sm"
+                            >
+                            <button id="clear-origin" type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                            </button>
                         </div>
-                        <input 
-                            type="text" 
-                            id="search-input" 
-                            autocomplete="off"
-                            placeholder="Ej. Centro Comercial, Madrid, Calle Mayor..." 
-                            class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                        >
-                        <!-- Clear Input Button -->
-                        <button id="clear-btn" type="button" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 hidden">
-                            <i class="fa-solid fa-circle-xmark"></i>
-                        </button>
+                        <!-- Suggestions Dropdown Origen -->
+                        <div id="suggestions-origin" class="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-200 max-h-60 overflow-y-auto suggestions-scroll hidden z-40"></div>
                     </div>
 
-                    <!-- Dropdown Suggestions -->
-                    <div id="suggestions-box" class="absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-72 overflow-y-auto suggestions-scroll hidden z-30">
-                        <!-- Dynamic items populated via JS -->
+                    <!-- Connecting Line Visual -->
+                    <div class="absolute left-7 top-16 bottom-16 w-0.5 border-l-2 border-dashed border-slate-300 pointer-events-none hidden sm:block"></div>
+
+                    <!-- Destino Input Group -->
+                    <div class="relative">
+                        <label for="dest-input" class="block text-xs font-bold uppercase tracking-wider text-blue-600 mb-1.5 flex items-center">
+                            <i class="fa-solid fa-location-dot mr-1.5 text-blue-500"></i> Dirección Destino
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                            </div>
+                            <input 
+                                type="text" 
+                                id="dest-input" 
+                                autocomplete="off"
+                                placeholder="Ej. Centro Comercial, Plaza Mayor..." 
+                                class="w-full pl-9 pr-9 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+                            >
+                            <button id="clear-dest" type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                            </button>
+                        </div>
+                        <!-- Suggestions Dropdown Destino -->
+                        <div id="suggestions-dest" class="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-200 max-h-60 overflow-y-auto suggestions-scroll hidden z-40"></div>
+                    </div>
+
+                    <!-- Swap Button -->
+                    <div class="flex justify-end pt-1">
+                        <button onclick="swapLocations()" class="text-xs bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm flex items-center space-x-1">
+                            <i class="fa-solid fa-right-left rotate-90 text-blue-600"></i>
+                            <span>Intercambiar Origen / Destino</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Selected Location Details Card -->
-                <div id="location-card" class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-6 transition-all">
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center space-x-2 text-blue-600 font-semibold text-sm">
-                            <i class="fa-solid fa-location-dot"></i>
-                            <span id="loc-type">Ubicación Seleccionada</span>
+                <!-- Route & Distance Summary Card -->
+                <div id="route-card" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm transition-all">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                        <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+                            <i class="fa-solid fa-chart-line text-blue-600"></i>
+                            <span>Resumen de la Ruta</span>
                         </div>
-                        <button id="center-map-btn" class="text-xs bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-medium transition-colors hidden shadow-sm">
-                            <i class="fa-solid fa-crosshairs mr-1"></i> Centrar
+                        <button id="fit-map-btn" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-medium transition-colors hidden shadow-sm">
+                            <i class="fa-solid fa-expand mr-1"></i> Ver Ruta
                         </button>
                     </div>
-                    
-                    <h2 id="loc-title" class="text-base font-bold text-slate-900 mb-1 leading-snug">Ninguna ubicación seleccionada</h2>
-                    <p id="loc-address" class="text-xs text-slate-500 mb-4">Escribe algo en el buscador o selecciona una sugerencia del menú.</p>
 
-                    <!-- Coordinates Display Box -->
-                    <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200">
-                        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm relative group">
-                            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Latitud</span>
-                            <div class="flex items-center justify-between">
-                                <span id="lat-value" class="text-sm font-mono font-bold text-slate-800">--</span>
-                                <button onclick="copyToClipboard('lat-value')" title="Copiar latitud" class="text-slate-400 hover:text-blue-600 transition-colors p-1">
-                                    <i class="fa-regular fa-copy text-xs"></i>
-                                </button>
-                            </div>
+                    <!-- Distance & Estimated Time / Pricing -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-blue-50/50 p-3.5 rounded-xl border border-blue-100">
+                            <span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-1">Distancia Est.</span>
+                            <span id="distance-value" class="text-lg font-extrabold text-blue-900">-- km</span>
                         </div>
-                        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm relative group">
-                            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Longitud</span>
-                            <div class="flex items-center justify-between">
-                                <span id="lng-value" class="text-sm font-mono font-bold text-slate-800">--</span>
-                                <button onclick="copyToClipboard('lng-value')" title="Copiar longitud" class="text-slate-400 hover:text-blue-600 transition-colors p-1">
-                                    <i class="fa-regular fa-copy text-xs"></i>
-                                </button>
-                            </div>
+                        <div class="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-100">
+                            <span class="block text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">Costo Estimado</span>
+                            <span id="price-value" class="text-lg font-extrabold text-emerald-900">$0.00</span>
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
+                    <!-- Tariff Settings -->
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4">
+                        <div class="flex justify-between items-center text-xs text-slate-600 mb-1">
+                            <span>Tarifa por km:</span>
+                            <span id="rate-display" class="font-bold text-slate-900">$1.50 / km</span>
+                        </div>
+                        <input type="range" id="rate-slider" min="0.5" max="5.0" step="0.25" value="1.5" class="w-full accent-blue-600 cursor-pointer" oninput="updateRate(this.value)">
+                    </div>
+
+                    <!-- Details of Origin & Destination Coordinates -->
+                    <div class="space-y-3 pt-3 border-t border-slate-100 text-xs">
+                        <!-- Origen Coord Info -->
+                        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            <div class="min-w-0 flex-1 mr-2">
+                                <span class="font-bold text-emerald-600 block truncate" id="summary-origin-title">Origen: No seleccionado</span>
+                                <span class="font-mono text-[10px] text-slate-500" id="summary-origin-coords">--</span>
+                            </div>
+                            <button id="copy-origin-btn" disabled onclick="copyCoords('origin')" class="p-2 text-slate-400 hover:text-emerald-600 disabled:opacity-30 transition-colors" title="Copiar coordenadas origen">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+                        <!-- Destino Coord Info -->
+                        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            <div class="min-w-0 flex-1 mr-2">
+                                <span class="font-bold text-blue-600 block truncate" id="summary-dest-title">Destino: No seleccionado</span>
+                                <span class="font-mono text-[10px] text-slate-500" id="summary-dest-coords">--</span>
+                            </div>
+                            <button id="copy-dest-btn" disabled onclick="copyCoords('dest')" class="p-2 text-slate-400 hover:text-blue-600 disabled:opacity-30 transition-colors" title="Copiar coordenadas destino">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- External Links -->
                     <div class="mt-4 flex space-x-2">
-                        <button id="copy-all-btn" disabled class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-medium py-2 px-3 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center space-x-1.5 cursor-pointer disabled:cursor-not-allowed">
-                            <i class="fa-solid fa-copy"></i>
-                            <span>Copiar Coordenadas</span>
-                        </button>
-                        <a id="gmaps-link" href="#" target="_blank" class="hidden flex-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium py-2 px-3 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center space-x-1.5">
-                            <i class="fa-solid fa-arrow-up-right-from-square text-blue-600"></i>
-                            <span>Abrir en Maps</span>
+                        <a id="gmaps-route-link" href="#" target="_blank" class="hidden flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-3 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            <span>Abrir Ruta en Google Maps</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- Quick Suggestions / Popular Categories -->
+                <!-- Quick Presets -->
                 <div>
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Búsquedas Frecuentes</h3>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="searchPreset('Centro Comercial')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition-colors border border-slate-200">
-                            🛍️ Centro Comercial
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Ejemplos Rápidos</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setPreset('Aeropuerto Barajas', 'Puerta del Sol')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium p-2 rounded-xl transition-colors border border-slate-200 text-left truncate">
+                            ✈️ Aeropuerto ➔ Sol
                         </button>
-                        <button onclick="searchPreset('Hospital')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition-colors border border-slate-200">
-                            🏥 Hospital
-                        </button>
-                        <button onclick="searchPreset('Aeropuerto')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition-colors border border-slate-200">
-                            ✈️ Aeropuerto
-                        </button>
-                        <button onclick="searchPreset('Estación de tren')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition-colors border border-slate-200">
-                            🚆 Estación
-                        </button>
-                        <button onclick="searchPreset('Parque central')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition-colors border border-slate-200">
-                            🌳 Parque
+                        <button onclick="setPreset('Estación de Atocha', 'Centro Comercial')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium p-2 rounded-xl transition-colors border border-slate-200 text-left truncate">
+                            🚆 Atocha ➔ C. Comercial
                         </button>
                     </div>
                 </div>
 
             </div>
             
-            <!-- Footer Info inside Sidebar -->
             <div class="p-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500">
-                Desarrollado con HTML5, Tailwind CSS y Leaflet Maps
+                GeoRoute Calc • Leaflet & OpenStreetMap
             </div>
         </section>
 
@@ -171,10 +202,10 @@
         <section class="flex-1 relative h-[400px] lg:h-full">
             <div id="map" class="w-full h-full z-0"></div>
             
-            <!-- Floating Notification Toast -->
+            <!-- Toast Notification -->
             <div id="toast" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/90 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 z-[1000] flex items-center space-x-2">
                 <i class="fa-solid fa-circle-check text-emerald-400"></i>
-                <span id="toast-msg">Mensaje de notificación</span>
+                <span id="toast-msg">Notificación</span>
             </div>
         </section>
 
@@ -184,290 +215,407 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <script>
-        // Global variables
+        // Global state variables
         let map;
-        let marker;
-        let searchTimeout = null;
-        let currentSelectedCoords = null;
+        let originMarker = null;
+        let destMarker = null;
+        let routePolyline = null;
+        
+        let originData = null; // { name, lat, lng, address }
+        let destData = null;   // { name, lat, lng, address }
+        
+        let ratePerKm = 1.5;
+        let searchTimeouts = { origin: null, dest: null };
 
-        // Initialize Map on window load
+        // Initialize application on window load
         window.addEventListener('DOMContentLoaded', () => {
             initMap();
             setupEventListeners();
         });
 
         function initMap() {
-            // Default initial view (Madrid, Spain center as fallback)
-            const defaultLat = 40.4168;
-            const defaultLng = -3.7038;
+            // Default initial center (Madrid)
+            map = L.map('map', { zoomControl: false }).setView([40.4168, -3.7038], 6);
 
-            map = L.map('map', {
-                zoomControl: false
-            }).setView([defaultLat, defaultLng], 6);
-
-            // Add smooth tile layer (OpenStreetMap)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
-            // Add custom zoom control to top-right
-            L.control.zoom({
-                position: 'topright'
-            }).addTo(map);
+            L.control.zoom({ position: 'topright' }).addTo(map);
         }
 
         function setupEventListeners() {
-            const searchInput = document.getElementById('search-input');
-            const clearBtn = document.getElementById('clear-btn');
-            const suggestionsBox = document.getElementById('suggestions-box');
+            const originInput = document.getElementById('origin-input');
+            const destInput = document.getElementById('dest-input');
+            const clearOrigin = document.getElementById('clear-origin');
+            const clearDest = document.getElementById('clear-dest');
 
-            // Input typing with debounce for real-time search
-            searchInput.addEventListener('input', (e) => {
+            // Origin input events
+            originInput.addEventListener('input', (e) => {
                 const query = e.target.value.trim();
-                
                 if (query.length > 0) {
-                    clearBtn.classList.remove('hidden');
+                    clearOrigin.classList.remove('hidden');
                 } else {
-                    clearBtn.classList.add('hidden');
-                    suggestionsBox.classList.add('hidden');
-                    return;
+                    clearOrigin.classList.add('hidden');
+                    document.getElementById('suggestions-origin').classList.add('hidden');
+                    originData = null;
+                    updateRouteAndUI();
                 }
 
-                // Debounce to prevent excessive API requests
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    fetchSuggestions(query);
-                }, 350);
+                clearTimeout(searchTimeouts.origin);
+                searchTimeouts.origin = setTimeout(() => fetchSuggestions(query, 'origin'), 350);
             });
 
-            // Clear input button
-            clearBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                clearBtn.classList.add('hidden');
-                suggestionsBox.classList.add('hidden');
-                searchInput.focus();
+            clearOrigin.addEventListener('click', () => {
+                originInput.value = '';
+                clearOrigin.classList.add('hidden');
+                document.getElementById('suggestions-origin').classList.add('hidden');
+                originData = null;
+                if (originMarker) { map.removeLayer(originMarker); originMarker = null; }
+                updateRouteAndUI();
+                originInput.focus();
             });
 
-            // Hide suggestions when clicking outside
+            // Dest input events
+            destInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                if (query.length > 0) {
+                    clearDest.classList.remove('hidden');
+                } else {
+                    clearDest.classList.add('hidden');
+                    document.getElementById('suggestions-dest').classList.add('hidden');
+                    destData = null;
+                    updateRouteAndUI();
+                }
+
+                clearTimeout(searchTimeouts.dest);
+                searchTimeouts.dest = setTimeout(() => fetchSuggestions(query, 'dest'), 350);
+            });
+
+            clearDest.addEventListener('click', () => {
+                destInput.value = '';
+                clearDest.classList.add('hidden');
+                document.getElementById('suggestions-dest').classList.add('hidden');
+                destData = null;
+                if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
+                updateRouteAndUI();
+                destInput.focus();
+            });
+
+            // Close suggestions on outside click
             document.addEventListener('click', (e) => {
-                if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
-                    suggestionsBox.classList.add('hidden');
+                if (!originInput.contains(e.target) && !document.getElementById('suggestions-origin').contains(e.target)) {
+                    document.getElementById('suggestions-origin').classList.add('hidden');
+                }
+                if (!destInput.contains(e.target) && !document.getElementById('suggestions-dest').contains(e.target)) {
+                    document.getElementById('suggestions-dest').classList.add('hidden');
                 }
             });
 
-            // Center map button
-            document.getElementById('center-map-btn').addEventListener('click', () => {
-                if (currentSelectedCoords) {
-                    map.setView([currentSelectedCoords.lat, currentSelectedCoords.lng], 16, { animate: true });
-                }
-            });
-
-            // Copy all coordinates button
-            document.getElementById('copy-all-btn').addEventListener('click', () => {
-                if (currentSelectedCoords) {
-                    const text = `${currentSelectedCoords.lat}, ${currentSelectedCoords.lng}`;
-                    copyTextToClipboard(text, 'Coordenadas copiadas al portapapeles');
+            // Fit map button
+            document.getElementById('fit-map-btn').addEventListener('click', () => {
+                if (originData && destData) {
+                    const bounds = L.latLngBounds(
+                        [originData.lat, originData.lng],
+                        [destData.lat, destData.lng]
+                    );
+                    map.fitBounds(bounds, { padding: [70, 70], maxZoom: 15 });
                 }
             });
         }
 
-        // Fetch suggestions from Nominatim API (OpenStreetMap geocoder, Google Maps alternative)
-        async function fetchSuggestions(query) {
-            const suggestionsBox = document.getElementById('suggestions-box');
-            
-            // Show loading state in dropdown
+        // Fetch autocomplete suggestions using Nominatim API
+        async function fetchSuggestions(query, type) {
+            const boxId = type === 'origin' ? 'suggestions-origin' : 'suggestions-dest';
+            const suggestionsBox = document.getElementById(boxId);
+
             suggestionsBox.innerHTML = `
                 <div class="p-3 text-xs text-slate-400 text-center flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-spinner fa-spin text-blue-500"></i>
-                    <span>Buscando ubicaciones...</span>
+                    <span>Buscando...</span>
                 </div>
             `;
             suggestionsBox.classList.remove('hidden');
 
             try {
-                // Nominatim API endpoint with format json and address details
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1`;
-                
-                const response = await fetch(url, {
-                    headers: {
-                        'Accept-Language': 'es'
-                    }
-                });
-                
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+                const response = await fetch(url, { headers: { 'Accept-Language': 'es' } });
                 const data = await response.json();
 
                 if (data && data.length > 0) {
-                    renderSuggestions(data);
+                    renderSuggestions(data, type);
                 } else {
-                    suggestionsBox.innerHTML = `
-                        <div class="p-4 text-xs text-slate-500 text-center">
-                            No se encontraron resultados para "<span class="font-semibold text-slate-700">${escapeHtml(query)}</span>"
-                        </div>
-                    `;
+                    suggestionsBox.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">Sin resultados</div>`;
                 }
             } catch (error) {
                 console.error('Error fetching suggestions:', error);
-                suggestionsBox.innerHTML = `
-                    <div class="p-4 text-xs text-red-500 text-center">
-                        Error al conectar con el servicio de búsqueda.
-                    </div>
-                `;
+                suggestionsBox.innerHTML = `<div class="p-3 text-xs text-red-500 text-center">Error de conexión</div>`;
             }
         }
 
-        // Render suggestion list in dropdown
-        function renderSuggestions(places) {
-            const suggestionsBox = document.getElementById('suggestions-box');
+        function renderSuggestions(places, type) {
+            const boxId = type === 'origin' ? 'suggestions-origin' : 'suggestions-dest';
+            const suggestionsBox = document.getElementById(boxId);
             suggestionsBox.innerHTML = '';
 
-            places.forEach((place) => {
+            places.forEach(place => {
                 const item = document.createElement('div');
-                item.className = 'px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors flex items-start space-x-3';
+                item.className = 'px-3.5 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors flex items-start space-x-2.5';
                 
-                // Icon based on place type or category
-                const iconClass = getPlaceIcon(place.type);
-
+                const title = place.name || place.display_name.split(',')[0];
+                
                 item.innerHTML = `
-                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <i class="fa-solid ${iconClass}"></i>
+                    <div class="w-6 h-6 rounded-md ${type === 'origin' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'} flex items-center justify-center flex-shrink-0 mt-0.5 text-xs">
+                        <i class="fa-solid ${type === 'origin' ? 'fa-circle-dot' : 'fa-location-dot'}"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-slate-900 truncate">${escapeHtml(place.name || place.display_name.split(',')[0])}</p>
-                        <p class="text-[11px] text-slate-500 truncate mt-0.5">${escapeHtml(place.display_name)}</p>
+                        <p class="text-xs font-bold text-slate-900 truncate">${escapeHtml(title)}</p>
+                        <p class="text-[10px] text-slate-500 truncate">${escapeHtml(place.display_name)}</p>
                     </div>
                 `;
 
-                // Click event on suggestion item
                 item.addEventListener('click', () => {
-                    selectLocation(place);
-                    suggestionsBox.classList.add('hidden');
-                    document.getElementById('search-input').value = place.display_name;
-                    document.getElementById('clear-btn').classList.remove('hidden');
+                    const locationObj = {
+                        name: title,
+                        address: place.display_name,
+                        lat: parseFloat(place.lat),
+                        lng: parseFloat(place.lon)
+                    };
+
+                    if (type === 'origin') {
+                        originData = locationObj;
+                        document.getElementById('origin-input').value = title;
+                        document.getElementById('clear-origin').classList.remove('hidden');
+                        suggestionsBox.classList.add('hidden');
+                    } else {
+                        destData = locationObj;
+                        document.getElementById('dest-input').value = title;
+                        document.getElementById('clear-dest').classList.remove('hidden');
+                        suggestionsBox.classList.add('hidden');
+                    }
+
+                    updateRouteAndUI();
                 });
 
                 suggestionsBox.appendChild(item);
             });
         }
 
-        // Helper for icons
-        function getPlaceIcon(type) {
-            if (!type) return 'fa-location-dot';
-            if (type.includes('mall') || type.includes('commercial') || type.includes('shop')) return 'fa-bag-shopping';
-            if (type.includes('hospital') || type.includes('clinic')) return 'fa-hospital';
-            if (type.includes('airport')) return 'fa-plane';
-            if (type.includes('station') || type.includes('railway')) return 'fa-train';
-            if (type.includes('park') || type.includes('nature')) return 'fa-tree';
-            if (type.includes('hotel') || type.includes('guest_house')) return 'fa-hotel';
-            if (type.includes('restaurant') || type.includes('cafe')) return 'fa-utensils';
-            return 'fa-map-pin';
+        // Haversine formula to calculate accurate distance in kilometers
+        function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius in km
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
         }
 
-        // Select and display a location on map and coordinate card
-        function selectLocation(place) {
-            const lat = parseFloat(place.lat);
-            const lng = parseFloat(place.lon);
+        function toRad(value) {
+            return value * Math.PI / 180;
+        }
 
-            currentSelectedCoords = { lat, lng };
+        // Update markers, route line, calculations and UI elements
+        function updateRouteAndUI() {
+            // Update Origin Marker
+            if (originData) {
+                if (originMarker) map.removeLayer(originMarker);
+                
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background-color: #10b981; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 11px;"><i class="fa-solid fa-a"></i></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
 
-            // Update UI values
-            document.getElementById('lat-value').textContent = lat.toFixed(6);
-            document.getElementById('lng-value').textContent = lng.toFixed(6);
-            
-            const title = place.name || place.display_name.split(',')[0];
-            document.getElementById('loc-title').textContent = title;
-            document.getElementById('loc-address').textContent = place.display_name;
-            document.getElementById('loc-type').textContent = capitalizeFirst(place.type || 'Ubicación');
-
-            // Enable buttons & show links
-            document.getElementById('copy-all-btn').removeAttribute('disabled');
-            document.getElementById('center-map-btn').classList.remove('hidden');
-            
-            const gmapsLink = document.getElementById('gmaps-link');
-            gmapsLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
-            gmapsLink.classList.remove('hidden');
-
-            // Update Map View and Marker
-            if (marker) {
-                map.removeLayer(marker);
+                originMarker = L.marker([originData.lat, originData.lng], { icon: customIcon }).addTo(map)
+                    .bindPopup(`<b>Origen:</b> ${escapeHtml(originData.name)}`);
+                
+                document.getElementById('summary-origin-title').textContent = originData.name;
+                document.getElementById('summary-origin-coords').textContent = `${originData.lat.toFixed(5)}, ${originData.lng.toFixed(5)}`;
+                document.getElementById('copy-origin-btn').removeAttribute('disabled');
+            } else {
+                document.getElementById('summary-origin-title').textContent = 'Origen: No seleccionado';
+                document.getElementById('summary-origin-coords').textContent = '--';
+                document.getElementById('copy-origin-btn').setAttribute('disabled', 'true');
             }
 
-            marker = L.marker([lat, lng]).addTo(map)
-                .bindPopup(`<div class="p-1"><b class="text-sm">${escapeHtml(title)}</b><br><span class="text-xs text-slate-600">${escapeHtml(place.display_name)}</span></div>`)
-                .openPopup();
+            // Update Dest Marker
+            if (destData) {
+                if (destMarker) map.removeLayer(destMarker);
 
-            map.setView([lat, lng], 16, { animate: true });
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background-color: #3b82f6; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 11px;"><i class="fa-solid fa-b"></i></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
 
-            showToast('Ubicación seleccionada con éxito');
-        }
+                destMarker = L.marker([destData.lat, destData.lng], { icon: customIcon }).addTo(map)
+                    .bindPopup(`<b>Destino:</b> ${escapeHtml(destData.name)}`);
 
-        // Quick search from preset buttons
-        function searchPreset(term) {
-            const searchInput = document.getElementById('search-input');
-            searchInput.value = term;
-            document.getElementById('clear-btn').classList.remove('hidden');
-            fetchSuggestions(term);
-            searchInput.focus();
-        }
+                document.getElementById('summary-dest-title').textContent = destData.name;
+                document.getElementById('summary-dest-coords').textContent = `${destData.lat.toFixed(5)}, ${destData.lng.toFixed(5)}`;
+                document.getElementById('copy-dest-btn').removeAttribute('disabled');
+            } else {
+                document.getElementById('summary-dest-title').textContent = 'Destino: No seleccionado';
+                document.getElementById('summary-dest-coords').textContent = '--';
+                document.getElementById('copy-dest-btn').setAttribute('disabled', 'true');
+            }
 
-        // Copy individual coordinate to clipboard
-        function copyToClipboard(elementId) {
-            const text = document.getElementById(elementId).textContent;
-            if (text && text !== '--') {
-                copyTextToClipboard(text, 'Valor copiado al portapapeles');
+            // Handle Route Line and Calculations if both exist
+            if (originData && destData) {
+                if (routePolyline) map.removeLayer(routePolyline);
+
+                // Draw connecting dashed line
+                routePolyline = L.polyline([
+                    [originData.lat, originData.lng],
+                    [destData.lat, destData.lng]
+                ], {
+                    color: '#3b82f6',
+                    weight: 4,
+                    opacity: 0.8,
+                    dashArray: '8, 8'
+                }).addTo(map);
+
+                // Calculate distance
+                const distKm = calculateHaversineDistance(originData.lat, originData.lng, destData.lat, destData.lng);
+                document.getElementById('distance-value').textContent = `${distKm.toFixed(2)} km`;
+
+                // Calculate price
+                const estimatedPrice = distKm * ratePerKm;
+                document.getElementById('price-value').textContent = `$${estimatedPrice.toFixed(2)}`;
+
+                // Fit bounds
+                const bounds = L.latLngBounds(
+                    [originData.lat, originData.lng],
+                    [destData.lat, destData.lng]
+                );
+                map.fitBounds(bounds, { padding: [70, 70], maxZoom: 15 });
+
+                // Show fit button & Gmaps link
+                document.getElementById('fit-map-btn').classList.remove('hidden');
+                const gmapsRoute = document.getElementById('gmaps-route-link');
+                gmapsRoute.href = `https://www.google.com/maps/dir/?api=1&origin=${originData.lat},${originData.lng}&destination=${destData.lat},${destData.lng}`;
+                gmapsRoute.classList.remove('hidden');
+
+            } else {
+                if (routePolyline) {
+                    map.removeLayer(routePolyline);
+                    routePolyline = null;
+                }
+                document.getElementById('distance-value').textContent = '-- km';
+                document.getElementById('price-value').textContent = '$0.00';
+                document.getElementById('fit-map-btn').classList.add('hidden');
+                document.getElementById('gmaps-route-link').classList.add('hidden');
+
+                // Center single point if only one exists
+                if (originData) {
+                    map.setView([originData.lat, originData.lng], 14);
+                } else if (destData) {
+                    map.setView([destData.lat, destData.lng], 14);
+                }
             }
         }
 
-        // Fallback robust clipboard function for iFrame environments
-        function copyTextToClipboard(text, successMessage) {
+        // Update tariff rate slider
+        function updateRate(val) {
+            ratePerKm = parseFloat(val);
+            document.getElementById('rate-display').textContent = `$${ratePerKm.toFixed(2)} / km`;
+            if (originData && destData) {
+                const distKm = calculateHaversineDistance(originData.lat, originData.lng, destData.lat, destData.lng);
+                document.getElementById('price-value').textContent = `$${(distKm * ratePerKm).toFixed(2)}`;
+            }
+        }
+
+        // Swap origin and destination
+        function swapLocations() {
+            const tempOrigin = originData;
+            const tempOriginText = document.getElementById('origin-input').value;
+
+            originData = destData;
+            document.getElementById('origin-input').value = document.getElementById('dest-input').value;
+            
+            destData = tempOrigin;
+            document.getElementById('dest-input').value = tempOriginText;
+
+            // Toggle clear button visibility
+            if (originData) document.getElementById('clear-origin').classList.remove('hidden');
+            else document.getElementById('clear-origin').classList.add('hidden');
+
+            if (destData) document.getElementById('clear-dest').classList.remove('hidden');
+            else document.getElementById('clear-dest').classList.add('hidden');
+
+            updateRouteAndUI();
+            showToast('Origen y Destino intercambiados');
+        }
+
+        // Set quick presets
+        async function setPreset(originTerm, destTerm) {
+            document.getElementById('origin-input').value = originTerm;
+            document.getElementById('dest-input').value = destTerm;
+            document.getElementById('clear-origin').classList.remove('hidden');
+            document.getElementById('clear-dest').classList.remove('hidden');
+
+            try {
+                const [res1, res2] = await Promise.all([
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(originTerm)}&limit=1`).then(r => r.json()),
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destTerm)}&limit=1`).then(r => r.json())
+                ]);
+
+                if (res1 && res1.length > 0) {
+                    originData = { name: res1[0].name || originTerm, lat: parseFloat(res1[0].lat), lng: parseFloat(res1[0].lon) };
+                }
+                if (res2 && res2.length > 0) {
+                    destData = { name: res2[0].name || destTerm, lat: parseFloat(res2[0].lat), lng: parseFloat(res2[0].lon) };
+                }
+
+                updateRouteAndUI();
+                showToast('Ejemplo cargado con éxito');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al cargar preset');
+            }
+        }
+
+        // Copy coordinates
+        function copyCoords(type) {
+            const target = type === 'origin' ? originData : destData;
+            if (target) {
+                const text = `${target.lat}, ${target.lng}`;
+                copyTextToClipboard(text, `Coordenadas de ${type} copiadas`);
+            }
+        }
+
+        function copyTextToClipboard(text, msg) {
             const textArea = document.createElement("textarea");
             textArea.value = text;
-            textArea.style.position = "fixed";  // Avoid scrolling to bottom
+            textArea.style.position = "fixed";
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-
             try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    showToast(successMessage);
-                } else {
-                    showToast('No se pudo copiar');
-                }
+                document.execCommand('copy');
+                showToast(msg);
             } catch (err) {
-                console.error('Fallback: Oops, unable to copy', err);
                 showToast('Error al copiar');
             }
-
             document.body.removeChild(textArea);
         }
 
-        // Toast notification system
         function showToast(message) {
             const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toast-msg');
-            toastMsg.textContent = message;
-            
+            document.getElementById('toast-msg').textContent = message;
             toast.classList.remove('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 3000);
+            setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 3000);
         }
 
-        // Utility: Escape HTML strings to prevent XSS
         function escapeHtml(str) {
-            return str
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/ྀ/g, "&#39;");
-        }
-
-        // Utility: Capitalize first letter
-        function capitalizeFirst(str) {
-            if (!str) return '';
-            return str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ');
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
         }
     </script>
 </body>

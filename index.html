@@ -3,192 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EN-VIA - Rutas y Coordenadas Automatizadas</title>
-    <!-- Tailwind CSS para diseño limpio -->
+    <title>EN-VIA - Panel Principal</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API cargando Geocoder y Places -->
+    <!-- Google Maps API con la nueva Places API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
-    <style>
-        #map { height: 450px; width: 100%; }
-    </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800">
+<body class="bg-slate-100 min-h-screen text-slate-800">
 
-    <div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="max-w-xl mx-auto px-4 py-8">
         <!-- Cabecera simple -->
-        <header class="mb-8 flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-extrabold text-blue-600">EN-VIA</h1>
-                <p class="text-xs text-slate-500">Rutas y Coordenadas Automatizadas con Google Maps</p>
-            </div>
+        <header class="mb-6 flex justify-between items-center bg-slate-900 text-white p-4 rounded-2xl shadow-sm">
+            <h1 class="text-lg font-bold">🚕 EN-VIA - Solicitud</h1>
+            <a href="geo-extractor.html" target="_blank" class="text-xs bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition">
+                🔍 Ir a Extractor
+            </a>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Panel de Controles Minimalista -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6 lg:col-span-1">
+        <!-- Formulario Principal -->
+        <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 space-y-4">
+            
+            <!-- Origen -->
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Origen</label>
+                <gmp-place-autocomplete id="origen-autocomplete" class="block w-full">
+                    <input type="text" id="origen" placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </gmp-place-autocomplete>
                 
-                <!-- Origen -->
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Dirección de Origen</label>
-                    <input type="text" id="origen-input" placeholder="Ej. Centro Comercial Sambil, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm" autocomplete="off">
-                    <div class="mt-2 text-xs text-slate-600">
-                        <span class="font-bold">Lat/Lon:</span> <span id="origin-coords" class="font-mono">-</span>
+                <!-- Resultado que regresa del extractor -->
+                <div id="resultado-origen" class="mt-2 p-3 bg-blue-50 rounded-xl border border-blue-100 hidden">
+                    <p class="text-xs text-slate-500 font-semibold">Lugar seleccionado:</p>
+                    <p id="txt-nombre-lugar" class="text-sm font-bold text-slate-800"></p>
+                    <div class="mt-1 flex gap-4 text-xs font-mono text-slate-600">
+                        <span>Lat: <strong id="txt-lat">0.00</strong></span>
+                        <span>Lon: <strong id="txt-lon">0.00</strong></span>
                     </div>
                 </div>
-
-                <!-- Destino -->
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Dirección de Destino</label>
-                    <input type="text" id="dest-input" placeholder="Ej. Vereda del Lago, Maracaibo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-sm" autocomplete="off">
-                    <div class="mt-2 text-xs text-slate-600">
-                        <span class="font-bold">Lat/Lon:</span> <span id="dest-coords" class="font-mono">-</span>
-                    </div>
-                </div>
-
-                <!-- Resumen de Ruta -->
-                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-slate-600">Distancia:</span>
-                        <span id="route-distance" class="font-bold text-slate-800">-</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-600">Tiempo:</span>
-                        <span id="route-duration" class="font-bold text-slate-800">-</span>
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Panel del Mapa -->
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2 flex flex-col justify-between">
-                <div class="rounded-xl overflow-hidden border border-slate-200 mb-4">
-                    <div id="map"></div>
-                </div>
-                <div id="status-msg" class="text-xs text-slate-500 text-center italic">
-                    Escribe la dirección y presiona Enter o sal del campo para extraer coordenadas automáticamente.
-                </div>
+            <!-- Destino -->
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Punto de Destino</label>
+                <gmp-place-autocomplete id="destino-autocomplete" class="block w-full">
+                    <input type="text" id="destino" placeholder="Ej. Vereda del Lago..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </gmp-place-autocomplete>
             </div>
-        </div>
+
+        </section>
     </div>
 
-    <!-- Script con Automatización Invisible del Extractor -->
+    <!-- Script de comunicación y enlace con el Extractor -->
     <script>
-        let map;
-        let directionsService;
-        let directionsRenderer;
-        let geocoder;
-        let originMarker = null;
-        let destMarker = null;
-        let origenCoords = null;
-        let destinoCoords = null;
-
-        const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
-
         window.addEventListener('load', () => {
+            // Revisar si hay coordenadas guardadas que acaban de regresar del extractor
+            const datosGuardados = localStorage.getItem('en_via_ultima_coordenada');
+            if (datosGuardados) {
+                const data = JSON.parse(datosGuardados);
+                if (data && data.direccion) {
+                    document.getElementById('origen').value = data.direccion;
+                    document.getElementById('txt-nombre-lugar').textContent = data.direccion;
+                    document.getElementById('txt-lat').textContent = data.lat;
+                    document.getElementById('txt-lon').textContent = data.lng;
+                    document.getElementById('resultado-origen').classList.remove('hidden');
+                }
+            }
+
             const checkMapsInterval = setInterval(() => {
-                if (typeof google !== 'undefined' && google.maps) {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                     clearInterval(checkMapsInterval);
 
-                    map = new google.maps.Map(document.getElementById('map'), {
-                        center: maracaiboCenter,
-                        zoom: 13,
-                        mapTypeControl: false,
-                        streetViewControl: false
-                    });
+                    const origenAutocomplete = document.getElementById('origen-autocomplete');
 
-                    directionsService = new google.maps.DirectionsService();
-                    directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
-                    geocoder = new google.maps.Geocoder();
+                    if (origenAutocomplete) {
+                        // Cuando el usuario hace clic encima de una opción del buscador
+                        origenAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                            const place = event.detail.place;
+                            if (place) {
+                                await place.fetchFields({ fields: ['displayName', 'formattedAddress'] });
+                                const nombreLugar = place.displayName || place.formattedAddress || document.getElementById('origen').value;
+                                
+                                // Empaquetar el dato y mandarlo automáticamente al archivo geo-extractor.html de forma interna
+                                localStorage.setItem('en_via_objetivo', nombreLugar);
 
-                    configurarExtractorAutomatico('origen-input', 'origin-coords', 'origen');
-                    configurarExtractorAutomatico('dest-input', 'dest-coords', 'destino');
-
-                    console.log("✅ Sistema automatizado de extracción listo.");
+                                // Simula el viaje rápido al extractor y regreso mostrando el nombre y debajo las coordenadas
+                                window.location.href = 'geo-extractor.html?auto=true';
+                            }
+                        });
+                    }
                 }
             }, 300);
         });
-
-        // Función que automatiza el proceso del extractor de forma invisible
-        function configurarExtractorAutomatico(inputId, coordsId, tipo) {
-            const inputEl = document.getElementById(inputId);
-            const coordsEl = document.getElementById(coordsId);
-
-            function ejecutarExtraccion() {
-                const textoDireccion = inputEl.value.trim();
-                if (textoDireccion.length < 3) return;
-
-                document.getElementById('status-msg').textContent = `Extrayendo coordenadas para ${tipo}...`;
-
-                // Aquí simula el "viaje" al extractor interno usando Geocoder
-                geocoder.geocode({ address: textoDireccion }, (results, status) => {
-                    if (status === 'OK' && results[0]) {
-                        const location = results[0].geometry.location;
-                        const lat = location.lat();
-                        const lng = location.lng();
-
-                        const coords = { lat, lng };
-                        coordsEl.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-
-                        if (tipo === 'origen') {
-                            origenCoords = coords;
-                            updateMarker('origen', coords);
-                        } else {
-                            destinoCoords = coords;
-                            updateMarker('destino', coords);
-                        }
-
-                        document.getElementById('status-msg').textContent = `¡Coordenadas de ${tipo} extraídas con éxito!`;
-                        intentarCalcularRuta();
-                    } else {
-                        document.getElementById('status-msg').textContent = `No se pudo extraer coordenadas para ${tipo}.`;
-                    }
-                });
-            }
-
-            // Se activa automáticamente cuando el usuario termina de escribir (Enter o cambia de campo)
-            inputEl.addEventListener('change', ejecutarExtraccion);
-            inputEl.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    ejecutarExtraccion();
-                }
-            });
-        }
-
-        function updateMarker(tipo, coord) {
-            if (tipo === 'origen') {
-                if (originMarker) originMarker.setMap(null);
-                originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen" });
-            } else {
-                if (destMarker) destMarker.setMap(null);
-                destMarker = new google.maps.Marker({ map: map, position: coord, title: "Destino" });
-            }
-            map.setCenter(coord);
-            map.setZoom(15);
-        }
-
-        function intentarCalcularRuta() {
-            if (!origenCoords || !destinoCoords) return;
-
-            document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
-            const request = {
-                origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
-                destination: new google.maps.LatLng(destinoCoords.lat, destinoCoords.lng),
-                travelMode: google.maps.TravelMode.DRIVING
-            };
-
-            directionsService.route(request, (response, status) => {
-                if (status === 'OK') {
-                    directionsRenderer.setDirections(response);
-                    const route = response.routes[0].legs[0];
-                    document.getElementById('route-distance').textContent = route.distance.text;
-                    document.getElementById('route-duration').textContent = route.duration.text;
-                    document.getElementById('status-msg').textContent = "¡Ruta trazada correctamente!";
-                } else {
-                    document.getElementById('status-msg').textContent = "No se pudo calcular la ruta.";
-                }
-            });
-        }
     </script>
 </body>
 </html>

@@ -145,7 +145,7 @@
     <!-- Script de Control Unificado con router -->
     <script>
         let map;
-        let router; // Objeto de enrutamiento vial
+        let router;
         let directionsRenderer;
         let autocompleteService;
         let placesService;
@@ -324,14 +324,12 @@
         }
 
         function verificarYCalcularRuta() {
-            const origenTexto = document.getElementById('campo-libre-origen').value;
-            const destTexto = document.getElementById('campo-libre-destino').value;
-
             if (origenCoords && destCoords) {
                 document.getElementById('status-msg').textContent = "Calculando ruta por carretera con el router...";
+                
                 const request = {
-                    origin: origenTexto || new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
-                    destination: destTexto || new google.maps.LatLng(destCoords.lat, destCoords.lng),
+                    origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
+                    destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),
                     travelMode: google.maps.TravelMode.DRIVING
                 };
 
@@ -348,32 +346,11 @@
                         gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
                         gmapsLink.classList.remove('hidden');
                     } else {
-                        // Respaldo directo por coordenadas numéricas si el texto falla
-                        const fallbackRequest = {
-                            origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
-                            destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),
-                            travelMode: google.maps.TravelMode.DRIVING
-                        };
-
-                        router.route(fallbackRequest, (fbResponse, fbStatus) => {
-                            if (fbStatus === 'OK') {
-                                directionsRenderer.setDirections(fbResponse);
-                                const route = fbResponse.routes[0].legs[0];
-                                document.getElementById('route-distance').textContent = route.distance.text;
-                                document.getElementById('route-duration').textContent = route.duration.text;
-                                document.getElementById('status-msg').textContent = "¡Ruta por carretera trazada con éxito!";
-
-                                const gmapsLink = document.getElementById('gmaps-link');
-                                gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
-                                gmapsLink.classList.remove('hidden');
-                            } else {
-                                document.getElementById('status-msg').textContent = "No se pudo calcular la ruta por carretera.";
-                            }
-                        });
+                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta por carretera (Error: " + status + ").";
                     }
                 });
             } else {
-                document.getElementById('status-msg').textContent = "Falta seleccionar el destino.";
+                document.getElementById('status-msg').textContent = "Falta seleccionar origen o destino.";
             }
         }
 

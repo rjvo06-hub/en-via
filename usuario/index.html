@@ -174,7 +174,7 @@
                     </div>
                 </div>
 
-                <!-- Mapa de seguimiento (Solo los dos puntos) en la parte inferior -->
+                <!-- Mapa de seguimiento con ruta y puntos en la parte inferior -->
                 <div id="contenedor-mapa-seguimiento" class="rounded-xl overflow-hidden border border-[#262626] hidden">
                     <div id="map-seguimiento"></div>
                 </div>
@@ -588,11 +588,27 @@
                         icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
                     });
 
-                    // Ajustar el mapa para que ambos puntos se muestren perfectamente sin ruta trazada
-                    const bounds = new google.maps.LatLngBounds();
-                    bounds.extend(baseCoords);
-                    bounds.extend(origenClienteCoords);
-                    mapSeguimiento.fitBounds(bounds);
+                    // Trazar la ruta en el mapa inferior entre la base y la ubicación del cliente
+                    const directionsService = new google.maps.DirectionsService();
+                    const directionsRenderer = new google.maps.DirectionsRenderer({
+                        map: mapSeguimiento,
+                        suppressMarkers: true, // Ocultamos marcadores por defecto para usar nuestros puntos personalizados
+                        polylineOptions: { 
+                            strokeColor: '#10b981', 
+                            strokeWeight: 5, 
+                            strokeOpacity: 0.8 
+                        }
+                    });
+
+                    directionsService.route({
+                        origin: baseCoords,
+                        destination: origenClienteCoords,
+                        travelMode: google.maps.TravelMode.DRIVING
+                    }, (response, status) => {
+                        if (status === 'OK') {
+                            directionsRenderer.setDirections(response);
+                        }
+                    });
                 }
             });
         }

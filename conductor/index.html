@@ -190,6 +190,7 @@
                 const tiempos = c.tiempos || {};
                 const yaLlego = tiempos.llegada_conductor_at != null;
                 const carreraIniciada = tiempos.inicio_carrera_at != null;
+                const recorridoFinalizado = tiempos.fin_recorrido_at != null;
 
                 let contenidoAcciones = '';
 
@@ -204,7 +205,7 @@
                         </button>
                     `;
                 } else if (!carreraIniciada) {
-                    // Fase 2: Ya llegó, esperando al pasajero con cronómetro de espera + botón Iniciar Carrera
+                    // Fase 2: Esperando al pasajero
                     contenidoAcciones = `
                         <div class="bg-[#161616] p-3 rounded-xl border border-amber-500/30 text-center space-y-1">
                             <p class="text-[11px] text-amber-400 font-bold uppercase">⏱️ Tiempo de espera transcurriendo:</p>
@@ -214,8 +215,8 @@
                             🚀 Iniciar Carrera
                         </button>
                     `;
-                } else {
-                    // Fase 3: Carrera en curso con su propio cronómetro de viaje + botón de navegación discreto + finalizar
+                } else if (!recorridoFinalizado) {
+                    // Fase 3: En viaje activo hacia el destino
                     contenidoAcciones = `
                         <div class="bg-[#161616] p-3 rounded-xl border border-emerald-500/30 text-center space-y-1">
                             <p class="text-[11px] text-emerald-400 font-bold uppercase">⏱️ Tiempo de viaje activo:</p>
@@ -223,11 +224,23 @@
                         </div>
                         <div class="flex justify-between items-center pt-1">
                             <a href="${urlNavegacionDestino}" target="_blank" class="text-[11px] text-slate-400 hover:text-purple-400 underline transition cursor-pointer">
-                                🗺️ ¿Necesitas navegar al destino?
+                                🗺️ Navegar al destino
                             </a>
                         </div>
-                        <button onclick='finalizarCarrera("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                            🏁 Finalizar Carrera
+                        <button onclick='finalizarRecorrido("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            📍 Finalizar Recorrido (Llegamos al Destino)
+                        </button>
+                    `;
+                } else {
+                    // Fase 4: Negociación y cobro de pago
+                    contenidoAcciones = `
+                        <div class="bg-[#161616] p-4 rounded-xl border border-purple-500/40 text-center space-y-2">
+                            <p class="text-xs text-purple-400 font-bold uppercase">💳 Negociación de Pago en Curso</p>
+                            <p class="text-slate-300 text-xs">Monto a cobrar: <strong class="text-emerald-400 text-sm">${c.precio || '$0.00'}</strong></p>
+                            <p class="text-[11px] text-slate-400 italic">Verifica con el pasajero el método de pago (Efectivo / Transferencia) y confirma cuando esté acreditado.</p>
+                        </div>
+                        <button onclick='confirmarPagoYFinalizar("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            ✅ Confirmar Pago y Finalizar Servicio
                         </button>
                     `;
                 }
@@ -252,7 +265,7 @@
 
                 if (yaLlego && !carreraIniciada) {
                     iniciarCronometro(tiempos.llegada_conductor_at, 'cronometro-conductor');
-                } else if (carreraIniciada) {
+                } else if (carreraIniciada && !recorridoFinalizado) {
                     iniciarCronometro(tiempos.inicio_carrera_at, 'cronometro-viaje');
                 }
             });
@@ -270,11 +283,8 @@
                 .update({ tiempos: nuevosTiempos })
                 .eq('id', idCarrera);
 
-            if (error) {
-                alert('Error al actualizar: ' + error.message);
-            } else {
-                cargarDatosConductor();
-            }
+            if (error) alert('Error al actualizar: ' + error.message);
+            else cargarDatosConductor();
         }
 
         async function iniciarCarrera(idCarrera, tiemposActuales) {
@@ -291,18 +301,31 @@
                 .update({ tiempos: nuevosTiempos })
                 .eq('id', idCarrera);
 
-            if (error) {
-                alert('Error al iniciar la carrera: ' + error.message);
-            } else {
-                cargarDatosConductor();
-            }
+            if (error) alert('Error al iniciar la carrera: ' + error.message);
+            else cargarDatosConductor();
         }
 
-        async function finalizarCarrera(idCarrera, tiemposActuales) {
-            if (!confirm('¿Estás seguro de finalizar esta carrera?')) return;
+        async function finalizarRecorrido(idCarrera, tiemposActuales) {
             if (timerInterval) clearInterval(timerInterval);
-
             const ahora = new Date().toISOString();
+            const nuevosTiempos = {
+                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
+                fin_recorrido_at: ahora
+            };
+
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ tiempos: nuevosTiempos })
+                .eq('id', idCarrera);
+
+            if (error) alert('Error al finalizar recorrido: ' + error.message);
+            else cargarDatosConductor();
+        }
+
+        async function confirmarPagoYFinalizar(idCarrera, tiemposActuales) {
+            if (!confirm('¿Confirmas que el pasajero pagó y deseas finalizar el servicio por completo?')) return;
+            const ahora = new Date().toISOString();
+
             const nuevosTiempos = {
                 ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
                 fin_carrera_at: ahora
@@ -316,7 +339,7 @@
             if (error) {
                 alert('Error al finalizar: ' + error.message);
             } else {
-                alert('¡Carrera finalizada con éxito!');
+                alert('¡Servicio finalizado y cobro confirmado con éxito!');
                 location.reload();
             }
         }
@@ -392,9 +415,8 @@
                 .eq('id', idCarrera)
                 .eq('estado', 'pendiente');
 
-            if (error) {
-                alert('Error al tomar la carrera: ' + error.message);
-            } else {
+            if (error) alert('Error al tomar la carrera: ' + error.message);
+            else {
                 alert('¡Has tomado la carrera con éxito!');
                 cargarDatosConductor();
             }

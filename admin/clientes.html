@@ -6,7 +6,6 @@
     <title>EN-VIA - Gestión de Clientes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Cargamos tu cliente de Supabase centralizado -->
     <script src="../js/supabaseClient.js"></script>
     <style>
         input, select { font-size: 16px !important; }
@@ -26,7 +25,7 @@
             </a>
         </header>
 
-        <!-- Formulario de Creación / Edición -->
+        <!-- Formulario -->
         <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
             <h2 id="form-title" class="text-xs font-bold uppercase tracking-wider text-emerald-400">Registrar Nuevo Cliente</h2>
             <input type="hidden" id="cliente-id">
@@ -63,7 +62,7 @@
             </div>
         </div>
 
-        <!-- Listado de Clientes -->
+        <!-- Listado -->
         <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Lista de Clientes Registrados</h2>
             <div class="overflow-x-auto">
@@ -77,9 +76,7 @@
                             <th class="p-2.5 text-right">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-clientes" class="divide-y divide-[#1a1a1a]">
-                        <!-- Se llena dinámicamente -->
-                    </tbody>
+                    <tbody id="tabla-clientes" class="divide-y divide-[#1a1a1a]"></tbody>
                 </table>
             </div>
         </div>
@@ -93,12 +90,7 @@
             const tbody = document.getElementById('tabla-clientes');
             tbody.innerHTML = '';
 
-            if (error) {
-                console.error("Error al cargar:", error);
-                return;
-            }
-
-            if (data.length === 0) {
+            if (error || !data || data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500 italic">No hay clientes registrados.</td></tr>`;
                 return;
             }
@@ -130,17 +122,12 @@
             const direccion_frecuente = document.getElementById('direccion_frecuente').value.trim();
             const activo = document.getElementById('activo').value === 'true';
 
-            if (!nombre) {
-                alert('El nombre es obligatorio.');
-                return;
-            }
+            if (!nombre) { alert('El nombre es obligatorio.'); return; }
 
             if (id) {
-                // Actualizar
                 const { error } = await supabaseClient.from('clientes').update({ nombre, telefono, direccion_frecuente, activo }).eq('id', id);
                 if (error) alert('Error al actualizar: ' + error.message);
             } else {
-                // Crear
                 const { error } = await supabaseClient.from('clientes').insert([{ nombre, telefono, direccion_frecuente, activo }]);
                 if (error) alert('Error al crear: ' + error.message);
             }

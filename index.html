@@ -15,41 +15,53 @@
     <div class="max-w-xl mx-auto w-full space-y-6 my-auto">
         <header class="text-center space-y-2">
             <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-500 tracking-tight">EN-VIA</h1>
-            <p class="text-slate-400 text-xs sm:text-sm">Sistema de gestión de rutas, servicios y personal</p>
+            <p class="text-slate-400 text-xs sm:text-sm">Sistema central de gestión de rutas y servicios</p>
         </header>
 
         <div class="grid grid-cols-1 gap-3 sm:gap-4 pt-2">
-            <!-- Crear Carrera / Servicio -->
-            <a href="carrera.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-blue-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
+            <!-- Portal de Usuario -->
+            <a href="usuario/index.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-emerald-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 text-lg font-bold border border-blue-500/20">🗺️</div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-lg font-bold border border-emerald-500/20">👤</div>
                     <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-blue-400 transition">Crear Carrera / Servicio</h2>
-                        <p class="text-slate-400 text-xs">Calcular ruta, distancia, costo y registrar servicio</p>
+                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-emerald-400 transition">Portal de Usuario</h2>
+                        <p class="text-slate-400 text-xs">Calcular ruta, costo y solicitar servicio</p>
                     </div>
                 </div>
                 <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>
             </a>
 
-            <!-- Gestionar Clientes -->
-            <a href="admin/clientes.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-emerald-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-lg font-bold border border-emerald-500/20">👥</div>
-                    <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-emerald-400 transition">Crear / Gestionar Clientes</h2>
-                        <p class="text-slate-400 text-xs">Administrar pasajeros y datos de contacto</p>
-                    </div>
-                </div>
-                <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>
-            </a>
-
-            <!-- Gestionar Conductores -->
-            <a href="admin/conductores.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-purple-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
+            <!-- Portal de Conductor -->
+            <a href="conductor/index.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-purple-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
                 <div class="flex items-center space-x-4">
                     <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 text-lg font-bold border border-purple-500/20">🚗</div>
                     <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-purple-400 transition">Crear / Gestionar Conductores</h2>
-                        <p class="text-slate-400 text-xs">Administrar choferes y estados activos</p>
+                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-purple-400 transition">Portal de Conductor (En Vivo)</h2>
+                        <p class="text-slate-400 text-xs">Ver carreras activas y tomarlas en tiempo real</p>
+                    </div>
+                </div>
+                <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>
+            </a>
+
+            <!-- Administración de Clientes -->
+            <a href="admin/clientes.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-blue-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 text-lg font-bold border border-blue-500/20">👥</div>
+                    <div>
+                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-blue-400 transition">Admin: Clientes</h2>
+                        <p class="text-slate-400 text-xs">Crear, modificar y eliminar registros de clientes</p>
+                    </div>
+                </div>
+                <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>
+            </a>
+
+            <!-- Administración de Conductores -->
+            <a href="admin/conductores.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-amber-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 text-lg font-bold border border-amber-500/20">📋</div>
+                    <div>
+                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-amber-400 transition">Admin: Conductores</h2>
+                        <p class="text-slate-400 text-xs">Crear, modificar y eliminar registros de choferes</p>
                     </div>
                 </div>
                 <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>

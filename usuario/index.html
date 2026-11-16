@@ -174,7 +174,7 @@
                     </div>
                 </div>
 
-                <!-- Mapa de seguimiento del conductor hacia el origen (Ubicado en la parte inferior) -->
+                <!-- Mapa de seguimiento (Solo los dos puntos) en la parte inferior -->
                 <div id="contenedor-mapa-seguimiento" class="rounded-xl overflow-hidden border border-[#262626] hidden">
                     <div id="map-seguimiento"></div>
                 </div>
@@ -543,7 +543,6 @@
                 seccionLlegada.classList.remove('hidden');
                 labelLlegada.textContent = "Aprox. 7 - 10 minutos";
 
-                // Mostrar el mapa de seguimiento en la parte inferior
                 contenedorMapaSeguimiento.classList.remove('hidden');
                 inicializarMapaSeguimiento(origenTexto);
             } else {
@@ -568,6 +567,7 @@
                 });
             }
 
+            // Marcador de la base del conductor (punto morado)
             new google.maps.Marker({
                 position: baseCoords,
                 map: mapSeguimiento,
@@ -580,6 +580,7 @@
                 if (status === 'OK' && results[0]) {
                     const origenClienteCoords = results[0].geometry.location;
 
+                    // Marcador del origen del cliente (punto azul)
                     new google.maps.Marker({
                         position: origenClienteCoords,
                         map: mapSeguimiento,
@@ -587,22 +588,11 @@
                         icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
                     });
 
-                    const directionsService = new google.maps.DirectionsService();
-                    const directionsRenderer = new google.maps.DirectionsRenderer({
-                        map: mapSeguimiento,
-                        suppressMarkers: true,
-                        polylineOptions: { strokeColor: '#8b5cf6', strokeWeight: 5, strokeOpacity: 0.8 }
-                    });
-
-                    directionsService.route({
-                        origin: baseCoords,
-                        destination: origenClienteCoords,
-                        travelMode: google.maps.TravelMode.DRIVING
-                    }, (response, status) => {
-                        if (status === 'OK') {
-                            directionsRenderer.setDirections(response);
-                        }
-                    });
+                    // Ajustar el mapa para que ambos puntos se muestren perfectamente sin ruta trazada
+                    const bounds = new google.maps.LatLngBounds();
+                    bounds.extend(baseCoords);
+                    bounds.extend(origenClienteCoords);
+                    mapSeguimiento.fitBounds(bounds);
                 }
             });
         }

@@ -204,7 +204,7 @@
                         </button>
                     `;
                 } else if (!carreraIniciada) {
-                    // Fase 2: Ya llegó, esperando al pasajero con cronómetro + botón Iniciar Carrera
+                    // Fase 2: Ya llegó, esperando al pasajero con cronómetro de espera + botón Iniciar Carrera
                     contenidoAcciones = `
                         <div class="bg-[#161616] p-3 rounded-xl border border-amber-500/30 text-center space-y-1">
                             <p class="text-[11px] text-amber-400 font-bold uppercase">⏱️ Tiempo de espera transcurriendo:</p>
@@ -215,14 +215,20 @@
                         </button>
                     `;
                 } else {
-                    // Fase 3: Carrera en curso hacia el destino
+                    // Fase 3: Carrera en curso con su propio cronómetro de viaje + botón de navegación discreto + finalizar
                     contenidoAcciones = `
                         <div class="bg-[#161616] p-3 rounded-xl border border-emerald-500/30 text-center space-y-1">
-                            <p class="text-[11px] text-emerald-400 font-bold uppercase">🚗 Carrera en curso hacia el destino</p>
+                            <p class="text-[11px] text-emerald-400 font-bold uppercase">⏱️ Tiempo de viaje activo:</p>
+                            <p id="cronometro-viaje" class="text-lg font-extrabold text-white">00:00</p>
                         </div>
-                        <a href="${urlNavegacionDestino}" target="_blank" class="w-full text-center block py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg">
-                            🏁 Navegar al Destino Final
-                        </a>
+                        <div class="flex justify-between items-center pt-1">
+                            <a href="${urlNavegacionDestino}" target="_blank" class="text-[11px] text-slate-400 hover:text-purple-400 underline transition cursor-pointer">
+                                🗺️ ¿Necesitas navegar al destino?
+                            </a>
+                        </div>
+                        <button onclick='finalizarCarrera("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            🏁 Finalizar Carrera
+                        </button>
                     `;
                 }
 
@@ -246,6 +252,8 @@
 
                 if (yaLlego && !carreraIniciada) {
                     iniciarCronometro(tiempos.llegada_conductor_at, 'cronometro-conductor');
+                } else if (carreraIniciada) {
+                    iniciarCronometro(tiempos.inicio_carrera_at, 'cronometro-viaje');
                 }
             });
         }
@@ -287,6 +295,29 @@
                 alert('Error al iniciar la carrera: ' + error.message);
             } else {
                 cargarDatosConductor();
+            }
+        }
+
+        async function finalizarCarrera(idCarrera, tiemposActuales) {
+            if (!confirm('¿Estás seguro de finalizar esta carrera?')) return;
+            if (timerInterval) clearInterval(timerInterval);
+
+            const ahora = new Date().toISOString();
+            const nuevosTiempos = {
+                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
+                fin_carrera_at: ahora
+            };
+
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ estado: 'completada', tiempos: nuevosTiempos })
+                .eq('id', idCarrera);
+
+            if (error) {
+                alert('Error al finalizar: ' + error.message);
+            } else {
+                alert('¡Carrera finalizada con éxito!');
+                location.reload();
             }
         }
 
@@ -335,7 +366,7 @@
                             <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
                         </div>
 
-                        <button onclick="tomarCarrera('${c.id}')" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                        <button onclick="tomarCarrera('${c.id}', ${JSON.stringify(c.tiempos || {})})" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
                             🚀 ¡Tomar esta Carrera!
                         </button>
                     </div>
@@ -343,13 +374,20 @@
             });
         }
 
-        async function tomarCarrera(idCarrera) {
+        async function tomarCarrera(idCarrera, tiemposActuales) {
+            const ahora = new Date().toISOString();
+            const nuevosTiempos = {
+                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
+                tomo_servicio_at: ahora
+            };
+
             const { error } = await supabaseClient
                 .from('carreras')
                 .update({ 
                     estado: 'asignada', 
                     conductor_asignado: conductorActual,
-                    conductor_id: conductorIdActual || null
+                    conductor_id: conductorIdActual || null,
+                    tiempos: nuevosTiempos
                 })
                 .eq('id', idCarrera)
                 .eq('estado', 'pendiente');

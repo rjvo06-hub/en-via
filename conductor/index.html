@@ -3,44 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EN-VIA - Panel de Conductores</title>
+    <title>EN-VIA - Portal de Conductores</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Tu cliente de Supabase centralizado -->
     <script src="../js/supabaseClient.js"></script>
     <style>
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6">
+<body class="bg-black min-h-screen text-slate-100 antialiased flex items-center justify-center p-3">
 
-    <div class="max-w-3xl mx-auto space-y-6">
+    <!-- SECCIÓN 1: PANTALLA DE SELECCIÓN DE CONDUCTOR (SIN CONTRASEÑA) -->
+    <div id="login-container" class="max-w-md w-full bg-[#111111] border border-[#222222] p-6 rounded-2xl shadow-2xl space-y-4">
+        <div class="text-center space-y-1">
+            <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Portal de Chofer</h1>
+            <p class="text-slate-400 text-xs">Selecciona tu nombre de la lista para ingresar</p>
+        </div>
+
+        <div class="space-y-3 pt-2">
+            <div>
+                <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Seleccionar Conductor</label>
+                <select id="login-select" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-purple-500 rounded-xl px-3 py-2.5 text-white outline-none text-xs">
+                    <option value="">Cargando conductores...</option>
+                </select>
+            </div>
+            <div id="login-error" class="text-red-400 text-xs text-center hidden">Por favor, selecciona un conductor.</div>
+
+            <button onclick="ingresarSinPassword()" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                Entrar al Portal
+            </button>
+            <a href="../index.html" class="block text-center text-slate-500 hover:text-slate-300 text-xs pt-2">← Volver al Menú Principal</a>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: PORTAL DE CARRERAS EN TIEMPO REAL (Oculto hasta elegir nombre) -->
+    <div id="portal-container" class="max-w-3xl w-full space-y-6 hidden">
         <header class="flex flex-col sm:flex-row justify-between items-center border-b border-[#222222] pb-4 gap-3">
             <div>
                 <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Panel de Chofer</h1>
-                <p class="text-slate-400 text-xs">Carreras disponibles en tiempo real</p>
+                <p class="text-slate-400 text-xs">Conectado como: <span id="driver-name-display" class="text-white font-bold"></span></p>
             </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <input type="text" id="nombre-conductor" placeholder="Tu Nombre de Chofer..." class="bg-[#161616] border border-[#2e2e2e] focus:border-purple-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none">
-                <a href="../index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">Salir</a>
-            </div>
+            <button onclick="cerrarSesion()" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition text-red-400 cursor-pointer">
+                Cambiar de Conductor
+            </button>
         </header>
 
         <div class="space-y-4">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes en Tiempo Real</h2>
             <div id="lista-carreras" class="grid grid-cols-1 gap-3">
                 <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
-                    Buscando carreras en tiempo real...
+                    Buscando carreras...
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        let conductorActual = "";
+
         document.addEventListener('DOMContentLoaded', () => {
+            const sesionGuardada = sessionStorage.getItem('conductor_en_via');
+            if (sesionGuardada) {
+                conductorActual = sesionGuardada;
+                mostrarPortal();
+            } else {
+                cargarConductoresSelect();
+            }
+        });
+
+        // Carga los conductores desde la base de datos para el menú desplegable
+        async function cargarConductoresSelect() {
+            const select = document.getElementById('login-select');
+            const { data, error } = await supabaseClient
+                .from('conductores')
+                .select('id, nombre')
+                .eq('activo', true)
+                .order('nombre', { ascending: true });
+
+            if (error || !data || data.length === 0) {
+                select.innerHTML = '<option value="">No hay conductores activos registrados</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
+            data.forEach(c => {
+                select.innerHTML += `<option value="${c.nombre}">${c.nombre}</option>`;
+            });
+        }
+
+        function ingresarSinPassword() {
+            const nombreSeleccionado = document.getElementById('login-select').value;
+            const errorDiv = document.getElementById('login-error');
+
+            if (!nombreSeleccionado) {
+                errorDiv.textContent = "Por favor, selecciona tu nombre de la lista.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+            conductorActual = nombreSeleccionado;
+            sessionStorage.setItem('conductor_en_via', conductorActual);
+            mostrarPortal();
+        }
+
+        function mostrarPortal() {
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('portal-container').classList.remove('hidden');
+            document.getElementById('driver-name-display').textContent = conductorActual;
+            
             cargarCarrerasPendientes();
             suscripcionRealtime();
-        });
+        }
+
+        function cerrarSesion() {
+            sessionStorage.removeItem('conductor_en_via');
+            location.reload();
+        }
 
         async function cargarCarrerasPendientes() {
             const { data, error } = await supabaseClient
@@ -93,18 +176,11 @@
         }
 
         async function tomarCarrera(idCarrera) {
-            const nombreChofer = document.getElementById('nombre-conductor').value.trim();
-            if (!nombreChofer) {
-                alert('Por favor, ingresa tu nombre de chofer en la parte superior antes de tomar una carrera.');
-                document.getElementById('nombre-conductor').focus();
-                return;
-            }
-
             const { error } = await supabaseClient
                 .from('carreras')
                 .update({ 
                     estado: 'asignada', 
-                    conductor_asignado: nombreChofer 
+                    conductor_asignado: conductorActual 
                 })
                 .eq('id', idCarrera)
                 .eq('estado', 'pendiente');

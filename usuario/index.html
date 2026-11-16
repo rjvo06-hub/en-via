@@ -223,7 +223,6 @@
         let idCarreraActiva = null;
         let clienteActual = "";
         let clienteIdActual = null;
-        let listaClientes = [];
         
         let currentMode = 'origin';
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
@@ -246,8 +245,7 @@
                 document.getElementById('cliente-actual-display').textContent = clienteActual;
                 document.getElementById('identificacion-container').classList.add('hidden');
 
-                // Consultar en Supabase si este cliente ya tiene una carrera pendiente o asignada usando cliente_nombre
-                const { data: carreraActiva, error } = await supabaseClient
+                const { data: carreraActiva } = await supabaseClient
                     .from('carreras')
                     .select('*')
                     .eq('cliente_nombre', clienteActual)
@@ -282,7 +280,6 @@
                 return;
             }
 
-            listaClientes = data;
             select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
             data.forEach(c => {
                 select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
@@ -301,7 +298,6 @@
             errorDiv.classList.add('hidden');
             clienteActual = select.value;
             
-            // Obtener el ID correspondiente al cliente seleccionado
             const selectedOption = select.options[select.selectedIndex];
             clienteIdActual = selectedOption.getAttribute('data-id') || null;
 
@@ -311,8 +307,7 @@
             document.getElementById('cliente-actual-display').textContent = clienteActual;
             document.getElementById('identificacion-container').classList.add('hidden');
 
-            // Verificar si al elegir el cliente ya tiene una carrera activa guardada
-            const { data: carreraActiva, error } = await supabaseClient
+            const { data: carreraActiva } = await supabaseClient
                 .from('carreras')
                 .select('*')
                 .eq('cliente_nombre', clienteActual)
@@ -564,8 +559,8 @@
             }
 
             const nuevaCarrera = {
-                cliente_nombre: clienteActual,
                 cliente_id: clienteIdActual || null,
+                cliente_nombre: clienteActual,
                 origen: origen,
                 destino: destino,
                 fecha_hora_servicio: new Date().toISOString(),

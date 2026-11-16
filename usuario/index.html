@@ -73,7 +73,7 @@
             <div id="cliente-error" class="text-red-400 text-xs hidden">Por favor, selecciona tu nombre de la lista.</div>
         </div>
 
-        <!-- VISTA 1: FORMULARIO DE SOLICITUD (Oculto hasta elegir cliente) -->
+        <!-- VISTA 1: FORMULARIO DE SOLICITUD -->
         <div id="vista-formulario" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
             <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-2xl space-y-3.5 flex flex-col justify-between">
                 <div class="space-y-3">
@@ -222,6 +222,8 @@
         let distanciaCalculada = "";
         let idCarreraActiva = null;
         let clienteActual = "";
+        let clienteIdActual = null;
+        let listaClientes = [];
         
         let currentMode = 'origin';
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
@@ -235,17 +237,32 @@
             await cargarClientesSelect();
 
             const clienteGuardado = sessionStorage.getItem('cliente_en_via');
-            const carreraGuardada = sessionStorage.getItem('carrera_activa_id');
+            const clienteIdGuardado = sessionStorage.getItem('cliente_id_en_via');
 
             if (clienteGuardado) {
                 clienteActual = clienteGuardado;
+                clienteIdActual = clienteIdGuardado || null;
+                document.getElementById('select-cliente').value = clienteActual;
+                document.getElementById('cliente-actual-display').textContent = clienteActual;
                 document.getElementById('identificacion-container').classList.add('hidden');
-                
-                if (carreraGuardada) {
-                    idCarreraActiva = carreraGuardada;
-                    verificarEstadoCarreraGuardada(idCarreraActiva);
-                    return;
+
+                // Consultar en Supabase si este cliente ya tiene una carrera pendiente o asignada usando cliente_nombre
+                const { data: carreraActiva, error } = await supabaseClient
+                    .from('carreras')
+                    .select('*')
+                    .eq('cliente_nombre', clienteActual)
+                    .in('estado', ['pendiente', 'asignada'])
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (carreraActiva) {
+                    idCarreraActiva = carreraActiva.id;
+                    sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
+                    mostrarVistaEstado(carreraActiva);
+                    suscripcionRealtime(idCarreraActiva);
                 } else {
+                    sessionStorage.removeItem('carrera_activa_id');
                     document.getElementById('vista-formulario').classList.remove('hidden');
                     inicializarMapaFormulario();
                 }
@@ -265,13 +282,14 @@
                 return;
             }
 
+            listaClientes = data;
             select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
             data.forEach(c => {
-                select.innerHTML += `<option value="${c.nombre}">${c.nombre}</option>`;
+                select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
             });
         }
 
-        function fijarCliente() {
+        async function fijarCliente() {
             const select = document.getElementById('select-cliente');
             const errorDiv = document.getElementById('cliente-error');
 
@@ -282,17 +300,42 @@
 
             errorDiv.classList.add('hidden');
             clienteActual = select.value;
+            
+            // Obtener el ID correspondiente al cliente seleccionado
+            const selectedOption = select.options[select.selectedIndex];
+            clienteIdActual = selectedOption.getAttribute('data-id') || null;
+
             sessionStorage.setItem('cliente_en_via', clienteActual);
+            if (clienteIdActual) sessionStorage.setItem('cliente_id_en_via', clienteIdActual);
 
             document.getElementById('cliente-actual-display').textContent = clienteActual;
             document.getElementById('identificacion-container').classList.add('hidden');
-            document.getElementById('vista-formulario').classList.remove('hidden');
 
-            inicializarMapaFormulario();
+            // Verificar si al elegir el cliente ya tiene una carrera activa guardada
+            const { data: carreraActiva, error } = await supabaseClient
+                .from('carreras')
+                .select('*')
+                .eq('cliente_nombre', clienteActual)
+                .in('estado', ['pendiente', 'asignada'])
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (carreraActiva) {
+                idCarreraActiva = carreraActiva.id;
+                sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
+                mostrarVistaEstado(carreraActiva);
+                suscripcionRealtime(idCarreraActiva);
+            } else {
+                document.getElementById('vista-formulario').classList.remove('hidden');
+                inicializarMapaFormulario();
+            }
         }
 
         function cambiarCliente() {
             sessionStorage.removeItem('cliente_en_via');
+            sessionStorage.removeItem('cliente_id_en_via');
+            sessionStorage.removeItem('carrera_activa_id');
             location.reload();
         }
 
@@ -521,7 +564,8 @@
             }
 
             const nuevaCarrera = {
-                cliente: clienteActual,
+                cliente_nombre: clienteActual,
+                cliente_id: clienteIdActual || null,
                 origen: origen,
                 destino: destino,
                 fecha_hora_servicio: new Date().toISOString(),
@@ -542,22 +586,12 @@
             }
         }
 
-        async function verificarEstadoCarreraGuardada(id) {
-            const { data, error } = await supabaseClient.from('carreras').select('*').eq('id', id).single();
-            if (error || !data) {
-                sessionStorage.removeItem('carrera_activa_id');
-                return;
-            }
-            mostrarVistaEstado(data);
-            suscripcionRealtime(id);
-        }
-
         function mostrarVistaEstado(carrera) {
             document.getElementById('identificacion-container').classList.add('hidden');
             document.getElementById('vista-formulario').classList.add('hidden');
             document.getElementById('vista-estado').classList.remove('hidden');
 
-            document.getElementById('estado-cliente').textContent = carrera.cliente || clienteActual;
+            document.getElementById('estado-cliente').textContent = carrera.cliente_nombre || clienteActual;
             document.getElementById('estado-origen').textContent = carrera.origen;
             document.getElementById('estado-destino').textContent = carrera.destino;
             document.getElementById('estado-precio').textContent = carrera.precio || '$0.00';

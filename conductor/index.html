@@ -52,13 +52,13 @@
             </button>
         </header>
 
-        <!-- Sección de Carrera Asignada Actual (Solo para el chofer que la tomó) -->
+        <!-- Sección de Carrera Asignada Actual -->
         <div id="seccion-asignada" class="space-y-3 hidden">
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Tu Carrera en Curso</h2>
             <div id="carrera-asignada-container"></div>
         </div>
 
-        <!-- Sección de Carreras Disponibles (Pendientes para todos) -->
+        <!-- Sección de Carreras Disponibles -->
         <div class="space-y-3 pt-2">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
             <div id="lista-carreras" class="grid grid-cols-1 gap-3">
@@ -73,7 +73,6 @@
         let conductorActual = "";
         let conductorIdActual = null;
         
-        // Coordenadas fijas de la base en Maracaibo para el origen de la navegación
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
@@ -105,7 +104,6 @@
 
             select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
             data.forEach(c => {
-                // Guardamos tanto el nombre como el id en los atributos de la opción
                 select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
             });
         }
@@ -124,7 +122,6 @@
             errorDiv.classList.add('hidden');
             conductorActual = nombreSeleccionado;
 
-            // Extraer el ID correspondiente al chofer seleccionado
             const selectedOption = select.options[select.selectedIndex];
             conductorIdActual = selectedOption.getAttribute('data-id') || null;
 
@@ -150,7 +147,6 @@
         }
 
         async function cargarDatosConductor() {
-            // 1. Cargar carreras pendientes
             const { data: pendData, error: pendError } = await supabaseClient
                 .from('carreras')
                 .select('*')
@@ -159,7 +155,6 @@
 
             if (pendError) console.error("Error al cargar pendientes:", pendError);
 
-            // 2. Cargar la carrera asignada específicamente a este chofer
             const { data: asigData, error: asigError } = await supabaseClient
                 .from('carreras')
                 .select('*')
@@ -186,7 +181,6 @@
             contenedor.innerHTML = '';
 
             asignadas.forEach(c => {
-                // Enlace de Google Maps usando la base fija como origen y el origen del cliente como destino
                 const urlNavegacion = `https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
 
                 contenedor.innerHTML += `

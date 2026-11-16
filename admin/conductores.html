@@ -4,141 +4,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Gestión de Conductores</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Ruta adaptada subiendo un nivel -->
-    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Cargamos tu cliente de Supabase centralizado -->
+    <script src="../js/supabaseClient.js"></script>
+    <style>
+        input, select { font-size: 16px !important; }
+        @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
+    </style>
 </head>
-<body class="bg-slate-100 min-h-screen">
+<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6">
 
-    <!-- Cabecera -->
-    <header class="bg-slate-900 text-white shadow-sm sticky top-0 z-50 py-3 px-4">
-        <div class="app-container flex justify-between items-center !p-0">
-            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
-                <span>👤</span> Registro de Conductores
-            </h1>
-            <a href="../index.html" class="text-xs bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition">
-                ← Volver al Panel
+    <div class="max-w-4xl mx-auto space-y-6">
+        <header class="flex justify-between items-center border-b border-[#222222] pb-4">
+            <div>
+                <h1 class="text-xl font-extrabold text-blue-500 tracking-tight">EN-VIA - Conductores</h1>
+                <p class="text-slate-400 text-xs">Administración de choferes</p>
+            </div>
+            <a href="../index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
+                ← Volver al Inicio
             </a>
-        </div>
-    </header>
+        </header>
 
-    <main class="app-container pb-16 pt-4">
-        
-        <!-- Formulario Capturador de Datos de Conductores -->
-        <section class="bg-white rounded-2xl shadow-sm p-5 mb-6 border border-slate-200">
-            <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
-                <span>Nuevo Conductor</span>
-                <span class="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md font-medium">Administración</span>
-            </h2>
+        <!-- Formulario de Creación / Edición -->
+        <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
+            <h2 id="form-title" class="text-xs font-bold uppercase tracking-wider text-blue-400">Registrar Nuevo Conductor</h2>
+            <input type="hidden" id="conductor-id">
             
-            <form id="formConductor" class="space-y-3.5">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Nombre Completo</label>
-                    <input type="text" id="nombreConductor" required placeholder="Ej. Carlos Pérez" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Nombre</label>
+                    <input type="text" id="nombre" placeholder="Ej. Carlos Pérez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-white outline-none">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Teléfono / Móvil</label>
-                    <input type="tel" id="telefonoConductor" required placeholder="Ej. +57 300 1234567" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono</label>
+                    <input type="text" id="telefono" placeholder="Ej. 0414-1234567" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-white outline-none">
                 </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Estado</label>
+                    <select id="activo" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-white outline-none">
+                        <option value="true">Activo</option>
+                        <option value="false">Inactivo</option>
+                    </select>
+                </div>
+            </div>
 
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold py-3.5 px-4 rounded-xl transition shadow-sm mt-2">
+            <div class="flex gap-2 pt-2">
+                <button onclick="guardarConductor()" id="btn-guardar" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
                     Guardar Conductor
                 </button>
-            </form>
-        </section>
-
-        <!-- Listado de Conductores Registrados -->
-        <section>
-            <div class="flex items-center justify-between mb-3 px-1">
-                <h2 class="text-base font-bold text-slate-900">Conductores Activos</h2>
-                <span id="contadorConductores" class="text-xs font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">0</span>
+                <button onclick="limpiarFormulario()" id="btn-cancelar" class="hidden px-4 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
+                    Cancelar
+                </button>
             </div>
-            
-            <div id="listaConductores" class="space-y-3">
-                <p class="text-slate-400 text-center py-10 bg-white rounded-2xl border border-slate-200 text-sm">Cargando conductores...</p>
+        </div>
+
+        <!-- Listado de Conductores -->
+        <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Lista de Conductores Registrados</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="border-b border-[#222222] text-slate-400">
+                            <th class="p-2.5">Nombre</th>
+                            <th class="p-2.5">Teléfono</th>
+                            <th class="p-2.5">Estado</th>
+                            <th class="p-2.5 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-conductores" class="divide-y divide-[#1a1a1a]">
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
             </div>
-        </section>
+        </div>
+    </div>
 
-    </main>
-
-    <!-- Supabase JS UMD y Lógica (Rutas adaptadas con ../) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../js/supabaseClient.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const formConductor = document.getElementById('formConductor');
-            const listaConductores = document.getElementById('listaConductores');
-            const contadorConductores = document.getElementById('contadorConductores');
+        document.addEventListener('DOMContentLoaded', cargarConductores);
 
-            // 1. Cargar la lista de conductores desde Supabase
-            async function cargarConductores() {
-                const { data, error } = await supabaseClient
-                    .from('conductores')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+        async function cargarConductores() {
+            const { data, error } = await supabaseClient.from('conductores').select('*').order('created_at', { ascending: false });
+            const tbody = document.getElementById('tabla-conductores');
+            tbody.innerHTML = '';
 
-                if (error) {
-                    console.error('Error al cargar conductores:', error);
-                    return;
-                }
-
-                renderizarConductores(data);
+            if (error) {
+                console.error("Error al cargar:", error);
+                return;
             }
 
-            // 2. Renderizar los conductores en pantalla
-            function renderizarConductores(conductores) {
-                contadorConductores.textContent = conductores.length;
-
-                if (conductores.length === 0) {
-                    listaConductores.innerHTML = `<p class="text-slate-400 text-center py-10 bg-white rounded-2xl border border-slate-200 text-sm">No hay conductores registrados.</p>`;
-                    return;
-                }
-
-                listaConductores.innerHTML = '';
-                conductores.forEach(conductor => {
-                    const card = document.createElement('div');
-                    card.className = 'bg-white rounded-2xl shadow-sm p-4 border border-slate-200 flex justify-between items-center gap-4';
-                    
-                    card.innerHTML = `
-                        <div>
-                            <p class="text-slate-900 font-bold text-sm">🚗 ${conductor.nombre}</p>
-                            <p class="text-slate-500 text-xs mt-0.5">📞 ${conductor.telefono || 'Sin teléfono'}</p>
-                        </div>
-                        <span class="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg font-medium">Activo</span>
-                    `;
-                    listaConductores.appendChild(card);
-                });
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500 italic">No hay conductores registrados.</td></tr>`;
+                return;
             }
 
-            // 3. Capturar y guardar nuevo conductor
-            formConductor.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                const nuevoConductor = {
-                    nombre: document.getElementById('nombreConductor').value.trim(),
-                    telefono: document.getElementById('telefonoConductor').value.trim(),
-                    activo: true
-                };
-
-                const { error } = await supabaseClient
-                    .from('conductores')
-                    .insert([nuevoConductor]);
-
-                if (error) {
-                    alert('Error al registrar conductor: ' + error.message);
-                    console.error(error);
-                } else {
-                    formConductor.reset();
-                    alert('¡Conductor registrado con éxito!');
-                    cargarConductores();
-                }
+            data.forEach(c => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-[#161616] transition">
+                        <td class="p-2.5 font-medium text-slate-200">${c.nombre}</td>
+                        <td class="p-2.5 text-slate-400">${c.telefono || 'N/A'}</td>
+                        <td class="p-2.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.activo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}">
+                                ${c.activo ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </td>
+                        <td class="p-2.5 text-right space-x-2">
+                            <button onclick="editarConductor('${c.id}', '${c.nombre}', '${c.telefono || ''}', ${c.activo})" class="text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">Editar</button>
+                            <button onclick="eliminarConductor('${c.id}')" class="text-red-400 hover:text-red-300 font-semibold cursor-pointer">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
             });
+        }
 
-            // Carga inicial
+        async function guardarConductor() {
+            const id = document.getElementById('conductor-id').value;
+            const nombre = document.getElementById('nombre').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const activo = document.getElementById('activo').value === 'true';
+
+            if (!nombre) {
+                alert('El nombre es obligatorio.');
+                return;
+            }
+
+            if (id) {
+                // Actualizar
+                const { error } = await supabaseClient.from('conductores').update({ nombre, telefono, activo }).eq('id', id);
+                if (error) alert('Error al actualizar: ' + error.message);
+            } else {
+                // Crear
+                const { error } = await supabaseClient.from('conductores').insert([{ nombre, telefono, activo }]);
+                if (error) alert('Error al crear: ' + error.message);
+            }
+
+            limpiarFormulario();
             cargarConductores();
-        });
+        }
+
+        function editarConductor(id, nombre, telefono, activo) {
+            document.getElementById('conductor-id').value = id;
+            document.getElementById('nombre').value = nombre;
+            document.getElementById('telefono').value = telefono;
+            document.getElementById('activo').value = activo.toString();
+            document.getElementById('form-title').textContent = "Modificar Conductor";
+            document.getElementById('btn-guardar').textContent = "Actualizar Conductor";
+            document.getElementById('btn-cancelar').classList.remove('hidden');
+        }
+
+        async function eliminarConductor(id) {
+            if (confirm('¿Estás seguro de eliminar este conductor?')) {
+                const { error } = await supabaseClient.from('conductores').delete().eq('id', id);
+                if (error) alert('Error al eliminar: ' + error.message);
+                cargarConductores();
+            }
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('conductor-id').value = '';
+            document.getElementById('nombre').value = '';
+            document.getElementById('telefono').value = '';
+            document.getElementById('activo').value = 'true';
+            document.getElementById('form-title').textContent = "Registrar Nuevo Conductor";
+            document.getElementById('btn-guardar').textContent = "Guardar Conductor";
+            document.getElementById('btn-cancelar').classList.add('hidden');
+        }
     </script>
 </body>
 </html>

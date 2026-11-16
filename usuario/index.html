@@ -205,6 +205,7 @@
                     <div id="map-seguimiento"></div>
                 </div>
 
+                <!-- Botón Cancelar (Visible SOLO en estado pendiente) -->
                 <div id="contenedor-boton-cancelar">
                     <button onclick="cancelarOReiniciarSolicitud()" class="w-full py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
                         Cancelar Solicitud
@@ -603,7 +604,7 @@
         function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos, precio) {
             const badge = document.getElementById('badge-estado');
             const labelConductor = document.getElementById('estado-conductor');
-            const botonCancelar = document.getElementById('contenedor-boton-cancelar');
+            const contenedorBotonCancelar = document.getElementById('contenedor-boton-cancelar');
             const seccionLlegada = document.getElementById('seccion-llegada');
             const labelLlegada = document.getElementById('estado-llegada');
             const contenedorMapaSeguimiento = document.getElementById('contenedor-mapa-seguimiento');
@@ -616,6 +617,7 @@
             const finCarreraAt = tiemposObj.fin_carrera_at;
 
             if (finCarreraAt || estado === 'completada') {
+                contenedorBotonCancelar.classList.add('hidden');
                 seccionCobroCliente.classList.add('hidden');
                 badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider";
                 badge.textContent = "🏁 ¡Servicio Finalizado y Pagado!";
@@ -627,18 +629,19 @@
                     location.reload();
                 }, 4000);
             } else if (finRecorridoAt) {
-                // El conductor llegó al destino y espera confirmación de pago
+                // El conductor llegó al destino y espera confirmación de pago (OCULTAMOS BOTÓN CANCELAR)
+                contenedorBotonCancelar.classList.add('hidden');
                 badge.className = "inline-block px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/40 text-xs font-bold uppercase tracking-wider animate-pulse";
-                badge.textContent = "💳 Esperando Confirmación de Pago";
+                badge.textContent = "💳 Confirmación de Pago";
                 seccionLlegada.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
 
-                // Cuadro de pago grande y destacado para el cliente
+                // Cuadro de pago grande y destacado para el cliente con el título correcto
                 seccionCobroCliente.classList.remove('hidden');
                 seccionCobroCliente.innerHTML = `
                     <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
-                        <p class="text-xs uppercase font-bold text-slate-400">Monto total a cancelar:</p>
+                        <p class="text-xs uppercase font-bold text-purple-400">💳 Confirmación de Pago</p>
                         <p class="text-3xl font-black text-amber-400 tracking-tight">${precio || '$0.00'}</p>
                         <p class="text-[11px] text-slate-300">Por favor, realiza tu pago en efectivo, transferencia o pago móvil al conductor y espera la confirmación.</p>
                         <div class="inline-block px-3 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25 text-[11px] font-bold">
@@ -650,7 +653,10 @@
                 seccionCobroCliente.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.remove('hidden');
                 inicializarMapaSeguimiento(origenTexto);
-                botonCancelar.classList.add('hidden');
+                
+                // UN CONDUCTOR YA FUE ASIGNADO, por lo tanto EL BOTÓN DE CANCELAR DESAPARECE
+                contenedorBotonCancelar.classList.add('hidden');
+
                 labelConductor.textContent = conductor || "Asignado";
                 labelConductor.className = "text-emerald-400 font-extrabold";
 
@@ -670,7 +676,6 @@
                 } else {
                     badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-bold uppercase tracking-wider";
                     badge.textContent = "✅ ¡Conductor Asignado en Camino!";
-                    seccionLlexionLlegada = document.getElementById('seccion-llegada');
                     seccionLlegada.classList.remove('hidden');
                     labelLlegada.textContent = "En camino al punto de recogida";
                 }
@@ -681,7 +686,8 @@
                 labelConductor.textContent = "Esperando asignación...";
                 labelConductor.className = "text-purple-400 font-bold";
 
-                botonCancelar.classList.remove('hidden');
+                // En estado pendiente SÍ se muestra el botón de cancelar
+                contenedorBotonCancelar.classList.remove('hidden');
                 seccionLlegada.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);

@@ -6,6 +6,8 @@
     <title>EN-VIA - Gestión de Conductores</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Librería jsQR para leer imágenes de códigos QR en el navegador -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="../js/supabaseClient.js"></script>
     <style>
         input, select, textarea { font-size: 16px !important; }
@@ -49,14 +51,14 @@
                 </div>
             </div>
 
-            <!-- Datos Bancarios y QR de Banesco -->
+            <!-- Datos Bancarios y Lector de Imagen QR -->
             <div class="space-y-3 pt-3 border-t border-[#222222]">
-                <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Datos Bancarios y Código QR</h2>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Datos Bancarios y Lector de QR</h2>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Banco</label>
-                        <input type="text" id="banco" value="Banesco" placeholder="Ej. Banesco" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                        <input type="text" id="banco" placeholder="Ej. Banesco" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
                     </div>
                     <div>
                         <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono (Pago Móvil)</label>
@@ -68,10 +70,14 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Código del QR (String de Banesco)</label>
-                    <textarea id="qr_codigo" rows="2" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl p-2.5 text-white outline-none text-[11px] font-mono">ACXzf6H8a4PEFeLr3cWvB8/sRhX4CrTKx9YHONkQBCA9q4IcF+DSN17XNImIDGBffzzfwCUmAAjjtqW8PkyZzkuYiIJpcsInDZAFEU9r/Fc3j7E7vGJ5/bJIbKg5VS5tNK23GvL7ejwLLNSI37T9/U0CUbcgPCzyRkxNByltgjVZjM2Xr8sekyk2hKDEdIlF?merchantId=0102&strong_id=1794871689</textarea>
-                    <p class="text-[10px] text-slate-500 mt-1">Este string genera automáticamente el QR de Banesco por código en la pantalla del usuario al finalizar el recorrido.</p>
+                <div class="space-y-2">
+                    <label class="block text-[10px] uppercase font-bold text-slate-400">Adjuntar Imagen QR del Banco</label>
+                    <input type="file" id="qr-file-input" accept="image/*" onchange="leerImagenQR(event)" class="w-full bg-[#161616] border border-[#2e2e2e] rounded-xl p-2 text-xs text-slate-300 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer">
+                    
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Código Extraído del QR (Se guarda como texto)</label>
+                        <textarea id="qr_codigo" rows="2" placeholder="Selecciona una imagen de QR arriba para extraer su código automáticamente..." class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl p-2.5 text-white outline-none text-[11px] font-mono"></textarea>
+                    </div>
                 </div>
             </div>
 
@@ -107,6 +113,36 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', cargarConductores);
+
+        // Función para leer la imagen del QR adjuntada y extraer su texto con jsQR
+        function leerImagenQR(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    context.drawImage(img, 0, 0, img.width, img.height);
+                    
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                    if (code) {
+                        document.getElementById('qr_codigo').value = code.data;
+                        alert('¡Código QR leído y extraído con éxito!');
+                    } else {
+                        alert('No se pudo detectar un código QR válido en la imagen. Intenta con otra imagen más clara.');
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
 
         async function cargarConductores() {
             const { data, error } = await supabaseClient.from('conductores').select('*').order('created_at', { ascending: false });
@@ -147,7 +183,6 @@
             const telefono = document.getElementById('telefono').value.trim();
             const activo = document.getElementById('activo').value === 'true';
 
-            // Capturar datos bancarios
             const banco = document.getElementById('banco').value.trim();
             const bancoTelefono = document.getElementById('banco-telefono').value.trim();
             const bancoCedula = document.getElementById('banco-cedula').value.trim();
@@ -180,11 +215,10 @@
             document.getElementById('telefono').value = telefono;
             document.getElementById('activo').value = activo.toString();
 
-            // Cargar datos bancarios en el formulario
-            document.getElementById('banco').value = bancarios.banco || 'Banesco';
+            document.getElementById('banco').value = bancarios.banco || '';
             document.getElementById('banco-telefono').value = bancarios.telefono || '';
             document.getElementById('banco-cedula').value = bancarios.cedula_rif || '';
-            document.getElementById('qr_codigo').value = bancarios.qr_codigo || "ACXzf6H8a4PEFeLr3cWvB8/sRhX4CrTKx9YHONkQBCA9q4IcF+DSN17XNImIDGBffzzfwCUmAAjjtqW8PkyZzkuYiIJpcsInDZAFEU9r/Fc3j7E7vGJ5/bJIbKg5VS5tNK23GvL7ejwLLNSI37T9/U0CUbcgPCzyRkxNByltgjVZjM2Xr8sekyk2hKDEdIlF?merchantId=0102&strong_id=1794871689";
+            document.getElementById('qr_codigo').value = bancarios.qr_codigo || '';
 
             document.getElementById('form-title').textContent = "Modificar Conductor";
             document.getElementById('btn-guardar').textContent = "Actualizar Conductor";
@@ -205,10 +239,11 @@
             document.getElementById('nombre').value = '';
             document.getElementById('telefono').value = '';
             document.getElementById('activo').value = 'true';
-            document.getElementById('banco').value = 'Banesco';
+            document.getElementById('banco').value = '';
             document.getElementById('banco-telefono').value = '';
             document.getElementById('banco-cedula').value = '';
-            document.getElementById('qr_codigo').value = "ACXzf6H8a4PEFeLr3cWvB8/sRhX4CrTKx9YHONkQBCA9q4IcF+DSN17XNImIDGBffzzfwCUmAAjjtqW8PkyZzkuYiIJpcsInDZAFEX9r/Fc3j7E7vGJ5/bJIbKg5VS5tNK23GvL7ejwLLNSI37T9/U0CUbcgPCzyRkxNByltgjVZjM2Xr8sekyk2hKDEdIlF?merchantId=0102&strong_id=1794871689";
+            document.getElementById('qr_codigo').value = '';
+            document.getElementById('qr-file-input').value = '';
             
             document.getElementById('form-title').textContent = "Registrar Nuevo Conductor";
             document.getElementById('btn-guardar').textContent = "Guardar Conductor";

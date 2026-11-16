@@ -195,7 +195,6 @@
                 let contenidoAcciones = '';
 
                 if (!yaLlego) {
-                    // Fase 1: En camino al origen
                     contenidoAcciones = `
                         <a href="${urlNavegacionBase}" target="_blank" class="w-full text-center block py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg">
                             🧭 Navegar desde Base al Origen
@@ -205,7 +204,6 @@
                         </button>
                     `;
                 } else if (!carreraIniciada) {
-                    // Fase 2: Esperando al pasajero
                     contenidoAcciones = `
                         <div class="bg-[#161616] p-3 rounded-xl border border-amber-500/30 text-center space-y-1">
                             <p class="text-[11px] text-amber-400 font-bold uppercase">⏱️ Tiempo de espera transcurriendo:</p>
@@ -216,7 +214,6 @@
                         </button>
                     `;
                 } else if (!recorridoFinalizado) {
-                    // Fase 3: En viaje activo hacia el destino
                     contenidoAcciones = `
                         <div class="bg-[#161616] p-3 rounded-xl border border-emerald-500/30 text-center space-y-1">
                             <p class="text-[11px] text-emerald-400 font-bold uppercase">⏱️ Tiempo de viaje activo:</p>
@@ -232,12 +229,12 @@
                         </button>
                     `;
                 } else {
-                    // Fase 4: Negociación y cobro de pago
+                    // Cuadro de confirmación de pago con monto GRANDE para el conductor
                     contenidoAcciones = `
-                        <div class="bg-[#161616] p-4 rounded-xl border border-purple-500/40 text-center space-y-2">
-                            <p class="text-xs text-purple-400 font-bold uppercase">💳 Negociación de Pago en Curso</p>
-                            <p class="text-slate-300 text-xs">Monto a cobrar: <strong class="text-emerald-400 text-sm">${c.precio || '$0.00'}</strong></p>
-                            <p class="text-[11px] text-slate-400 italic">Verifica con el pasajero el método de pago (Efectivo / Transferencia) y confirma cuando esté acreditado.</p>
+                        <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
+                            <p class="text-xs uppercase font-bold text-purple-400">💳 Confirmación de Pago</p>
+                            <p class="text-3xl font-black text-amber-400 tracking-tight">${c.precio || '$0.00'}</p>
+                            <p class="text-[11px] text-slate-300">Recibe el pago del pasajero (efectivo/transferencia) y confirma cuando esté acreditado.</p>
                         </div>
                         <button onclick='confirmarPagoYFinalizar("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
                             ✅ Confirmar Pago y Finalizar Servicio

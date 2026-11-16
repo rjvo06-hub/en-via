@@ -15,10 +15,10 @@
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased flex items-center justify-center p-3">
+<body class="bg-black min-h-screen text-slate-100 antialiased flex flex-col items-center justify-start p-3 sm:p-6">
 
     <!-- SECCIÓN 1: PANTALLA DE SELECCIÓN DE CONDUCTOR -->
-    <div id="login-container" class="max-w-md w-full bg-[#111111] border border-[#222222] p-6 rounded-2xl shadow-2xl space-y-4">
+    <div id="login-container" class="max-w-md w-full bg-[#111111] border border-[#222222] p-6 rounded-2xl shadow-2xl space-y-4 my-auto">
         <div class="text-center space-y-1">
             <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Portal de Chofer</h1>
             <p class="text-slate-400 text-xs">Selecciona tu nombre de la lista para ingresar</p>
@@ -41,7 +41,7 @@
     </div>
 
     <!-- SECCIÓN 2: PORTAL DE CARRERAS -->
-    <div id="portal-container" class="max-w-3xl w-full space-y-6 hidden">
+    <div id="portal-container" class="max-w-3xl w-full space-y-6 hidden my-0">
         <header class="flex flex-col sm:flex-row justify-between items-center border-b border-[#222222] pb-4 gap-3">
             <div>
                 <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Panel de Chofer</h1>
@@ -52,13 +52,13 @@
             </button>
         </header>
 
-        <!-- Sección de Carrera Asignada Actual (Solo se muestra si el chofer tiene una activa) -->
+        <!-- Sección de Carrera Asignada Actual -->
         <div id="seccion-asignada" class="space-y-3 hidden">
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Tu Carrera en Curso</h2>
             <div id="carrera-asignada-container"></div>
         </div>
 
-        <!-- Sección de Carreras Disponibles (Pendientes) -->
+        <!-- Sección de Carreras Disponibles -->
         <div class="space-y-3 pt-2">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
             <div id="lista-carreras" class="grid grid-cols-1 gap-3">
@@ -132,22 +132,24 @@
         }
 
         async function cargarDatosConductor() {
-            const { data, error } = await supabaseClient
+            const { data: pendData, error: pendError } = await supabaseClient
                 .from('carreras')
                 .select('*')
-                .or(`estado.eq.pendiente,and(estado.eq.asignada,conductor_asignado.eq.${conductorActual})`)
+                .eq('estado', 'pendiente')
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error("Error al cargar datos:", error);
-                return;
-            }
+            if (pendError) console.error("Error al cargar pendientes:", pendError);
 
-            const pendientes = data.filter(c => c.estado === 'pendiente');
-            const asignadas = data.filter(c => c.estado === 'asignada' && c.conductor_asignado === conductorActual);
+            const { data: asigData, error: asigError } = await supabaseClient
+                .from('carreras')
+                .select('*')
+                .eq('estado', 'asignada')
+                .eq('conductor_asignado', conductorActual);
 
-            renderizarAsignada(asignadas);
-            renderizarPendientes(pendientes);
+            if (asigError) console.error("Error al cargar asignada:", asigError);
+
+            renderizarAsignada(asigData);
+            renderizarPendientes(pendData);
         }
 
         function renderizarAsignada(asignadas) {
@@ -155,13 +157,11 @@
             const contenedor = document.getElementById('carrera-asignada-container');
             
             if (!asignadas || asignadas.length === 0) {
-                // Ocultar la sección por completo si no tiene carrera en curso
                 seccionAsignada.classList.add('hidden');
                 contenedor.innerHTML = '';
                 return;
             }
 
-            // Mostrar la sección si tiene una carrera activa
             seccionAsignada.classList.remove('hidden');
             contenedor.innerHTML = '';
 

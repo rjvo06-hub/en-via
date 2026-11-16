@@ -608,8 +608,19 @@
             const tiemposObj = tiempos || {};
             const llegadaConductorAt = tiemposObj.llegada_conductor_at;
             const inicioCarreraAt = tiemposObj.inicio_carrera_at;
+            const finCarreraAt = tiemposObj.fin_carrera_at;
 
-            if (estado === 'asignada') {
+            if (finCarreraAt || estado === 'completada') {
+                badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider";
+                badge.textContent = "🏁 ¡Carrera Finalizada!";
+                seccionLlegada.classList.remove('hidden');
+                labelLlegada.innerHTML = `<span class="text-emerald-400 font-extrabold">Servicio completado con éxito</span>`;
+                if (timerClientInterval) clearInterval(timerClientInterval);
+                setTimeout(() => {
+                    sessionStorage.removeItem('carrera_activa_id');
+                    location.reload();
+                }, 4000);
+            } else if (estado === 'asignada') {
                 contenedorMapaSeguimiento.classList.remove('hidden');
                 inicializarMapaSeguimiento(origenTexto);
                 botonCancelar.classList.add('hidden');
@@ -617,14 +628,12 @@
                 labelConductor.className = "text-emerald-400 font-extrabold";
 
                 if (inicioCarreraAt) {
-                    // El conductor ya inició el viaje con el pasajero
                     badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider";
                     badge.textContent = "🚗 ¡Carrera en Curso!";
                     seccionLlegada.classList.remove('hidden');
-                    labelLlegada.innerHTML = `<span class="text-emerald-400 font-extrabold">En camino hacia tu destino final</span>`;
-                    if (timerClientInterval) clearInterval(timerClientInterval);
+                    labelLlegada.innerHTML = `Tiempo de viaje activo: <span id="cronometro-cliente" class="text-emerald-400 font-extrabold">00:00</span>`;
+                    iniciarCronometroCliente(inicioCarreraAt);
                 } else if (llegadaConductorAt) {
-                    // El conductor ya llegó al punto de origen y espera al pasajero
                     badge.className = "inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider animate-pulse";
                     badge.textContent = "🚗 ¡El conductor ya llegó al lugar!";
                     
@@ -632,7 +641,6 @@
                     labelLlegada.innerHTML = `Tiempo de espera: <span id="cronometro-cliente" class="text-amber-400 font-extrabold">00:00</span>`;
                     iniciarCronometroCliente(llegadaConductorAt);
                 } else {
-                    // Conductor asignado en camino al origen
                     badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-bold uppercase tracking-wider";
                     badge.textContent = "✅ ¡Conductor Asignado en Camino!";
                     seccionLlegada.classList.remove('hidden');
@@ -756,7 +764,7 @@
                     const carreraActualizada = payload.new;
                     actualizarBadgeYConductor(
                         carreraActualizada.estado, 
-                        carreraActualizada.conductor_asignado, 
+                        cayeronConductor = carreraActualizada.conductor_asignado, 
                         carreraActualizada.origen, 
                         carreraActualizada.tiempos
                     );

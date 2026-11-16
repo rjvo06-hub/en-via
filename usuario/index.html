@@ -594,16 +594,18 @@
             document.getElementById('estado-precio').textContent = carrera.precio || '$0.00';
             document.getElementById('estado-distancia').textContent = carrera.distancia || 'N/A';
 
-            actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen, carrera.llegada_conductor_at);
+            actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen, carrera.tiempos);
         }
 
-        function actualizarBadgeYConductor(estado, conductor, origenTexto, llegadaConductorAt) {
+        function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos) {
             const badge = document.getElementById('badge-estado');
             const labelConductor = document.getElementById('estado-conductor');
             const botonCancelar = document.getElementById('contenedor-boton-cancelar');
             const seccionLlegada = document.getElementById('seccion-llegada');
             const labelLlegada = document.getElementById('estado-llegada');
             const contenedorMapaSeguimiento = document.getElementById('contenedor-mapa-seguimiento');
+
+            const llegadaConductorAt = tiempos ? tiempos.llegada_conductor_at : null;
 
             if (estado === 'asignada') {
                 contenedorMapaSeguimiento.classList.remove('hidden');
@@ -745,7 +747,7 @@
                         carreraActualizada.estado, 
                         carreraActualizada.conductor_asignado, 
                         carreraActualizada.origen, 
-                        carreraActualizada.llegada_conductor_at
+                        carreraActualizada.tiempos
                     );
                 })
                 .subscribe();

@@ -192,7 +192,7 @@
                         <span id="estado-conductor" class="text-purple-400 font-bold">Esperando asignación...</span>
                     </div>
                     <div id="seccion-llegada" class="flex justify-between pt-2 border-t border-[#222222] hidden">
-                        <span class="text-slate-400">Tiempo estimado de llegada:</span>
+                        <span class="text-slate-400">Estado de llegada:</span>
                         <span id="estado-llegada" class="text-emerald-400 font-bold">Calculando...</span>
                     </div>
                 </div>
@@ -223,6 +223,7 @@
         let idCarreraActiva = null;
         let clienteActual = "";
         let clienteIdActual = null;
+        let timerClientInterval = null;
         
         let currentMode = 'origin';
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
@@ -331,6 +332,7 @@
             sessionStorage.removeItem('cliente_en_via');
             sessionStorage.removeItem('cliente_id_en_via');
             sessionStorage.removeItem('carrera_activa_id');
+            if (timerClientInterval) clearInterval(timerClientInterval);
             location.reload();
         }
 
@@ -592,10 +594,10 @@
             document.getElementById('estado-precio').textContent = carrera.precio || '$0.00';
             document.getElementById('estado-distancia').textContent = carrera.distancia || 'N/A';
 
-            actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen);
+            actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen, carrera.llegada_conductor_at);
         }
 
-        function actualizarBadgeYConductor(estado, conductor, origenTexto) {
+        function actualizarBadgeYConductor(estado, conductor, origenTexto, llegadaConductorAt) {
             const badge = document.getElementById('badge-estado');
             const labelConductor = document.getElementById('estado-conductor');
             const botonCancelar = document.getElementById('contenedor-boton-cancelar');
@@ -604,17 +606,25 @@
             const contenedorMapaSeguimiento = document.getElementById('contenedor-mapa-seguimiento');
 
             if (estado === 'asignada') {
-                badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-bold uppercase tracking-wider";
-                badge.textContent = "✅ ¡Conductor Asignado!";
+                contenedorMapaSeguimiento.classList.remove('hidden');
+                inicializarMapaSeguimiento(origenTexto);
+                botonCancelar.classList.add('hidden');
                 labelConductor.textContent = conductor || "Asignado";
                 labelConductor.className = "text-emerald-400 font-extrabold";
 
-                botonCancelar.classList.add('hidden');
-                seccionLlegada.classList.remove('hidden');
-                labelLlegada.textContent = "Aprox. 7 - 10 minutos";
-
-                contenedorMapaSeguimiento.classList.remove('hidden');
-                inicializarMapaSeguimiento(origenTexto);
+                if (llegadaConductorAt) {
+                    badge.className = "inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider animate-pulse";
+                    badge.textContent = "🚗 ¡El conductor ya llegó al lugar!";
+                    
+                    seccionLlegada.classList.remove('hidden');
+                    labelLlegada.innerHTML = `Tiempo de espera: <span id="cronometro-cliente" class="text-amber-400 font-extrabold">00:00</span>`;
+                    iniciarCronometroCliente(llegadaConductorAt);
+                } else {
+                    badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-bold uppercase tracking-wider";
+                    badge.textContent = "✅ ¡Conductor Asignado en Camino!";
+                    seccionLlegada.classList.remove('hidden');
+                    labelLlegada.textContent = "En camino al punto de recogida";
+                }
             } else {
                 badge.className = "inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider animate-pulse";
                 badge.textContent = "🔍 Buscando Conductor...";
@@ -624,7 +634,25 @@
                 botonCancelar.classList.remove('hidden');
                 seccionLlegada.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.add('hidden');
+                if (timerClientInterval) clearInterval(timerClientInterval);
             }
+        }
+
+        function iniciarCronometroCliente(isoStringInicio) {
+            if (timerClientInterval) clearInterval(timerClientInterval);
+            const tiempoInicio = new Date(isoStringInicio).getTime();
+
+            timerClientInterval = setInterval(() => {
+                const ahora = new Date().getTime();
+                const diferenciaSecs = Math.floor((ahora - tiempoInicio) / 1000);
+
+                if (diferenciaSecs >= 0) {
+                    const mins = Math.floor(diferenciaSecs / 60).toString().padStart(2, '0');
+                    const secs = (diferenciaSecs % 60).toString().padStart(2, '0');
+                    const el = document.getElementById('cronometro-cliente');
+                    if (el) el.textContent = `${mins}:${secs}`;
+                }
+            }, 1000);
         }
 
         async function inicializarMapaSeguimiento(origenTexto) {
@@ -704,6 +732,7 @@
 
         function cancelarOReiniciarSolicitud() {
             sessionStorage.removeItem('carrera_activa_id');
+            if (timerClientInterval) clearInterval(timerClientInterval);
             location.reload();
         }
 
@@ -712,7 +741,12 @@
                 .channel(`carrera-${id}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'carreras', filter: `id=eq.${id}` }, payload => {
                     const carreraActualizada = payload.new;
-                    actualizarBadgeYConductor(carreraActualizada.estado, carreraActualizada.conductor_asignado, carreraActualizada.origen);
+                    actualizarBadgeYConductor(
+                        carreraActualizada.estado, 
+                        carreraActualizada.conductor_asignado, 
+                        carreraActualizada.origen, 
+                        carreraActualizada.llegada_conductor_at
+                    );
                 })
                 .subscribe();
         }

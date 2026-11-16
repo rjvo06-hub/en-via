@@ -59,10 +59,29 @@
             </a>
         </header>
 
-        <!-- VISTA 1: FORMULARIO DE SOLICITUD -->
-        <div id="vista-formulario" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Selector de Cliente (Identificación inicial) -->
+        <div id="identificacion-container" class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl mb-4 space-y-2">
+            <label class="block text-[10px] uppercase font-bold text-emerald-400">Identificación del Cliente</label>
+            <div class="flex gap-2">
+                <select id="select-cliente" class="flex-1 bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2.5 text-white outline-none text-xs">
+                    <option value="">Cargando clientes registrados...</option>
+                </select>
+                <button onclick="fijarCliente()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer shadow-lg">
+                    Continuar
+                </button>
+            </div>
+            <div id="cliente-error" class="text-red-400 text-xs hidden">Por favor, selecciona tu nombre de la lista.</div>
+        </div>
+
+        <!-- VISTA 1: FORMULARIO DE SOLICITUD (Oculto hasta elegir cliente) -->
+        <div id="vista-formulario" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
             <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-2xl space-y-3.5 flex flex-col justify-between">
                 <div class="space-y-3">
+                    <div class="flex justify-between items-center bg-[#161616] px-3 py-2 rounded-xl border border-[#262626]">
+                        <span class="text-xs text-slate-400">Cliente activo: <strong id="cliente-actual-display" class="text-white"></strong></span>
+                        <button onclick="cambiarCliente()" class="text-[10px] text-emerald-400 hover:underline cursor-pointer font-bold">Cambiar</button>
+                    </div>
+
                     <div class="flex bg-[#161616] p-1 rounded-xl border border-[#262626]">
                         <button id="btn-mode-origin" onclick="setMode('origin')" class="flex-1 py-2 text-xs font-bold uppercase rounded-lg transition bg-emerald-600 text-white shadow-sm cursor-pointer">
                             1. Buscar Origen
@@ -149,6 +168,10 @@
                 <!-- Tarjeta de Detalles -->
                 <div class="bg-[#161616] p-4 rounded-xl border border-[#262626] space-y-3 text-xs">
                     <div class="flex justify-between items-center border-b border-[#222222] pb-2">
+                        <span class="text-slate-400">Cliente:</span>
+                        <span id="estado-cliente" class="text-emerald-400 font-bold">-</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-[#222222] pb-2">
                         <span class="text-slate-400">Costo de la carrera:</span>
                         <span id="estado-precio" class="text-amber-400 font-extrabold text-sm">-</span>
                     </div>
@@ -174,7 +197,7 @@
                     </div>
                 </div>
 
-                <!-- Mapa de seguimiento con Routes API en la parte inferior -->
+                <!-- Mapa de seguimiento -->
                 <div id="contenedor-mapa-seguimiento" class="rounded-xl overflow-hidden border border-[#262626] hidden">
                     <div id="map-seguimiento"></div>
                 </div>
@@ -191,7 +214,6 @@
     <script>
         let map;
         let mapSeguimiento;
-        let router;
         let originMarker = null;
         let destMarker = null;
         let origenCoords = null;
@@ -199,6 +221,7 @@
         let costoCalculado = 0;
         let distanciaCalculada = "";
         let idCarreraActiva = null;
+        let clienteActual = "";
         
         let currentMode = 'origin';
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
@@ -208,97 +231,81 @@
         const COSTO_POR_KM = 1;
         const TARIFA_MINIMA = 3;
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
+            await cargarClientesSelect();
+
+            const clienteGuardado = sessionStorage.getItem('cliente_en_via');
             const carreraGuardada = sessionStorage.getItem('carrera_activa_id');
-            if (carreraGuardada) {
-                idCarreraActiva = carreraGuardada;
-                verificarEstadoCarreraGuardada(idCarreraActiva);
+
+            if (clienteGuardado) {
+                clienteActual = clienteGuardado;
+                document.getElementById('identificacion-container').classList.add('hidden');
+                
+                if (carreraGuardada) {
+                    idCarreraActiva = carreraGuardada;
+                    verificarEstadoCarreraGuardada(idCarreraActiva);
+                    return;
+                } else {
+                    document.getElementById('vista-formulario').classList.remove('hidden');
+                    inicializarMapaFormulario();
+                }
+            }
+        });
+
+        async function cargarClientesSelect() {
+            const select = document.getElementById('select-cliente');
+            const { data, error } = await supabaseClient
+                .from('clientes')
+                .select('id, nombre')
+                .eq('activo', true)
+                .order('nombre', { ascending: true });
+
+            if (error || !data || data.length === 0) {
+                select.innerHTML = '<option value="">No hay clientes activos registrados</option>';
                 return;
             }
 
-            const checkMapsInterval = setInterval(async () => {
-                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-                    clearInterval(checkMapsInterval);
+            select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
+            data.forEach(c => {
+                select.innerHTML += `<option value="${c.nombre}">${c.nombre}</option>`;
+            });
+        }
 
-                    map = new google.maps.Map(document.getElementById('map'), {
-                        center: maracaiboCenter,
-                        zoom: 13,
-                        mapTypeControl: false,
-                        streetViewControl: false
-                    });
+        function fijarCliente() {
+            const select = document.getElementById('select-cliente');
+            const errorDiv = document.getElementById('cliente-error');
 
-                    router = {
-                        route: async (request, callback) => {
-                            try {
-                                const body = {
-                                    origin: { location: { latLng: { latitude: request.origin.lat(), longitude: request.origin.lng() } } },
-                                    destination: { location: { latLng: { latitude: request.destination.lat(), longitude: request.destination.lng() } } },
-                                    travelMode: "DRIVE",
-                                    routingPreference: "TRAFFIC_UNAWARE"
-                                };
+            if (!select.value) {
+                errorDiv.classList.remove('hidden');
+                return;
+            }
 
-                                const response = await fetch(`https://routes.googleapis.com/directions/v2:computeRoutes`, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-Goog-Api-Key': apiKey,
-                                        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
-                                    },
-                                    body: JSON.stringify(body)
-                                });
+            errorDiv.classList.add('hidden');
+            clienteActual = select.value;
+            sessionStorage.setItem('cliente_en_via', clienteActual);
 
-                                const data = await response.json();
+            document.getElementById('cliente-actual-display').textContent = clienteActual;
+            document.getElementById('identificacion-container').classList.add('hidden');
+            document.getElementById('vista-formulario').classList.remove('hidden');
 
-                                if (data.routes && data.routes.length > 0) {
-                                    const route = data.routes[0];
-                                    const distanceMeters = route.distanceMeters;
-                                    const distanceKm = distanceMeters / 1000;
-                                    distanciaCalculada = distanceKm.toFixed(1) + " km";
-                                    
-                                    const durationSec = parseInt(route.duration);
-                                    const durationMins = Math.round(durationSec / 60);
-                                    const durationText = durationMins > 60 ? `${Math.floor(durationMins/60)} h ${durationMins%60} min` : `${durationMins} mins`;
+            inicializarMapaFormulario();
+        }
 
-                                    let costoTotal = distanceKm * COSTO_POR_KM;
-                                    if (costoTotal < TARIFA_MINIMA) costoTotal = TARIFA_MINIMA;
-                                    costoCalculado = costoTotal.toFixed(2);
-                                    const costoText = `$${costoCalculado}`;
+        function cambiarCliente() {
+            sessionStorage.removeItem('cliente_en_via');
+            location.reload();
+        }
 
-                                    const decodedPath = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
-                                    if (window.currentRoutePolyline) window.currentRoutePolyline.setMap(null);
-                                    
-                                    window.currentRoutePolyline = new google.maps.Polyline({
-                                        path: decodedPath,
-                                        geodesic: true,
-                                        strokeColor: '#10b981',
-                                        strokeOpacity: 0.8,
-                                        strokeWeight: 5
-                                    });
-                                    window.currentRoutePolyline.setMap(map);
-
-                                    callback({
-                                        routes: [{
-                                            legs: [{
-                                                distance: { text: distanciaCalculada },
-                                                duration: { text: durationText },
-                                                cost: { text: costoText }
-                                            }]
-                                        }]
-                                    }, 'OK');
-                                } else {
-                                    callback(null, 'ZERO_RESULTS');
-                                }
-                            } catch (error) {
-                                console.error("Error en Routes API:", error);
-                                callback(null, 'ERROR');
-                            }
-                        }
-                    };
-
-                    setupUnifiedAutocomplete();
-                }
-            }, 300);
-        });
+        function inicializarMapaFormulario() {
+            if (map) return;
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: maracaiboCenter,
+                zoom: 13,
+                mapTypeControl: false,
+                streetViewControl: false
+            });
+            setupUnifiedAutocomplete();
+        }
 
         function setMode(mode) {
             currentMode = mode;
@@ -446,34 +453,67 @@
             }
         }
 
-        function verificarYCalcularRuta() {
+        async function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
                 document.getElementById('status-msg').textContent = "Calculando ruta y tarifa...";
                 
-                const request = {
-                    origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
-                    destination: new google.maps.LatLng(destCoords.lat, destCoords.lng)
-                };
+                try {
+                    const body = {
+                        origin: { location: { latLng: { latitude: origenCoords.lat, longitude: origenCoords.lng } } },
+                        destination: { location: { latLng: { latitude: destCoords.lat, longitude: destCoords.lng } } },
+                        travelMode: "DRIVE",
+                        routingPreference: "TRAFFIC_UNAWARE"
+                    };
 
-                router.route(request, (response, status) => {
-                    if (status === 'OK') {
-                        const route = response.routes[0].legs[0];
-                        document.getElementById('route-distance').textContent = route.distance.text;
-                        document.getElementById('route-duration').textContent = route.duration.text;
-                        document.getElementById('route-cost').textContent = route.cost.text;
+                    const response = await fetch(`https://routes.googleapis.com/directions/v2:computeRoutes`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Goog-Api-Key': apiKey,
+                            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+                        },
+                        body: JSON.stringify(body)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const distanceMeters = route.distanceMeters;
+                        const distanceKm = distanceMeters / 1000;
+                        distanciaCalculada = distanceKm.toFixed(1) + " km";
+                        
+                        let costoTotal = distanceKm * COSTO_POR_KM;
+                        if (costoTotal < TARIFA_MINIMA) costoTotal = TARIFA_MINIMA;
+                        costoCalculado = costoTotal.toFixed(2);
+
+                        document.getElementById('route-distance').textContent = distanciaCalculada;
+                        document.getElementById('route-duration').textContent = Math.round(parseInt(route.duration) / 60) + " mins";
+                        document.getElementById('route-cost').textContent = `$${costoCalculado}`;
                         document.getElementById('status-msg').textContent = "¡Ruta calculada con éxito!";
                         document.getElementById('btn-solicitar').classList.remove('hidden');
-                    } else {
-                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta.";
+
+                        const decodedPath = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
+                        if (window.currentRoutePolyline) window.currentRoutePolyline.setMap(null);
+                        
+                        window.currentRoutePolyline = new google.maps.Polyline({
+                            path: decodedPath,
+                            geodesic: true,
+                            strokeColor: '#10b981',
+                            strokeOpacity: 0.8,
+                            strokeWeight: 5
+                        });
+                        window.currentRoutePolyline.setMap(map);
                     }
-                });
+                } catch (error) {
+                    console.error("Error Routes API:", error);
+                }
             }
         }
 
         async function solicitarCarrera() {
             const origen = document.getElementById('campo-libre-origen').value;
             const destino = document.getElementById('campo-libre-destino').value;
-            const fecha_hora_servicio = new Date().toISOString();
 
             if (!origen || !destino) {
                 alert('Faltan el origen o el destino.');
@@ -481,9 +521,10 @@
             }
 
             const nuevaCarrera = {
+                cliente: clienteActual,
                 origen: origen,
                 destino: destino,
-                fecha_hora_servicio: fecha_hora_servicio,
+                fecha_hora_servicio: new Date().toISOString(),
                 precio: `$${costoCalculado}`,
                 distancia: distanciaCalculada,
                 estado: 'pendiente'
@@ -512,9 +553,11 @@
         }
 
         function mostrarVistaEstado(carrera) {
+            document.getElementById('identificacion-container').classList.add('hidden');
             document.getElementById('vista-formulario').classList.add('hidden');
             document.getElementById('vista-estado').classList.remove('hidden');
 
+            document.getElementById('estado-cliente').textContent = carrera.cliente || clienteActual;
             document.getElementById('estado-origen').textContent = carrera.origen;
             document.getElementById('estado-destino').textContent = carrera.destino;
             document.getElementById('estado-precio').textContent = carrera.precio || '$0.00';
@@ -565,7 +608,6 @@
                 });
             }
 
-            // 1. Marcador de la base del conductor
             new google.maps.Marker({
                 position: baseCoords,
                 map: mapSeguimiento,
@@ -573,13 +615,11 @@
                 icon: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png"
             });
 
-            // 2. Geocodificar la dirección de origen del cliente
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ address: origenTexto }, async (results, status) => {
                 if (status === 'OK' && results[0]) {
                     const origenClienteCoords = results[0].geometry.location;
 
-                    // Marcador del origen del cliente
                     new google.maps.Marker({
                         position: origenClienteCoords,
                         map: mapSeguimiento,
@@ -587,7 +627,6 @@
                         icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
                     });
 
-                    // 3. Consumir la moderna Routes API (computeRoutes) para trazar la polilínea en el mapa inferior
                     try {
                         const body = {
                             origin: { location: { latLng: { latitude: baseCoords.lat, longitude: baseCoords.lng } } },
@@ -609,8 +648,7 @@
                         const data = await response.json();
 
                         if (data.routes && data.routes.length > 0) {
-                            const encodedPolyline = data.routes[0].polyline.encodedPolyline;
-                            const decodedPath = google.maps.geometry.encoding.decodePath(encodedPolyline);
+                            const decodedPath = google.maps.geometry.encoding.decodePath(data.routes[0].polyline.encodedPolyline);
 
                             if (window.seguimientoPolyline) window.seguimientoPolyline.setMap(null);
 
@@ -623,14 +661,13 @@
                             });
                             window.seguimientoPolyline.setMap(mapSeguimiento);
 
-                            // Ajustar límites para mostrar ambos puntos y la ruta completa
                             const bounds = new google.maps.LatLngBounds();
                             bounds.extend(baseCoords);
                             bounds.extend(origenClienteCoords);
                             mapSeguimiento.fitBounds(bounds);
                         }
                     } catch (error) {
-                        console.error("Error al obtener ruta con Routes API en seguimiento:", error);
+                        console.error("Error ruta seguimiento:", error);
                     }
                 }
             });

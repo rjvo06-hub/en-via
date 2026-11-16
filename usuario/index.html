@@ -58,7 +58,7 @@
             </a>
         </header>
 
-        <!-- VISTA 1: FORMULARIO DE SOLICITUD (Visible antes de pedir la carrera) -->
+        <!-- VISTA 1: FORMULARIO DE SOLICITUD -->
         <div id="vista-formulario" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-2xl space-y-3.5 flex flex-col justify-between">
                 <div class="space-y-3">
@@ -113,7 +113,7 @@
                         <span id="route-distance" class="font-bold text-emerald-400">-</span>
                     </div>
                     <div class="flex justify-between text-xs">
-                        <span class="text-slate-400">Tiempo estimado:</span>
+                        <span class="text-slate-400">Tiempo estimado de viaje:</span>
                         <span id="route-duration" class="font-bold text-slate-200">-</span>
                     </div>
                     <div class="flex justify-between text-xs pt-1 border-t border-[#222222]">
@@ -135,7 +135,7 @@
             </div>
         </div>
 
-        <!-- VISTA 2: ESTADO DE CARRERA ACTIVA (Visible después de solicitar) -->
+        <!-- VISTA 2: ESTADO DE CARRERA ACTIVA -->
         <div id="vista-estado" class="max-w-xl mx-auto space-y-4 hidden">
             <div class="bg-[#111111] border border-[#222222] p-5 rounded-2xl shadow-2xl space-y-4">
                 <div class="text-center space-y-1">
@@ -167,11 +167,19 @@
                         <span class="text-slate-400">Conductor Asignado:</span>
                         <span id="estado-conductor" class="text-purple-400 font-bold">Esperando asignación...</span>
                     </div>
+                    <!-- Tiempo estimado de llegada del conductor -->
+                    <div id="seccion-llegada" class="flex justify-between pt-2 border-t border-[#222222] hidden">
+                        <span class="text-slate-400">Tiempo estimado de llegada:</span>
+                        <span id="estado-llegada" class="text-emerald-400 font-bold">Calculando...</span>
+                    </div>
                 </div>
 
-                <button onclick="cancelarOReiniciarSolicitud()" class="w-full py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
-                    Cancelar o Pedir Otra Carrera
-                </button>
+                <!-- Botón de cancelar (Solo aparece si la carrera sigue pendiente) -->
+                <div id="contenedor-boton-cancelar">
+                    <button onclick="cancelarOReiniciarSolicitud()" class="w-full py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
+                        Cancelar Solicitud
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -196,7 +204,6 @@
         const TARIFA_MINIMA = 3;
 
         window.addEventListener('load', () => {
-            // Verificar si el usuario ya tenía una carrera activa en esta sesión
             const carreraGuardada = sessionStorage.getItem('carrera_activa_id');
             if (carreraGuardada) {
                 idCarreraActiva = carreraGuardada;
@@ -515,17 +522,31 @@
         function actualizarBadgeYConductor(estado, conductor) {
             const badge = document.getElementById('badge-estado');
             const labelConductor = document.getElementById('estado-conductor');
+            const botonCancelar = document.getElementById('contenedor-boton-cancelar');
+            const seccionLlegada = document.getElementById('seccion-llegada');
+            const labelLlegada = document.getElementById('estado-llegada');
 
             if (estado === 'asignada') {
                 badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-bold uppercase tracking-wider";
                 badge.textContent = "✅ ¡Conductor Asignado!";
                 labelConductor.textContent = conductor || "Asignado";
                 labelConductor.className = "text-emerald-400 font-extrabold";
+
+                // Ocultar botón de cancelar para que no pueda anularla directamente
+                botonCancelar.classList.add('hidden');
+
+                // Mostrar tiempo estimado de llegada (Ejemplo dinámico o estimado de 5 a 10 mins)
+                seccionLlegada.classList.remove('hidden');
+                labelLlegada.textContent = "Aprox. 7 - 10 minutos"; 
             } else {
                 badge.className = "inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider animate-pulse";
                 badge.textContent = "🔍 Buscando Conductor...";
                 labelConductor.textContent = "Esperando asignación...";
                 labelConductor.className = "text-purple-400 font-bold";
+
+                // Mostrar botón de cancelar mientras busca conductor
+                botonCancelar.classList.remove('hidden');
+                seccionLlegada.classList.add('hidden');
             }
         }
 

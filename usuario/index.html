@@ -197,6 +197,9 @@
                     </div>
                 </div>
 
+                <!-- CONTENEDOR DE CONFIRMACIÓN DE PAGO GRANDE (Al llegar al destino) -->
+                <div id="seccion-cobro-cliente" class="hidden"></div>
+
                 <!-- Mapa de seguimiento -->
                 <div id="contenedor-mapa-seguimiento" class="rounded-xl overflow-hidden border border-[#262626] hidden">
                     <div id="map-seguimiento"></div>
@@ -594,33 +597,57 @@
             document.getElementById('estado-precio').textContent = carrera.precio || '$0.00';
             document.getElementById('estado-distancia').textContent = carrera.distancia || 'N/A';
 
-            actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen, carrera.tiempos);
+            actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen, carrera.tiempos, carrera.precio);
         }
 
-        function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos) {
+        function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos, precio) {
             const badge = document.getElementById('badge-estado');
             const labelConductor = document.getElementById('estado-conductor');
             const botonCancelar = document.getElementById('contenedor-boton-cancelar');
             const seccionLlegada = document.getElementById('seccion-llegada');
             const labelLlegada = document.getElementById('estado-llegada');
             const contenedorMapaSeguimiento = document.getElementById('contenedor-mapa-seguimiento');
+            const seccionCobroCliente = document.getElementById('seccion-cobro-cliente');
 
             const tiemposObj = tiempos || {};
             const llegadaConductorAt = tiemposObj.llegada_conductor_at;
             const inicioCarreraAt = tiemposObj.inicio_carrera_at;
+            const finRecorridoAt = tiemposObj.fin_recorrido_at;
             const finCarreraAt = tiemposObj.fin_carrera_at;
 
             if (finCarreraAt || estado === 'completada') {
+                seccionCobroCliente.classList.add('hidden');
                 badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider";
-                badge.textContent = "🏁 ¡Carrera Finalizada!";
+                badge.textContent = "🏁 ¡Servicio Finalizado y Pagado!";
                 seccionLlegada.classList.remove('hidden');
-                labelLlegada.innerHTML = `<span class="text-emerald-400 font-extrabold">Servicio completado con éxito</span>`;
+                labelLlegada.innerHTML = `<span class="text-emerald-400 font-extrabold">¡Gracias por viajar con EN-VIA!</span>`;
                 if (timerClientInterval) clearInterval(timerClientInterval);
                 setTimeout(() => {
                     sessionStorage.removeItem('carrera_activa_id');
                     location.reload();
                 }, 4000);
+            } else if (finRecorridoAt) {
+                // El conductor llegó al destino y espera confirmación de pago
+                badge.className = "inline-block px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/40 text-xs font-bold uppercase tracking-wider animate-pulse";
+                badge.textContent = "💳 Esperando Confirmación de Pago";
+                seccionLlegada.classList.add('hidden');
+                contenedorMapaSeguimiento.classList.add('hidden');
+                if (timerClientInterval) clearInterval(timerClientInterval);
+
+                // Cuadro de pago grande y destacado para el cliente
+                seccionCobroCliente.classList.remove('hidden');
+                seccionCobroCliente.innerHTML = `
+                    <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
+                        <p class="text-xs uppercase font-bold text-slate-400">Monto total a cancelar:</p>
+                        <p class="text-3xl font-black text-amber-400 tracking-tight">${precio || '$0.00'}</p>
+                        <p class="text-[11px] text-slate-300">Por favor, realiza tu pago en efectivo, transferencia o pago móvil al conductor y espera la confirmación.</p>
+                        <div class="inline-block px-3 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25 text-[11px] font-bold">
+                            ⌛ Verificando acreditación del pago...
+                        </div>
+                    </div>
+                `;
             } else if (estado === 'asignada') {
+                seccionCobroCliente.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.remove('hidden');
                 inicializarMapaSeguimiento(origenTexto);
                 botonCancelar.classList.add('hidden');
@@ -643,10 +670,12 @@
                 } else {
                     badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-bold uppercase tracking-wider";
                     badge.textContent = "✅ ¡Conductor Asignado en Camino!";
+                    seccionLlexionLlegada = document.getElementById('seccion-llegada');
                     seccionLlegada.classList.remove('hidden');
                     labelLlegada.textContent = "En camino al punto de recogida";
                 }
             } else {
+                seccionCobroCliente.classList.add('hidden');
                 badge.className = "inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider animate-pulse";
                 badge.textContent = "🔍 Buscando Conductor...";
                 labelConductor.textContent = "Esperando asignación...";
@@ -764,9 +793,10 @@
                     const carreraActualizada = payload.new;
                     actualizarBadgeYConductor(
                         carreraActualizada.estado, 
-                        cayeronConductor = carreraActualizada.conductor_asignado, 
+                        carreraActualizada.conductor_asignado, 
                         carreraActualizada.origen, 
-                        carreraActualizada.tiempos
+                        carreraActualizada.tiempos,
+                        carreraActualizada.precio
                     );
                 })
                 .subscribe();

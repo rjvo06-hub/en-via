@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EN-VIA - Gestión de Conductores</title>
+    <title>EN-VIA - Acceso de Conductores</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/supabaseClient.js"></script>
@@ -12,147 +12,211 @@
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6">
+<body class="bg-black min-h-screen text-slate-100 antialiased flex items-center justify-center p-3">
 
-    <div class="max-w-4xl mx-auto space-y-6">
-        <header class="flex justify-between items-center border-b border-[#222222] pb-4">
-            <div>
-                <h1 class="text-xl font-extrabold text-blue-500 tracking-tight">EN-VIA - Conductores</h1>
-                <p class="text-slate-400 text-xs">Administración de choferes</p>
-            </div>
-            <a href="../index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
-                ← Volver al Inicio
-            </a>
-        </header>
-
-        <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
-            <h2 id="form-title" class="text-xs font-bold uppercase tracking-wider text-blue-400">Registrar Nuevo Conductor</h2>
-            <input type="hidden" id="conductor-id">
-            
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Nombre</label>
-                    <input type="text" id="nombre" placeholder="Ej. Carlos Pérez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-white outline-none">
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono</label>
-                    <input type="text" id="telefono" placeholder="Ej. 0414-1234567" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-white outline-none">
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Estado</label>
-                    <select id="activo" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-blue-500 rounded-xl px-3 py-2 text-white outline-none">
-                        <option value="true">Activo</option>
-                        <option value="false">Inactivo</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex gap-2 pt-2">
-                <button onclick="guardarConductor()" id="btn-guardar" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                    Guardar Conductor
-                </button>
-                <button onclick="limpiarFormulario()" id="btn-cancelar" class="hidden px-4 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
-                    Cancelar
-                </button>
-            </div>
+    <!-- SECCIÓN 1: PANTALLA DE LOGIN CON SELECTOR DESPLEGABLE -->
+    <div id="login-container" class="max-w-md w-full bg-[#111111] border border-[#222222] p-6 rounded-2xl shadow-2xl space-y-4">
+        <div class="text-center space-y-1">
+            <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Portal de Chofer</h1>
+            <p class="text-slate-400 text-xs">Selecciona tu usuario e introduce tu contraseña</p>
         </div>
 
-        <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Lista de Conductores Registrados</h2>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="border-b border-[#222222] text-slate-400">
-                            <th class="p-2.5">Nombre</th>
-                            <th class="p-2.5">Teléfono</th>
-                            <th class="p-2.5">Estado</th>
-                            <th class="p-2.5 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-conductores" class="divide-y divide-[#1a1a1a]"></tbody>
-                </table>
+        <div class="space-y-3 pt-2">
+            <div>
+                <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Seleccionar Conductor</label>
+                <select id="login-select" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-purple-500 rounded-xl px-3 py-2.5 text-white outline-none text-xs">
+                    <option value="">Cargando conductores...</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Contraseña</label>
+                <input type="password" id="login-password" placeholder="••••••••" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-purple-500 rounded-xl px-3 py-2.5 text-white outline-none text-xs">
+            </div>
+            <div id="login-error" class="text-red-400 text-xs text-center hidden">Contraseña incorrecta o cuenta inactiva.</div>
+
+            <button onclick="autenticarConductor()" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                Iniciar Sesión
+            </button>
+            <a href="../index.html" class="block text-center text-slate-500 hover:text-slate-300 text-xs pt-2">← Volver al Menú Principal</a>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: PORTAL DEL CONDUCTOR -->
+    <div id="portal-container" class="max-w-3xl w-full space-y-6 hidden">
+        <header class="flex flex-col sm:flex-row justify-between items-center border-b border-[#222222] pb-4 gap-3">
+            <div>
+                <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Panel de Chofer</h1>
+                <p class="text-slate-400 text-xs">Conectado como: <span id="driver-name-display" class="text-white font-bold"></span></p>
+            </div>
+            <button onclick="cerrarSesion()" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition text-red-400 cursor-pointer">
+                Cerrar Sesión
+            </button>
+        </header>
+
+        <div class="space-y-4">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes en Tiempo Real</h2>
+            <div id="lista-carreras" class="grid grid-cols-1 gap-3">
+                <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
+                    Buscando carreras...
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', cargarConductores);
+        let conductorActual = "";
 
-        async function cargarConductores() {
-            const { data, error } = await supabaseClient.from('conductores').select('*').order('created_at', { ascending: false });
-            const tbody = document.getElementById('tabla-conductores');
-            tbody.innerHTML = '';
+        document.addEventListener('DOMContentLoaded', () => {
+            const sesionGuardada = sessionStorage.getItem('conductor_en_via');
+            if (sesionGuardada) {
+                conductorActual = sesionGuardada;
+                mostrarPortal();
+            } else {
+                cargarConductoresSelect();
+            }
+        });
+
+        // Cargar la lista de conductores activos en el menú desplegable
+        async function cargarConductoresSelect() {
+            const select = document.getElementById('login-select');
+            const { data, error } = await supabaseClient
+                .from('conductores')
+                .select('id, nombre')
+                .eq('activo', true)
+                .order('nombre', { ascending: true });
 
             if (error || !data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500 italic">No hay conductores registrados.</td></tr>`;
+                select.innerHTML = '<option value="">No hay conductores activos registrados</option>';
                 return;
             }
 
+            select.innerHTML = '<option value="">-- Selecciona tu nombre --</option>';
             data.forEach(c => {
-                tbody.innerHTML += `
-                    <tr class="hover:bg-[#161616] transition">
-                        <td class="p-2.5 font-medium text-slate-200">${c.nombre}</td>
-                        <td class="p-2.5 text-slate-400">${c.telefono || 'N/A'}</td>
-                        <td class="p-2.5">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.activo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}">
-                                ${c.activo ? 'Activo' : 'Inactivo'}
-                            </span>
-                        </td>
-                        <td class="p-2.5 text-right space-x-2">
-                            <button onclick="editarConductor('${c.id}', '${c.nombre}', '${c.telefono || ''}', ${c.activo})" class="text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">Editar</button>
-                            <button onclick="eliminarConductor('${c.id}')" class="text-red-400 hover:text-red-300 font-semibold cursor-pointer">Eliminar</button>
-                        </td>
-                    </tr>
+                select.innerHTML += `<option value="${c.nombre}">${c.nombre}</option>`;
+            });
+        }
+
+        async function autenticarConductor() {
+            const nombreSeleccionado = document.getElementById('login-select').value;
+            const passwordInput = document.getElementById('login-password').value.trim();
+            const errorDiv = document.getElementById('login-error');
+
+            if (!nombreSeleccionado || !passwordInput) {
+                errorDiv.textContent = "Por favor, selecciona tu nombre e introduce tu contraseña.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Validar en Supabase
+            const { data, error } = await supabaseClient
+                .from('conductores')
+                .select('*')
+                .eq('nombre', nombreSeleccionado)
+                .eq('password', passwordInput)
+                .eq('activo', true)
+                .single();
+
+            if (error || !data) {
+                errorDiv.textContent = "Contraseña incorrecta.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+            conductorActual = data.nombre;
+            sessionStorage.setItem('conductor_en_via', conductorActual);
+            mostrarPortal();
+        }
+
+        function mostrarPortal() {
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('portal-container').classList.remove('hidden');
+            document.getElementById('driver-name-display').textContent = conductorActual;
+            
+            cargarCarrerasPendientes();
+            suscripcionRealtime();
+        }
+
+        function cerrarSesion() {
+            sessionStorage.removeItem('conductor_en_via');
+            location.reload();
+        }
+
+        async function cargarCarrerasPendientes() {
+            const { data, error } = await supabaseClient
+                .from('carreras')
+                .select('*')
+                .eq('estado', 'pendiente')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Error al cargar carreras:", error);
+                return;
+            }
+
+            renderizarCarreras(data);
+        }
+
+        function renderizarCarreras(carreras) {
+            const contenedor = document.getElementById('lista-carreras');
+            contenedor.innerHTML = '';
+
+            if (!carreras || carreras.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="bg-[#111111] border border-[#222222] p-6 rounded-2xl text-center text-slate-500 italic text-xs">
+                        No hay carreras pendientes en este momento. Esperando solicitudes...
+                    </div>
+                `;
+                return;
+            }
+
+            carreras.forEach(c => {
+                contenedor.innerHTML += `
+                    <div class="bg-[#111111] border border-[#222222] hover:border-purple-500/40 p-4 rounded-2xl shadow-xl transition space-y-3">
+                        <div class="flex justify-between items-start text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">Pendiente</span>
+                            <span class="text-emerald-400 font-bold text-sm">${c.precio || '$0.00'}</span>
+                        </div>
+                        
+                        <div class="space-y-1 text-xs">
+                            <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
+                            <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
+                            <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
+                        </div>
+
+                        <button onclick="tomarCarrera('${c.id}')" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            🚀 ¡Tomar esta Carrera!
+                        </button>
+                    </div>
                 `;
             });
         }
 
-        async function guardarConductor() {
-            const id = document.getElementById('conductor-id').value;
-            const nombre = document.getElementById('nombre').value.trim();
-            const telefono = document.getElementById('telefono').value.trim();
-            const activo = document.getElementById('activo').value === 'true';
+        async function tomarCarrera(idCarrera) {
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ 
+                    estado: 'asignada', 
+                    conductor_asignado: conductorActual 
+                })
+                .eq('id', idCarrera)
+                .eq('estado', 'pendiente');
 
-            if (!nombre) { alert('El nombre es obligatorio.'); return; }
-
-            if (id) {
-                const { error } = await supabaseClient.from('conductores').update({ nombre, telefono, activo }).eq('id', id);
-                if (error) alert('Error al actualizar: ' + error.message);
+            if (error) {
+                alert('Error al tomar la carrera: ' + error.message);
             } else {
-                const { error } = await supabaseClient.from('conductores').insert([{ nombre, telefono, activo }]);
-                if (error) alert('Error al crear: ' + error.message);
-            }
-
-            limpiarFormulario();
-            cargarConductores();
-        }
-
-        function editarConductor(id, nombre, telefono, activo) {
-            document.getElementById('conductor-id').value = id;
-            document.getElementById('nombre').value = nombre;
-            document.getElementById('telefono').value = telefono;
-            document.getElementById('activo').value = activo.toString();
-            document.getElementById('form-title').textContent = "Modificar Conductor";
-            document.getElementById('btn-guardar').textContent = "Actualizar Conductor";
-            document.getElementById('btn-cancelar').classList.remove('hidden');
-        }
-
-        async function eliminarConductor(id) {
-            if (confirm('¿Estás seguro de eliminar este conductor?')) {
-                const { error } = await supabaseClient.from('conductores').delete().eq('id', id);
-                if (error) alert('Error al eliminar: ' + error.message);
-                cargarConductores();
+                alert('¡Has tomado la carrera con éxito!');
+                cargarCarrerasPendientes();
             }
         }
 
-        function limpiarFormulario() {
-            document.getElementById('conductor-id').value = '';
-            document.getElementById('nombre').value = '';
-            document.getElementById('telefono').value = '';
-            document.getElementById('activo').value = 'true';
-            document.getElementById('form-title').textContent = "Registrar Nuevo Conductor";
-            document.getElementById('btn-guardar').textContent = "Guardar Conductor";
-            document.getElementById('btn-cancelar').classList.add('hidden');
+        function suscripcionRealtime() {
+            supabaseClient
+                .channel('cambios-carreras')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, payload => {
+                    cargarCarrerasPendientes();
+                })
+                .subscribe();
         }
     </script>
 </body>

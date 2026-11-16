@@ -185,7 +185,9 @@
 
             asignadas.forEach(c => {
                 const urlNavegacion = `https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
-                const yaLlego = c.llegada_conductor_at != null;
+                
+                const tiempos = c.tiempos || {};
+                const yaLlego = tiempos.llegada_conductor_at != null;
 
                 contenedor.innerHTML += `
                     <div class="bg-[#111111] border-2 border-emerald-500/50 p-4 rounded-2xl shadow-2xl space-y-3">
@@ -206,7 +208,7 @@
                         </a>
 
                         ${!yaLlego ? `
-                            <button onclick="conductorLlego('${c.id}')" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            <button onclick='conductorLlego("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
                                 📍 Ya estoy en el lugar
                             </button>
                         ` : `
@@ -219,16 +221,21 @@
                 `;
 
                 if (yaLlego) {
-                    iniciarCronometro(c.llegada_conductor_at, 'cronometro-conductor');
+                    iniciarCronometro(tiempos.llegada_conductor_at, 'cronometro-conductor');
                 }
             });
         }
 
-        async function conductorLlego(idCarrera) {
+        async function conductorLlego(idCarrera, tiemposActuales) {
             const ahora = new Date().toISOString();
+            const nuevosTiempos = {
+                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
+                llegada_conductor_at: ahora
+            };
+
             const { error } = await supabaseClient
                 .from('carreras')
-                .update({ llegada_conductor_at: ahora })
+                .update({ tiempos: nuevosTiempos })
                 .eq('id', idCarrera);
 
             if (error) {

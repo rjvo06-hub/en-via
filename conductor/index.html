@@ -52,13 +52,13 @@
             </button>
         </header>
 
-        <!-- Sección de Carrera Asignada Actual -->
+        <!-- Sección de Carrera Asignada Actual (Solo para el chofer que la tomó) -->
         <div id="seccion-asignada" class="space-y-3 hidden">
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Tu Carrera en Curso</h2>
             <div id="carrera-asignada-container"></div>
         </div>
 
-        <!-- Sección de Carreras Disponibles -->
+        <!-- Sección de Carreras Disponibles (Pendientes para todos) -->
         <div class="space-y-3 pt-2">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
             <div id="lista-carreras" class="grid grid-cols-1 gap-3">
@@ -71,15 +71,19 @@
 
     <script>
         let conductorActual = "";
-        // Coordenadas estáticas de la base para todos los conductores en Maracaibo
-        const latBase = "10.670389"; // 10°40'13.4"N
-        const lngBase = "-71.658972"; // 71°39'32.3"W (o puedes usar la cadena exacta de coordenadas)
-        const coordenadaBaseEstetica = "10.670389, -71.658972"; 
+        let conductorIdActual = null;
+        
+        // Coordenadas fijas de la base en Maracaibo para el origen de la navegación
+        const baseLat = "10.670389";
+        const baseLng = "-71.658972";
 
         document.addEventListener('DOMContentLoaded', () => {
             const sesionGuardada = sessionStorage.getItem('conductor_en_via');
+            const sesionIdGuardada = sessionStorage.getItem('conductor_id_en_via');
+
             if (sesionGuardada) {
                 conductorActual = sesionGuardada;
+                conductorIdActual = sesionIdGuardada || null;
                 mostrarPortal();
             } else {
                 cargarConductoresSelect();
@@ -101,12 +105,14 @@
 
             select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
             data.forEach(c => {
-                select.innerHTML += `<option value="${c.nombre}">${c.nombre}</option>`;
+                // Guardamos tanto el nombre como el id en los atributos de la opción
+                select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
             });
         }
 
         function ingresarSinPassword() {
-            const nombreSeleccionado = document.getElementById('login-select').value;
+            const select = document.getElementById('login-select');
+            const nombreSeleccionado = select.value;
             const errorDiv = document.getElementById('login-error');
 
             if (!nombreSeleccionado) {
@@ -117,7 +123,14 @@
 
             errorDiv.classList.add('hidden');
             conductorActual = nombreSeleccionado;
+
+            // Extraer el ID correspondiente al chofer seleccionado
+            const selectedOption = select.options[select.selectedIndex];
+            conductorIdActual = selectedOption.getAttribute('data-id') || null;
+
             sessionStorage.setItem('conductor_en_via', conductorActual);
+            if (conductorIdActual) sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
+
             mostrarPortal();
         }
 
@@ -132,10 +145,12 @@
 
         function cerrarSesion() {
             sessionStorage.removeItem('conductor_en_via');
+            sessionStorage.removeItem('conductor_id_en_via');
             location.reload();
         }
 
         async function cargarDatosConductor() {
+            // 1. Cargar carreras pendientes
             const { data: pendData, error: pendError } = await supabaseClient
                 .from('carreras')
                 .select('*')
@@ -144,6 +159,7 @@
 
             if (pendError) console.error("Error al cargar pendientes:", pendError);
 
+            // 2. Cargar la carrera asignada específicamente a este chofer
             const { data: asigData, error: asigError } = await supabaseClient
                 .from('carreras')
                 .select('*')
@@ -170,8 +186,8 @@
             contenedor.innerHTML = '';
 
             asignadas.forEach(c => {
-                // Generar enlace de Google Maps con la base estática como origen y el origen de la carrera como destino
-                const urlNavegacion = `https://www.google.com/maps/dir/?api=1&origin=10.670389,-71.658972&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
+                // Enlace de Google Maps usando la base fija como origen y el origen del cliente como destino
+                const urlNavegacion = `https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
 
                 contenedor.innerHTML += `
                     <div class="bg-[#111111] border-2 border-emerald-500/50 p-4 rounded-2xl shadow-2xl space-y-3">
@@ -181,6 +197,7 @@
                         </div>
                         
                         <div class="space-y-1 text-xs">
+                            <p class="text-slate-300"><strong class="text-slate-400">👤 Cliente:</strong> ${c.cliente_nombre || 'N/A'}</p>
                             <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
                             <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
                             <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
@@ -216,6 +233,7 @@
                         </div>
                         
                         <div class="space-y-1 text-xs">
+                            <p class="text-slate-300"><strong class="text-slate-400">👤 Cliente:</strong> ${c.cliente_nombre || 'N/A'}</p>
                             <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
                             <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
                             <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
@@ -234,7 +252,8 @@
                 .from('carreras')
                 .update({ 
                     estado: 'asignada', 
-                    conductor_asignado: conductorActual 
+                    conductor_asignado: conductorActual,
+                    conductor_id: conductorIdActual || null
                 })
                 .eq('id', idCarrera)
                 .eq('estado', 'pendiente');

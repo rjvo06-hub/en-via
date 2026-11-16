@@ -146,11 +146,6 @@
                     <h2 class="text-base font-bold text-white pt-1">Estado de tu Solicitud</h2>
                 </div>
 
-                <!-- Mapa de seguimiento del conductor hacia el origen -->
-                <div id="contenedor-mapa-seguimiento" class="rounded-xl overflow-hidden border border-[#262626] hidden">
-                    <div id="map-seguimiento"></div>
-                </div>
-
                 <!-- Tarjeta de Detalles -->
                 <div class="bg-[#161616] p-4 rounded-xl border border-[#262626] space-y-3 text-xs">
                     <div class="flex justify-between items-center border-b border-[#222222] pb-2">
@@ -179,6 +174,11 @@
                     </div>
                 </div>
 
+                <!-- Mapa de seguimiento del conductor hacia el origen (Ubicado en la parte inferior) -->
+                <div id="contenedor-mapa-seguimiento" class="rounded-xl overflow-hidden border border-[#262626] hidden">
+                    <div id="map-seguimiento"></div>
+                </div>
+
                 <div id="contenedor-boton-cancelar">
                     <button onclick="cancelarOReiniciarSolicitud()" class="w-full py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
                         Cancelar Solicitud
@@ -203,7 +203,6 @@
         
         let currentMode = 'origin';
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
-        // Coordenadas de la base estática de los conductores
         const baseCoords = { lat: 10.670389, lng: -71.658972 };
         const apiKey = "AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I";
 
@@ -544,7 +543,7 @@
                 seccionLlegada.classList.remove('hidden');
                 labelLlegada.textContent = "Aprox. 7 - 10 minutos";
 
-                // Mostrar el mapa de seguimiento del conductor hacia el origen
+                // Mostrar el mapa de seguimiento en la parte inferior
                 contenedorMapaSeguimiento.classList.remove('hidden');
                 inicializarMapaSeguimiento(origenTexto);
             } else {
@@ -569,7 +568,6 @@
                 });
             }
 
-            // Marcador en la Base (Conductor)
             new google.maps.Marker({
                 position: baseCoords,
                 map: mapSeguimiento,
@@ -577,13 +575,11 @@
                 icon: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png"
             });
 
-            // Geocodificar la dirección de origen del cliente para obtener sus coordenadas exactas en el mapa
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ address: origenTexto }, (results, status) => {
                 if (status === 'OK' && results[0]) {
                     const origenClienteCoords = results[0].geometry.location;
 
-                    // Marcador en el Origen (Cliente)
                     new google.maps.Marker({
                         position: origenClienteCoords,
                         map: mapSeguimiento,
@@ -591,7 +587,6 @@
                         icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
                     });
 
-                    // Trazar ruta entre la base y el origen usando Routes API (o DirectionsService)
                     const directionsService = new google.maps.DirectionsService();
                     const directionsRenderer = new google.maps.DirectionsRenderer({
                         map: mapSeguimiento,

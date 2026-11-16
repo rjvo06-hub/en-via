@@ -142,10 +142,10 @@
         </div>
     </div>
 
-    <!-- Script de Control Unificado -->
+    <!-- Script de Control Unificado con router -->
     <script>
         let map;
-        let directionsService;
+        let router; // Objeto de enrutamiento vial
         let directionsRenderer;
         let autocompleteService;
         let placesService;
@@ -169,7 +169,7 @@
                         streetViewControl: false
                     });
 
-                    directionsService = new google.maps.DirectionsService();
+                    router = new google.maps.DirectionsService();
                     directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false });
                     autocompleteService = new google.maps.places.AutocompleteService();
                     placesService = new google.maps.places.PlacesService(map);
@@ -256,7 +256,6 @@
                                         const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
                                         const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
                                         
-                                        // Asegurar una dirección limpia basada en texto legible por carretera
                                         const direccionFinal = place.formattedAddress || place.displayName || placePrediction.text.toString();
                                         const coords = { lat, lng };
 
@@ -325,15 +324,18 @@
         }
 
         function verificarYCalcularRuta() {
+            const origenTexto = document.getElementById('campo-libre-origen').value;
+            const destTexto = document.getElementById('campo-libre-destino').value;
+
             if (origenCoords && destCoords) {
-                document.getElementById('status-msg').textContent = "Calculando ruta vial con Google...";
+                document.getElementById('status-msg').textContent = "Calculando ruta por carretera con el router...";
                 const request = {
-                    origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
-                    destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),
+                    origin: origenTexto || new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
+                    destination: destTexto || new google.maps.LatLng(destCoords.lat, destCoords.lng),
                     travelMode: google.maps.TravelMode.DRIVING
                 };
 
-                directionsService.route(request, (response, status) => {
+                router.route(request, (response, status) => {
                     if (status === 'OK') {
                         directionsRenderer.setDirections(response);
 
@@ -346,7 +348,28 @@
                         gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
                         gmapsLink.classList.remove('hidden');
                     } else {
-                        document.getElementById('status-msg').textContent = "No se pudo calcular la ruta por carretera para estos puntos.";
+                        // Respaldo directo por coordenadas numéricas si el texto falla
+                        const fallbackRequest = {
+                            origin: new google.maps.LatLng(origenCoords.lat, origenCoords.lng),
+                            destination: new google.maps.LatLng(destCoords.lat, destCoords.lng),
+                            travelMode: google.maps.TravelMode.DRIVING
+                        };
+
+                        router.route(fallbackRequest, (fbResponse, fbStatus) => {
+                            if (fbStatus === 'OK') {
+                                directionsRenderer.setDirections(fbResponse);
+                                const route = fbResponse.routes[0].legs[0];
+                                document.getElementById('route-distance').textContent = route.distance.text;
+                                document.getElementById('route-duration').textContent = route.duration.text;
+                                document.getElementById('status-msg').textContent = "¡Ruta por carretera trazada con éxito!";
+
+                                const gmapsLink = document.getElementById('gmaps-link');
+                                gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${origenCoords.lat},${origenCoords.lng}&destination=${destCoords.lat},${destCoords.lng}&travelmode=driving`;
+                                gmapsLink.classList.remove('hidden');
+                            } else {
+                                document.getElementById('status-msg').textContent = "No se pudo calcular la ruta por carretera.";
+                            }
+                        });
                     }
                 });
             } else {

@@ -17,7 +17,7 @@
 </head>
 <body class="bg-black min-h-screen text-slate-100 antialiased flex items-center justify-center p-3">
 
-    <!-- SECCIÓN 1: PANTALLA DE SELECCIÓN DE CONDUCTOR (SIN CONTRASEÑA) -->
+    <!-- SECCIÓN 1: PANTALLA DE SELECCIÓN DE CONDUCTOR -->
     <div id="login-container" class="max-w-md w-full bg-[#111111] border border-[#222222] p-6 rounded-2xl shadow-2xl space-y-4">
         <div class="text-center space-y-1">
             <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Portal de Chofer</h1>
@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 2: PORTAL DE CARRERAS EN TIEMPO REAL (Oculto hasta elegir nombre) -->
+    <!-- SECCIÓN 2: PORTAL DE CARRERAS (Pendientes y Asignadas al chofer) -->
     <div id="portal-container" class="max-w-3xl w-full space-y-6 hidden">
         <header class="flex flex-col sm:flex-row justify-between items-center border-b border-[#222222] pb-4 gap-3">
             <div>
@@ -52,8 +52,19 @@
             </button>
         </header>
 
-        <div class="space-y-4">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes en Tiempo Real</h2>
+        <!-- Sección de Carrera Asignada Actual -->
+        <div class="space-y-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Tu Carrera en Curso</h2>
+            <div id="carrera-asignada-container">
+                <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
+                    No tienes ninguna carrera asignada en este momento.
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Carreras Disponibles (Pendientes) -->
+        <div class="space-y-3 pt-4 border-t border-[#222222]">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
             <div id="lista-carreras" class="grid grid-cols-1 gap-3">
                 <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
                     Buscando carreras...
@@ -75,7 +86,6 @@
             }
         });
 
-        // Carga los conductores desde la base de datos para el menú desplegable
         async function cargarConductoresSelect() {
             const select = document.getElementById('login-select');
             const { data, error } = await supabaseClient
@@ -116,7 +126,7 @@
             document.getElementById('portal-container').classList.remove('hidden');
             document.getElementById('driver-name-display').textContent = conductorActual;
             
-            cargarCarrerasPendientes();
+            cargarDatosConductor();
             suscripcionRealtime();
         }
 
@@ -125,29 +135,69 @@
             location.reload();
         }
 
-        async function cargarCarrerasPendientes() {
+        async function cargarDatosConductor() {
+            // Carga simultánea de carreras pendientes y la carrera asignada a este chofer
             const { data, error } = await supabaseClient
                 .from('carreras')
                 .select('*')
-                .eq('estado', 'pendiente')
+                .or(`estado.eq.pendiente,and(estado.eq.asignada,conductor_asignado.eq.${conductorActual})`)
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error("Error al cargar carreras:", error);
+                console.error("Error al cargar datos:", error);
                 return;
             }
 
-            renderizarCarreras(data);
+            const pendientes = data.filter(c => c.estado === 'pendiente');
+            const asignadas = data.filter(c => c.estado === 'asignada' && c.conductor_asignado === conductorActual);
+
+            renderizarAsignada(asignadas);
+            renderizarPendientes(pendientes);
         }
 
-        function renderizarCarreras(carreras) {
+        function renderizarAsignada(asignadas) {
+            const contenedor = document.getElementById('carrera-asignada-container');
+            
+            if (!asignadas || asignadas.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
+                        No tienes ninguna carrera asignada en este momento.
+                    </div>
+                `;
+                return;
+            }
+
+            contenedor.innerHTML = '';
+            asignadas.forEach(c => {
+                contenedor.innerHTML += `
+                    <div class="bg-[#111111] border-2 border-emerald-500/50 p-4 rounded-2xl shadow-2xl space-y-3">
+                        <div class="flex justify-between items-start text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase">✅ Asignada a ti</span>
+                            <span class="text-emerald-400 font-bold text-sm">${c.precio || '$0.00'}</span>
+                        </div>
+                        
+                        <div class="space-y-1 text-xs">
+                            <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
+                            <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
+                            <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
+                        </div>
+
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.origen)}" target="_blank" class="w-full text-center block py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg">
+                            🧭 Navegar al Punto de Origen
+                        </a>
+                    </div>
+                `;
+            });
+        }
+
+        function renderizarPendientes(carreras) {
             const contenedor = document.getElementById('lista-carreras');
             contenedor.innerHTML = '';
 
             if (!carreras || carreras.length === 0) {
                 contenedor.innerHTML = `
                     <div class="bg-[#111111] border border-[#222222] p-6 rounded-2xl text-center text-slate-500 italic text-xs">
-                        No hay carreras pendientes en este momento. Esperando solicitudes...
+                        No hay carreras pendientes en este momento.
                     </div>
                 `;
                 return;
@@ -189,7 +239,7 @@
                 alert('Error al tomar la carrera: ' + error.message);
             } else {
                 alert('¡Has tomado la carrera con éxito!');
-                cargarCarrerasPendientes();
+                cargarDatosConductor();
             }
         }
 
@@ -197,7 +247,7 @@
             supabaseClient
                 .channel('cambios-carreras')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, payload => {
-                    cargarCarrerasPendientes();
+                    cargarDatosConductor();
                 })
                 .subscribe();
         }

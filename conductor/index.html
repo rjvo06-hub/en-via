@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 2: PORTAL DE CARRERAS (Pendientes y Asignadas al chofer) -->
+    <!-- SECCIÓN 2: PORTAL DE CARRERAS -->
     <div id="portal-container" class="max-w-3xl w-full space-y-6 hidden">
         <header class="flex flex-col sm:flex-row justify-between items-center border-b border-[#222222] pb-4 gap-3">
             <div>
@@ -52,18 +52,14 @@
             </button>
         </header>
 
-        <!-- Sección de Carrera Asignada Actual -->
-        <div class="space-y-3">
+        <!-- Sección de Carrera Asignada Actual (Solo se muestra si el chofer tiene una activa) -->
+        <div id="seccion-asignada" class="space-y-3 hidden">
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Tu Carrera en Curso</h2>
-            <div id="carrera-asignada-container">
-                <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
-                    No tienes ninguna carrera asignada en este momento.
-                </div>
-            </div>
+            <div id="carrera-asignada-container"></div>
         </div>
 
         <!-- Sección de Carreras Disponibles (Pendientes) -->
-        <div class="space-y-3 pt-4 border-t border-[#222222]">
+        <div class="space-y-3 pt-2">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
             <div id="lista-carreras" class="grid grid-cols-1 gap-3">
                 <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
@@ -136,7 +132,6 @@
         }
 
         async function cargarDatosConductor() {
-            // Carga simultánea de carreras pendientes y la carrera asignada a este chofer
             const { data, error } = await supabaseClient
                 .from('carreras')
                 .select('*')
@@ -156,18 +151,20 @@
         }
 
         function renderizarAsignada(asignadas) {
+            const seccionAsignada = document.getElementById('seccion-asignada');
             const contenedor = document.getElementById('carrera-asignada-container');
             
             if (!asignadas || asignadas.length === 0) {
-                contenedor.innerHTML = `
-                    <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
-                        No tienes ninguna carrera asignada en este momento.
-                    </div>
-                `;
+                // Ocultar la sección por completo si no tiene carrera en curso
+                seccionAsignada.classList.add('hidden');
+                contenedor.innerHTML = '';
                 return;
             }
 
+            // Mostrar la sección si tiene una carrera activa
+            seccionAsignada.classList.remove('hidden');
             contenedor.innerHTML = '';
+
             asignadas.forEach(c => {
                 contenedor.innerHTML += `
                     <div class="bg-[#111111] border-2 border-emerald-500/50 p-4 rounded-2xl shadow-2xl space-y-3">

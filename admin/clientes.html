@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EN-VIA - Gestión de Clientes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Cargamos tu cliente de Supabase centralizado -->
+    <script src="../js/supabaseClient.js"></script>
+    <style>
+        input, select { font-size: 16px !important; }
+        @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
+    </style>
+</head>
+<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        <header class="flex justify-between items-center border-b border-[#222222] pb-4">
+            <div>
+                <h1 class="text-xl font-extrabold text-emerald-500 tracking-tight">EN-VIA - Clientes</h1>
+                <p class="text-slate-400 text-xs">Administración de pasajeros y usuarios</p>
+            </div>
+            <a href="../index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
+                ← Volver al Inicio
+            </a>
+        </header>
+
+        <!-- Formulario de Creación / Edición -->
+        <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
+            <h2 id="form-title" class="text-xs font-bold uppercase tracking-wider text-emerald-400">Registrar Nuevo Cliente</h2>
+            <input type="hidden" id="cliente-id">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Nombre</label>
+                    <input type="text" id="nombre" placeholder="Ej. María Gómez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono</label>
+                    <input type="text" id="telefono" placeholder="Ej. 0424-9876543" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Dirección Frecuente</label>
+                    <input type="text" id="direccion_frecuente" placeholder="Ej. Av. 4 Bella Vista" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Estado</label>
+                    <select id="activo" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                        <option value="true">Activo</option>
+                        <option value="false">Inactivo</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="guardarCliente()" id="btn-guardar" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                    Guardar Cliente
+                </button>
+                <button onclick="limpiarFormulario()" id="btn-cancelar" class="hidden px-4 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+
+        <!-- Listado de Clientes -->
+        <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Lista de Clientes Registrados</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="border-b border-[#222222] text-slate-400">
+                            <th class="p-2.5">Nombre</th>
+                            <th class="p-2.5">Teléfono</th>
+                            <th class="p-2.5">Dirección Frecuente</th>
+                            <th class="p-2.5">Estado</th>
+                            <th class="p-2.5 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-clientes" class="divide-y divide-[#1a1a1a]">
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', cargarClientes);
+
+        async function cargarClientes() {
+            const { data, error } = await supabaseClient.from('clientes').select('*').order('created_at', { ascending: false });
+            const tbody = document.getElementById('tabla-clientes');
+            tbody.innerHTML = '';
+
+            if (error) {
+                console.error("Error al cargar:", error);
+                return;
+            }
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500 italic">No hay clientes registrados.</td></tr>`;
+                return;
+            }
+
+            data.forEach(c => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-[#161616] transition">
+                        <td class="p-2.5 font-medium text-slate-200">${c.nombre}</td>
+                        <td class="p-2.5 text-slate-400">${c.telefono || 'N/A'}</td>
+                        <td class="p-2.5 text-slate-400">${c.direccion_frecuente || 'N/A'}</td>
+                        <td class="p-2.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.activo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}">
+                                ${c.activo ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </td>
+                        <td class="p-2.5 text-right space-x-2">
+                            <button onclick="editarCliente('${c.id}', '${c.nombre}', '${c.telefono || ''}', '${c.direccion_frecuente || ''}', ${c.activo})" class="text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer">Editar</button>
+                            <button onclick="eliminarCliente('${c.id}')" class="text-red-400 hover:text-red-300 font-semibold cursor-pointer">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function guardarCliente() {
+            const id = document.getElementById('cliente-id').value;
+            const nombre = document.getElementById('nombre').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const direccion_frecuente = document.getElementById('direccion_frecuente').value.trim();
+            const activo = document.getElementById('activo').value === 'true';
+
+            if (!nombre) {
+                alert('El nombre es obligatorio.');
+                return;
+            }
+
+            if (id) {
+                // Actualizar
+                const { error } = await supabaseClient.from('clientes').update({ nombre, telefono, direccion_frecuente, activo }).eq('id', id);
+                if (error) alert('Error al actualizar: ' + error.message);
+            } else {
+                // Crear
+                const { error } = await supabaseClient.from('clientes').insert([{ nombre, telefono, direccion_frecuente, activo }]);
+                if (error) alert('Error al crear: ' + error.message);
+            }
+
+            limpiarFormulario();
+            cargarClientes();
+        }
+
+        function editarCliente(id, nombre, telefono, direccion, activo) {
+            document.getElementById('cliente-id').value = id;
+            document.getElementById('nombre').value = nombre;
+            document.getElementById('telefono').value = telefono;
+            document.getElementById('direccion_frecuente').value = direccion;
+            document.getElementById('activo').value = activo.toString();
+            document.getElementById('form-title').textContent = "Modificar Cliente";
+            document.getElementById('btn-guardar').textContent = "Actualizar Cliente";
+            document.getElementById('btn-cancelar').classList.remove('hidden');
+        }
+
+        async function eliminarCliente(id) {
+            if (confirm('¿Estás seguro de eliminar este cliente?')) {
+                const { error } = await supabaseClient.from('clientes').delete().eq('id', id);
+                if (error) alert('Error al eliminar: ' + error.message);
+                cargarClientes();
+            }
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('cliente-id').value = '';
+            document.getElementById('nombre').value = '';
+            document.getElementById('telefono').value = '';
+            document.getElementById('direccion_frecuente').value = '';
+            document.getElementById('activo').value = 'true';
+            document.getElementById('form-title').textContent = "Registrar Nuevo Cliente";
+            document.getElementById('btn-guardar').textContent = "Guardar Cliente";
+            document.getElementById('btn-cancelar').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

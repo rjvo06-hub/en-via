@@ -71,6 +71,10 @@
 
     <script>
         let conductorActual = "";
+        // Coordenadas estáticas de la base para todos los conductores en Maracaibo
+        const latBase = "10.670389"; // 10°40'13.4"N
+        const lngBase = "-71.658972"; // 71°39'32.3"W (o puedes usar la cadena exacta de coordenadas)
+        const coordenadaBaseEstetica = "10.670389, -71.658972"; 
 
         document.addEventListener('DOMContentLoaded', () => {
             const sesionGuardada = sessionStorage.getItem('conductor_en_via');
@@ -166,6 +170,9 @@
             contenedor.innerHTML = '';
 
             asignadas.forEach(c => {
+                // Generar enlace de Google Maps con la base estática como origen y el origen de la carrera como destino
+                const urlNavegacion = `https://www.google.com/maps/dir/?api=1&origin=10.670389,-71.658972&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
+
                 contenedor.innerHTML += `
                     <div class="bg-[#111111] border-2 border-emerald-500/50 p-4 rounded-2xl shadow-2xl space-y-3">
                         <div class="flex justify-between items-start text-xs">
@@ -179,8 +186,8 @@
                             <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
                         </div>
 
-                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.origen)}" target="_blank" class="w-full text-center block py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg">
-                            🧭 Navegar al Punto de Origen
+                        <a href="${urlNavegacion}" target="_blank" class="w-full text-center block py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg">
+                            🧭 Navegar desde Base al Origen
                         </a>
                     </div>
                 `;

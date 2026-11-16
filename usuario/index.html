@@ -174,7 +174,7 @@
                     </div>
                 </div>
 
-                <!-- Mapa de seguimiento con ruta y puntos en la parte inferior -->
+                <!-- Mapa de seguimiento con Routes API en la parte inferior -->
                 <div id="contenedor-mapa-seguimiento" class="rounded-xl overflow-hidden border border-[#262626] hidden">
                     <div id="map-seguimiento"></div>
                 </div>
@@ -192,7 +192,6 @@
         let map;
         let mapSeguimiento;
         let router;
-        let directionsRenderer;
         let originMarker = null;
         let destMarker = null;
         let origenCoords = null;
@@ -296,7 +295,6 @@
                         }
                     };
 
-                    directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true });
                     setupUnifiedAutocomplete();
                 }
             }, 300);
@@ -567,7 +565,7 @@
                 });
             }
 
-            // Marcador de la base del conductor (punto morado)
+            // 1. Marcador de la base del conductor
             new google.maps.Marker({
                 position: baseCoords,
                 map: mapSeguimiento,
@@ -575,12 +573,13 @@
                 icon: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png"
             });
 
+            // 2. Geocodificar la dirección de origen del cliente
             const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: origenTexto }, (results, status) => {
+            geocoder.geocode({ address: origenTexto }, async (results, status) => {
                 if (status === 'OK' && results[0]) {
                     const origenClienteCoords = results[0].geometry.location;
 
-                    // Marcador del origen del cliente (punto azul)
+                    // Marcador del origen del cliente
                     new google.maps.Marker({
                         position: origenClienteCoords,
                         map: mapSeguimiento,
@@ -588,27 +587,51 @@
                         icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
                     });
 
-                    // Trazar la ruta en el mapa inferior entre la base y la ubicación del cliente
-                    const directionsService = new google.maps.DirectionsService();
-                    const directionsRenderer = new google.maps.DirectionsRenderer({
-                        map: mapSeguimiento,
-                        suppressMarkers: true, // Ocultamos marcadores por defecto para usar nuestros puntos personalizados
-                        polylineOptions: { 
-                            strokeColor: '#10b981', 
-                            strokeWeight: 5, 
-                            strokeOpacity: 0.8 
-                        }
-                    });
+                    // 3. Consumir la moderna Routes API (computeRoutes) para trazar la polilínea en el mapa inferior
+                    try {
+                        const body = {
+                            origin: { location: { latLng: { latitude: baseCoords.lat, longitude: baseCoords.lng } } },
+                            destination: { location: { latLng: { latitude: origenClienteCoords.lat(), longitude: origenClienteCoords.lng() } } },
+                            travelMode: "DRIVE",
+                            routingPreference: "TRAFFIC_UNAWARE"
+                        };
 
-                    directionsService.route({
-                        origin: baseCoords,
-                        destination: origenClienteCoords,
-                        travelMode: google.maps.TravelMode.DRIVING
-                    }, (response, status) => {
-                        if (status === 'OK') {
-                            directionsRenderer.setDirections(response);
+                        const response = await fetch(`https://routes.googleapis.com/directions/v2:computeRoutes`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Goog-Api-Key': apiKey,
+                                'X-Goog-FieldMask': 'routes.polyline.encodedPolyline'
+                            },
+                            body: JSON.stringify(body)
+                        });
+
+                        const data = await response.json();
+
+                        if (data.routes && data.routes.length > 0) {
+                            const encodedPolyline = data.routes[0].polyline.encodedPolyline;
+                            const decodedPath = google.maps.geometry.encoding.decodePath(encodedPolyline);
+
+                            if (window.seguimientoPolyline) window.seguimientoPolyline.setMap(null);
+
+                            window.seguimientoPolyline = new google.maps.Polyline({
+                                path: decodedPath,
+                                geodesic: true,
+                                strokeColor: '#10b981',
+                                strokeOpacity: 0.8,
+                                strokeWeight: 5
+                            });
+                            window.seguimientoPolyline.setMap(mapSeguimiento);
+
+                            // Ajustar límites para mostrar ambos puntos y la ruta completa
+                            const bounds = new google.maps.LatLngBounds();
+                            bounds.extend(baseCoords);
+                            bounds.extend(origenClienteCoords);
+                            mapSeguimiento.fitBounds(bounds);
                         }
-                    });
+                    } catch (error) {
+                        console.error("Error al obtener ruta con Routes API en seguimiento:", error);
+                    }
                 }
             });
         }

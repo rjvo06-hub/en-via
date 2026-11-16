@@ -15,7 +15,6 @@
 <body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6">
 
     <div class="max-w-3xl mx-auto space-y-6">
-        <!-- Identificación del Conductor -->
         <header class="flex flex-col sm:flex-row justify-between items-center border-b border-[#222222] pb-4 gap-3">
             <div>
                 <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Panel de Chofer</h1>
@@ -27,11 +26,9 @@
             </div>
         </header>
 
-        <!-- Lista de Carreras Disponibles -->
         <div class="space-y-4">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
             <div id="lista-carreras" class="grid grid-cols-1 gap-3">
-                <!-- Se llena dinámicamente en tiempo real -->
                 <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
                     Buscando carreras en tiempo real...
                 </div>
@@ -95,7 +92,6 @@
             });
         }
 
-        // Tomar la carrera de forma exclusiva y actualizar Supabase
         async function tomarCarrera(idCarrera) {
             const nombreChofer = document.getElementById('nombre-conductor').value.trim();
             if (!nombreChofer) {
@@ -104,7 +100,6 @@
                 return;
             }
 
-            // Cambiamos el estatus a 'asignada' y guardamos el conductor asignado
             const { error } = await supabaseClient
                 .from('carreras')
                 .update({ 
@@ -112,7 +107,7 @@
                     conductor_asignado: nombreChofer 
                 })
                 .eq('id', idCarrera)
-                .eq('estado', 'pendiente'); // Validación de seguridad: solo si sigue pendiente
+                .eq('estado', 'pendiente');
 
             if (error) {
                 alert('Error al tomar la carrera: ' + error.message);
@@ -122,13 +117,10 @@
             }
         }
 
-        // Suscripción en Tiempo Real con Supabase Realtime
         function suscripcionRealtime() {
             supabaseClient
                 .channel('cambios-carreras')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, payload => {
-                    console.log('Cambio detectado en tiempo real:', payload);
-                    // Recargamos la lista automáticamente cuando cualquier conductor tome una o se cree una nueva
                     cargarCarrerasPendientes();
                 })
                 .subscribe();

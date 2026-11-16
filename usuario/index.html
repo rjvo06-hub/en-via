@@ -631,7 +631,7 @@
                     location.reload();
                 }, 4000);
             } else if (finRecorridoAt || inicioCarreraAt) {
-                // AQUÍ SE MUESTRAN LOS DATOS BANCARIOS Y EL QR DESDE QUE INICIA LA CARRERA (Y AL LLEGAR)
+                // SE MUESTRAN LOS DATOS BANCARIOS Y EL QR DESDE QUE INICIA LA CARRERA O AL FINALIZAR
                 contenedorBotonCancelar.classList.add('hidden');
                 
                 if (finRecorridoAt) {
@@ -665,7 +665,7 @@
                 const bancoCedula = datosBancarios.cedula_rif || 'N/A';
                 const qrString = datosBancarios.qr_codigo || '';
 
-                // Cuadro de pago con los datos y el QR generado por código
+                // Cuadro de pago con los datos, el QR generado y botones de Descargar/Copiar
                 seccionCobroCliente.classList.remove('hidden');
                 seccionCobroCliente.innerHTML = `
                     <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
@@ -678,12 +678,22 @@
                             <p class="text-slate-300"><strong>Cédula / RIF:</strong> ${bancoCedula}</p>
                         </div>
 
-                        <p class="text-[11px] text-slate-300">Puedes escanear el código QR o realizar tu pago móvil durante el trayecto.</p>
+                        <p class="text-[11px] text-slate-300">Escanea el código QR, descárgalo o copia los datos para adelantar tu pago en el trayecto.</p>
                         
                         <!-- Contenedor del QR generado por código -->
-                        <div id="usuario-qr-container" class="flex justify-center p-3 bg-white rounded-xl w-fit mx-auto"></div>
+                        <div id="usuario-qr-container" class="flex justify-center p-3 bg-white rounded-xl w-fit mx-auto shadow-md"></div>
 
-                        <div class="inline-block px-3 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25 text-[11px] font-bold">
+                        <!-- Botones de Acción Rápida para el Cliente -->
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button onclick="descargarQRImagen()" class="py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1">
+                                📥 Descargar QR
+                            </button>
+                            <button onclick="copiarDatosPago('${bancoNombre}', '${bancoTlf}', '${bancoCedula}', '${precio}')" class="py-2 px-3 bg-[#222222] hover:bg-[#2e2e2e] border border-[#333333] text-slate-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1">
+                                📋 Copiar Datos
+                            </button>
+                        </div>
+
+                        <div class="inline-block px-3 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25 text-[11px] font-bold mt-1">
                             ${finRecorridoAt ? '⌛ Esperando confirmación del conductor...' : '🚀 Viaje en curso - Pago habilitado'}
                         </div>
                     </div>
@@ -696,8 +706,8 @@
                             qrContainer.innerHTML = '';
                             new QRCode(qrContainer, {
                                 text: qrString,
-                                width: 150,
-                                height: 150,
+                                width: 160,
+                                height: 160,
                                 colorDark : "#000000",
                                 colorLight : "#ffffff",
                                 correctLevel : QRCode.CorrectLevel.M
@@ -739,6 +749,43 @@
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
             }
+        }
+
+        // Función para que el cliente descargue el QR generado como imagen PNG
+        function descargarQRImagen() {
+            const qrContainer = document.getElementById('usuario-qr-container');
+            if (!qrContainer) return;
+            const canvas = qrContainer.querySelector('canvas');
+            const imgTag = qrContainer.querySelector('img');
+
+            let imageUrl = '';
+            if (canvas) {
+                imageUrl = canvas.toDataURL("image/png");
+            } else if (imgTag) {
+                imageUrl = imgTag.src;
+            }
+
+            if (imageUrl) {
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.download = 'QR_Pago_EN_VIA.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                alert('El código QR aún se está generando, intenta de nuevo en un segundo.');
+            }
+        }
+
+        // Función para copiar rápidamente la información bancaria al portapapeles
+        function copiarDatosPago(banco, telefono, cedula, monto) {
+            const textoACopiar = `Banco: ${banco}\nTeléfono: ${telefono}\nCédula/RIF: ${cedula}\nMonto: ${monto}`;
+            
+            navigator.clipboard.writeText(textoACopiar).then(() => {
+                alert('¡Datos bancarios copiados al portapapeles! Ya puedes pegarlos en tu aplicación de pago.');
+            }).catch(err => {
+                alert('No se pudieron copiar los datos automáticamente.');
+            });
         }
 
         function iniciarCronometroCliente(isoStringInicio) {

@@ -10,6 +10,8 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Librería QRCode.js para generar el QR mediante código -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Cliente de Supabase -->
     <script src="../js/supabaseClient.js"></script>
     <style>
@@ -197,7 +199,7 @@
                     </div>
                 </div>
 
-                <!-- CONTENEDOR DE CONFIRMACIÓN DE PAGO GRANDE (Al llegar al destino) -->
+                <!-- CONTENEDOR DE DATOS BANCARIOS Y QR (Visible en el trayecto y al finalizar) -->
                 <div id="seccion-cobro-cliente" class="hidden"></div>
 
                 <!-- Mapa de seguimiento -->
@@ -601,7 +603,7 @@
             actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen, carrera.tiempos, carrera.precio);
         }
 
-        function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos, precio) {
+        async function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos, precio) {
             const badge = document.getElementById('badge-estado');
             const labelConductor = document.getElementById('estado-conductor');
             const contenedorBotonCancelar = document.getElementById('contenedor-boton-cancelar');
@@ -628,48 +630,94 @@
                     sessionStorage.removeItem('carrera_activa_id');
                     location.reload();
                 }, 4000);
-            } else if (finRecorridoAt) {
-                // El conductor llegó al destino y espera confirmación de pago (OCULTAMOS BOTÓN CANCELAR)
+            } else if (finRecorridoAt || inicioCarreraAt) {
+                // AQUÍ SE MUESTRAN LOS DATOS BANCARIOS Y EL QR DESDE QUE INICIA LA CARRERA (Y AL LLEGAR)
                 contenedorBotonCancelar.classList.add('hidden');
-                badge.className = "inline-block px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/40 text-xs font-bold uppercase tracking-wider animate-pulse";
-                badge.textContent = "💳 Confirmación de Pago";
+                
+                if (finRecorridoAt) {
+                    badge.className = "inline-block px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/40 text-xs font-bold uppercase tracking-wider animate-pulse";
+                    badge.textContent = "💳 Confirmación de Pago";
+                } else {
+                    badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider";
+                    badge.textContent = "🚗 ¡Carrera en Curso (Adelanta tu pago)!";
+                }
+
                 seccionLlegada.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
 
-                // Cuadro de pago grande y destacado para el cliente con el título correcto
+                // Consultar los datos bancarios del conductor asignado desde la tabla 'conductores'
+                let datosBancarios = {};
+                if (conductor) {
+                    const { data: condData } = await supabaseClient
+                        .from('conductores')
+                        .select('datos_bancarios')
+                        .eq('nombre', conductor)
+                        .maybeSingle();
+                    
+                    if (condData && condData.datos_bancarios) {
+                        datosBancarios = condData.datos_bancarios;
+                    }
+                }
+
+                const bancoNombre = datosBancarios.banco || 'Banco';
+                const bancoTlf = datosBancarios.telefono || 'N/A';
+                const bancoCedula = datosBancarios.cedula_rif || 'N/A';
+                const qrString = datosBancarios.qr_codigo || '';
+
+                // Cuadro de pago con los datos y el QR generado por código
                 seccionCobroCliente.classList.remove('hidden');
                 seccionCobroCliente.innerHTML = `
                     <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
-                        <p class="text-xs uppercase font-bold text-purple-400">💳 Confirmación de Pago</p>
+                        <p class="text-xs uppercase font-bold text-purple-400">💳 Datos de Pago - ${bancoNombre}</p>
                         <p class="text-3xl font-black text-amber-400 tracking-tight">${precio || '$0.00'}</p>
-                        <p class="text-[11px] text-slate-300">Por favor, realiza tu pago en efectivo, transferencia o pago móvil al conductor y espera la confirmación.</p>
+                        
+                        <div class="bg-[#111111] p-3 rounded-xl border border-[#262626] text-left text-xs space-y-1">
+                            <p class="text-slate-300"><strong>Banco:</strong> ${bancoNombre}</p>
+                            <p class="text-slate-300"><strong>Teléfono (Pago Móvil):</strong> ${bancoTlf}</p>
+                            <p class="text-slate-300"><strong>Cédula / RIF:</strong> ${bancoCedula}</p>
+                        </div>
+
+                        <p class="text-[11px] text-slate-300">Puedes escanear el código QR o realizar tu pago móvil durante el trayecto.</p>
+                        
+                        <!-- Contenedor del QR generado por código -->
+                        <div id="usuario-qr-container" class="flex justify-center p-3 bg-white rounded-xl w-fit mx-auto"></div>
+
                         <div class="inline-block px-3 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25 text-[11px] font-bold">
-                            ⌛ Verificando acreditación del pago...
+                            ${finRecorridoAt ? '⌛ Esperando confirmación del conductor...' : '🚀 Viaje en curso - Pago habilitado'}
                         </div>
                     </div>
                 `;
+
+                if (qrString) {
+                    setTimeout(() => {
+                        const qrContainer = document.getElementById('usuario-qr-container');
+                        if (qrContainer) {
+                            qrContainer.innerHTML = '';
+                            new QRCode(qrContainer, {
+                                text: qrString,
+                                width: 150,
+                                height: 150,
+                                colorDark : "#000000",
+                                colorLight : "#ffffff",
+                                correctLevel : QRCode.CorrectLevel.M
+                            });
+                        }
+                    }, 100);
+                }
+
             } else if (estado === 'asignada') {
                 seccionCobroCliente.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.remove('hidden');
                 inicializarMapaSeguimiento(origenTexto);
-                
-                // UN CONDUCTOR YA FUE ASIGNADO, por lo tanto EL BOTÓN DE CANCELAR DESAPARECE
                 contenedorBotonCancelar.classList.add('hidden');
 
                 labelConductor.textContent = conductor || "Asignado";
                 labelConductor.className = "text-emerald-400 font-extrabold";
 
-                if (inicioCarreraAt) {
-                    badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider";
-                    badge.textContent = "🚗 ¡Carrera en Curso!";
-                    seccionLlegada.classList.remove('hidden');
-                    labelLlegada.innerHTML = `Tiempo de viaje activo: <span id="cronometro-cliente" class="text-emerald-400 font-extrabold">00:00</span>`;
-                    iniciarCronometroCliente(inicioCarreraAt);
-                } else if (llegadaConductorAt) {
+                if (llegadaConductorAt) {
                     badge.className = "inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider animate-pulse";
                     badge.textContent = "🚗 ¡El conductor ya llegó al lugar!";
-                    
                     seccionLlegada.classList.remove('hidden');
                     labelLlegada.innerHTML = `Tiempo de espera: <span id="cronometro-cliente" class="text-amber-400 font-extrabold">00:00</span>`;
                     iniciarCronometroCliente(llegadaConductorAt);
@@ -686,7 +734,6 @@
                 labelConductor.textContent = "Esperando asignación...";
                 labelConductor.className = "text-purple-400 font-bold";
 
-                // En estado pendiente SÍ se muestra el botón de cancelar
                 contenedorBotonCancelar.classList.remove('hidden');
                 seccionLlegada.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.add('hidden');

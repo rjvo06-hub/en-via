@@ -863,7 +863,19 @@
             });
         }
 
-        function cancelarOReiniciarSolicitud() {
+        // Función corregida para cancelar la solicitud tanto en la base de datos como localmente
+        async function cancelarOReiniciarSolicitud() {
+            if (idCarreraActiva) {
+                const { error } = await supabaseClient
+                    .from('carreras')
+                    .update({ estado: 'cancelada' })
+                    .eq('id', idCarreraActiva);
+
+                if (error) {
+                    console.error("Error al cancelar en Supabase:", error);
+                }
+            }
+
             sessionStorage.removeItem('carrera_activa_id');
             if (timerClientInterval) clearInterval(timerClientInterval);
             location.reload();

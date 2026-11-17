@@ -16,9 +16,14 @@
 </head>
 <body class="bg-black min-h-screen text-slate-100 antialiased flex flex-col items-center justify-start p-6">
 
-    <!-- Elemento de audio nativo de respaldo para garantizar reproducción móvil -->
+    <!-- Elemento de audio nativo para la alarma de nuevas carreras -->
     <audio id="alarma-audio" preload="auto">
         <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Elemento de audio invisible y continuo para mantener vivo el contenedor PWA en iOS -->
+    <audio id="audio-silencioso" loop preload="auto">
+        <source src="https://actions.google.com/sounds/v1/ambiences/rain_heavy.ogg" type="audio/ogg">
     </audio>
 
     <!-- SECCIÓN 1: PANTALLA DE SELECCIÓN DE CONDUCTOR -->
@@ -56,11 +61,11 @@
             </button>
         </header>
 
-        <!-- Botón anti-suspensión en segundo plano (Truco iOS) -->
+        <!-- Botón anti-suspensión optimizado para el Acceso Directo de iOS -->
         <div class="bg-amber-900/30 border-2 border-amber-500/60 p-4 rounded-xl flex items-center justify-between shadow-xl">
             <div>
-                <p class="text-xs font-bold text-amber-400 uppercase">🛡️ Activar Modo Segundo Plano (iOS)</p>
-                <p class="text-[11px] text-slate-300">Mantén el proceso activo con el teléfono bloqueado.</p>
+                <p class="text-xs font-bold text-amber-400 uppercase">🛡️ Activar Modo Segundo Plano (Acceso Directo)</p>
+                <p class="text-[11px] text-slate-300">Toca este botón para habilitar la persistencia en la PWA.</p>
             </div>
             <button onclick="activarModoSegundoPlano()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg cursor-pointer shrink-0">
                 Activar Persistencia
@@ -119,40 +124,33 @@
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // ==========================================
-        // TRUCO DE PERSISTENCIA EN SEGUNDO PLANO (iOS) - CORREGIDO
-        // ==========================================
+        // =========================================================================
+        // TRUCO DE PERSISTENCIA MEJORADO PARA ACCESO DIRECTO / PWA EN iOS
+        // =========================================================================
         async function activarModoSegundoPlano() {
             try {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContextClass();
-                await audioCtx.resume();
+                // 1. Reproducir el audio en bucle mediante la etiqueta HTML (Muy efectivo en PWAs)
+                const audioSilencioso = document.getElementById('audio-silencioso');
+                audioSilencioso.volume = 0.01; // Casi imperceptible
+                await audioSilencioso.play();
 
-                // Configuración correcta con MediaMetadata para iOS/Safari
+                // 2. Registrar la sesión multimedia en el sistema operativo
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
-                        title: 'EN-VIA Conductor',
-                        artist: 'En espera de servicios',
+                        title: 'EN-VIA Conductor (Activo)',
+                        artist: 'Esperando servicios',
                         album: 'Sistema de Alertas',
                         artwork: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
                     });
                     
-                    navigator.mediaSession.setActionHandler('play', () => {});
+                    navigator.mediaSession.setActionHandler('play', () => { audioSilencioso.play(); });
                     navigator.mediaSession.setActionHandler('pause', () => {});
                 }
 
-                // Reproducir un bucle de audio silencioso ininterrumpido (anti-suspensión)
-                const buffer = audioCtx.createBuffer(1, 1, 22050);
-                const source = audioCtx.createBufferSource();
-                source.buffer = buffer;
-                source.loop = true;
-                source.connect(audioCtx.destination);
-                source.start(0);
-
-                alert("¡Modo segundo plano activado con éxito!");
+                alert("¡Modo de persistencia para Acceso Directo activado con éxito!");
             } catch (err) {
-                console.error("Error al activar la persistencia de audio:", err);
-                alert("Error al activar: " + err.message);
+                console.error("Error al activar la persistencia:", err);
+                alert("Para activar el modo segundo plano, asegúrate de tocar el botón directamente.");
             }
         }
 
@@ -223,45 +221,14 @@
             }
         }
 
-        // Función de alarma robusta compatible con dispositivos móviles
         function reproducirAlarmaEscritorio() {
             try {
-                // Intento 1: Reproducir audio nativo optimizado para móviles
                 const audioElement = document.getElementById('alarma-audio');
                 if (audioElement) {
                     audioElement.currentTime = 0;
                     audioElement.play().catch(err => {
-                        console.log("Reproducción de audio nativo bloqueada por política móvil:", err);
+                        console.log("Reproducción de audio nativo bloqueada:", err);
                     });
-                }
-
-                // Intento 2: Sintetizador Web Audio API de respaldo
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-
-                for (let i = 0; i < 3; i++) {
-                    setTimeout(() => {
-                        if (!audioCtx) return;
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-
-                        osc.type = 'square';
-                        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                        osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.2);
-
-                        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-
-                        osc.connect(gain);
-                        gain.connect(audioCtx.destination);
-
-                        osc.start();
-                        osc.stop(audioCtx.currentTime + 0.3);
-                    }, i * 350);
                 }
 
                 if ("vibrate" in navigator) {
@@ -300,139 +267,7 @@
 
             select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
             data.forEach(c => {
-                select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
-            });
-        }
-
-        function ingresarAlPortal() {
-            const select = document.getElementById('login-select');
-            const nombreSeleccionado = select.value;
-            const errorDiv = document.getElementById('login-error');
-
-            if (!nombreSeleccionado) {
-                errorDiv.textContent = "Por favor, selecciona tu nombre de la lista.";
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            errorDiv.classList.add('hidden');
-            conductorActual = nombreSeleccionado;
-
-            const selectedOption = select.options[select.selectedIndex];
-            conductorIdActual = selectedOption.getAttribute('data-id') || selectedOption.dataset.id || null;
-
-            if (!conductorIdActual) {
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].value === nombreSeleccionado) {
-                        conductorIdActual = select.options[i].getAttribute('data-id');
-                        break;
-                    }
-                }
-            }
-
-            sessionStorage.setItem('conductor_en_via', conductorActual);
-            if (conductorIdActual) {
-                sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
-            }
-
-            const audioElement = document.getElementById('alarma-audio');
-            if (audioElement) {
-                audioElement.play().then(() => {
-                    audioElement.pause();
-                    audioElement.currentTime = 0;
-                }).catch(() => {});
-            }
-
-            mostrarPortal();
-        }
-
-        function mostrarPortal() {
-            document.getElementById('login-container').classList.add('hidden');
-            document.getElementById('portal-container').classList.remove('hidden');
-            document.getElementById('driver-name-display').textContent = conductorActual;
-            
-            cargarDatosConductor();
-            suscripcionRealtime();
-            
-            if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(() => {
-                cargarDatosConductor();
-            }, 4000);
-        }
-
-        function cerrarSesion() {
-            sessionStorage.removeItem('conductor_en_via');
-            sessionStorage.removeItem('conductor_id_en_via');
-            if (timerInterval) clearInterval(timerInterval);
-            if (pollingInterval) clearInterval(pollingInterval);
-            location.reload();
-        }
-
-        async function cargarDatosConductor() {
-            const { data: pendData, error: pendError } = await supabaseClient
-                .from('carreras')
-                .select('*')
-                .eq('estado', 'pendiente')
-                .order('created_at', { ascending: false });
-
-            if (pendError) console.error("Error al cargar pendientes:", pendError);
-
-            const cantidadActualPendientes = pendData ? pendData.length : 0;
-            
-            if (!primeraCargaRealizada) {
-                cantidadPendientesAnterior = cantidadActualPendientes;
-                primeraCargaRealizada = true;
-            } else {
-                if (cantidadActualPendientes > cantidadPendientesAnterior) {
-                    reproducirAlarmaEscritorio();
-                }
-                cantidadPendientesAnterior = cantidadActualPendientes;
-            }
-
-            const { data: asigData, error: asigError } = await supabaseClient
-                .from('carreras')
-                .select('*')
-                .eq('estado', 'asignada')
-                .eq('conductor_asignado', conductorActual);
-
-            if (asigError) console.error("Error al cargar asignada:", asigError);
-
-            renderizarAsignada(asigData);
-            renderizarPendientes(pendData);
-        }
-
-        async function tomarCarrera(idCarrera) {
-            const { error } = await supabaseClient
-                .from('carreras')
-                .update({ 
-                    estado: 'asignada', 
-                    conductor_asignado: conductorActual 
-                })
-                .eq('id', idCarrera);
-
-            if (error) {
-                alert('Error al tomar la carrera: ' + error.message);
-            } else {
-                cargarDatosConductor();
-            }
-        }
-
-        function renderizarAsignada(asignadas) {
-            const seccionAsignada = document.getElementById('seccion-asignada');
-            const contenedor = document.getElementById('carrera-asignada-container');
-            
-            if (!asignadas || asignadas.length === 0) {
-                seccionAsignada.classList.add('hidden');
-                contenedor.innerHTML = '';
-                if (timerInterval) clearInterval(timerInterval);
-                return;
-            }
-
-            seccionAsignada.classList.remove('hidden');
-            contenedor.innerHTML = '';
-
-            asignadas.forEach(c => {
-                const urlNavegacionBase = `https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
+                select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`; }); }  function ingresarAlPortal() { const select = document.getElementById('login-select'); const nombreSeleccionado = select.value; const errorDiv = document.getElementById('login-error');  if (!nombreSeleccionado) { errorDiv.textContent = "Por favor, selecciona tu nombre de la lista."; errorDiv.classList.remove('hidden'); return; }  errorDiv.classList.add('hidden'); conductorActual = nombreSeleccionado;  const selectedOption = select.options[select.selectedIndex]; conductorIdActual = selectedOption.getAttribute('data-id') \vert{}\vert{} selectedOption.dataset.id \vert{}\vert{} null;  if (!conductorIdActual) { for (let i = 0; i < select.options.length; i++) { if (select.options[i].value === nombreSeleccionado) { conductorIdActual = select.options[i].getAttribute('data-id'); break; } } }  sessionStorage.setItem('conductor_en_via', conductorActual); if (conductorIdActual) { sessionStorage.setItem('conductor_id_en_via', conductorIdActual); }  const audioElement = document.getElementById('alarma-audio'); if (audioElement) { audioElement.play().then(() => { audioElement.pause(); audioElement.currentTime = 0; }).catch(() => {}); }  mostrarPortal(); }  function mostrarPortal() { document.getElementById('login-container').classList.add('hidden'); document.getElementById('portal-container').classList.remove('hidden'); document.getElementById('driver-name-display').textContent = conductorActual;  cargarDatosConductor(); suscripcionRealtime();  if (pollingInterval) clearInterval(pollingInterval); pollingInterval = setInterval(() => { cargarDatosConductor(); }, 4000); }  function cerrarSesion() { sessionStorage.removeItem('conductor_en_via'); sessionStorage.removeItem('conductor_id_en_via'); if (timerInterval) clearInterval(timerInterval); if (pollingInterval) clearInterval(pollingInterval); location.reload(); }  async function cargarDatosConductor() { const { data: pendData, error: pendError } = await supabaseClient .from('carreras') .select('*') .eq('estado', 'pendiente') .order('created_at', { ascending: false });  if (pendError) console.error("Error al cargar pendientes:", pendError);  const cantidadActualPendientes = pendData ? pendData.length : 0;  if (!primeraCargaRealizada) { cantidadPendientesAnterior = cantidadActualPendientes; primeraCargaRealizada = true; } else { if (cantidadActualPendientes > cantidadPendientesAnterior) { reproducirAlarmaEscritorio(); } cantidadPendientesAnterior = cantidadActualPendientes; }  const { data: asigData, error: asigError } = await supabaseClient .from('carreras') .select('*') .eq('estado', 'asignada') .eq('conductor_asignado', conductorActual);  if (asigError) console.error("Error al cargar asignada:", asigError);  renderizarAsignada(asigData); renderizarPendientes(pendData); }  async function tomarCarrera(idCarrera) { const { error } = await supabaseClient .from('carreras') .update({ estado: 'asignada', conductor_asignado: conductorActual }) .eq('id', idCarrera);  if (error) { alert('Error al tomar la carrera: ' + error.message); } else { cargarDatosConductor(); } }  function renderizarAsignada(asignadas) { const seccionAsignada = document.getElementById('seccion-asignada'); const contenedor = document.getElementById('carrera-asignada-container');  if (!asignadas \vert{}\vert{} asignadas.length === 0) { seccionAsignada.classList.add('hidden'); contenedor.innerHTML = ''; if (timerInterval) clearInterval(timerInterval); return; }  seccionAsignada.classList.remove('hidden'); contenedor.innerHTML = '';  asignadas.forEach(c => { const urlNavegacionBase = `https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
                 const urlNavegacionDestino = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(c.origen)}&destination=${encodeURIComponent(c.destino)}&travelmode=driving`;
                 
                 const tiempos = c.tiempos || {};
@@ -463,7 +298,7 @@
                     `;
                 } else if (!recorridoFinalizado) {
                     contenidoAcciones = `
-                        <div class="bg-[#161616] p-3 rounded-xl border border-amber-500/30 text-center space-y-1">
+                        <div class="bg-[#161616] p-3 rounded-xl border border-emerald-500/30 text-center space-y-1">
                             <p class="text-[11px] text-emerald-400 font-bold uppercase">⏱️ Tiempo de viaje activo:</p>
                             <p id="cronometro-viaje" class="text-lg font-extrabold text-white">00:00</p>
                         </div>
@@ -625,30 +460,3 @@
                             <span class="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">Pendiente</span>
                             <span class="text-emerald-400 font-bold text-sm">${c.precio || '$0.00'}</span>
                         </div>
-                        
-                        <div class="space-y-1 text-xs">
-                            <p class="text-slate-300"><strong class="text-slate-400">👤 Cliente:</strong> ${c.cliente_nombre || 'N/A'}</p>
-                            <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
-                            <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
-                            <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
-                        </div>
-
-                        <button onclick="tomarCarrera('${c.id}')" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                            🙋‍♂️ Tomar esta Carrera
-                        </button>
-                    </div>
-                `;
-            });
-        }
-
-        async function suscripcionRealtime() {
-            supabaseClient
-                .channel('cambios-carreras-conductor-actualizado')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, () => {
-                    cargarDatosConductor();
-                })
-                .subscribe();
-        }
-    </script>
-</body>
-</html>

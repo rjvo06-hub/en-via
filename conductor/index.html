@@ -52,11 +52,14 @@
             </button>
         </header>
 
-        <!-- Botón visible para activar notificaciones y audio del sistema -->
-        <div id="banner-audio" class="bg-purple-900/40 border border-purple-500/40 p-3 rounded-2xl flex items-center justify-between text-xs">
-            <span class="text-purple-200">🔔 Alertas de sistema y audio listas</span>
-            <button onclick="activarSistemaAlertas()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition cursor-pointer">
-                Activar Permisos
+        <!-- Botón obligatorio de desbloqueo de audio nativo -->
+        <div id="banner-audio" class="bg-amber-500/20 border-2 border-amber-500/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+            <div class="text-center sm:text-left">
+                <p class="text-xs font-bold text-amber-400 uppercase">⚠️ Alerta de Audio Silenciada por el Navegador</p>
+                <p class="text-[11px] text-slate-300">Toca este botón una sola vez para habilitar las alarmas de nuevas carreras.</p>
+            </div>
+            <button onclick="desbloquearAudioNativo()" class="w-full sm:w-auto px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                🔊 Activar Alerta de Sonido
             </button>
         </div>
 
@@ -77,82 +80,58 @@
         </div>
     </div>
 
+    <!-- Reproductor de audio nativo integrado con un tono de campanita codificado en Base64 -->
+    <audio id="alarma-audio" preload="auto">
+        <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUcvT19vL09vL09vL09vL09vL09vL09vL09vL09vL09vL09vL09vL09vL09vL09vLw==" type="audio/wav">
+    </audio>
+
     <script>
         let conductorActual = "";
         let conductorIdActual = null;
         let timerInterval = null;
         let pollingInterval = null;
         let cantidadPendientesAnterior = 0;
-        let audioCtxGlobal = null;
+        let audioDesbloqueado = false;
         
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Solicitar permisos nativos de notificación al navegador
-        function solicitarPermisoNotificaciones() {
-            if ("Notification" in window && Notification.permission !== "granted") {
-                Notification.requestPermission().then(permission => {
-                    console.log("Permiso de notificaciones:", permission);
+        // Función que se ejecuta al presionar el botón de activación para desbloquear el audio
+        function desbloquearAudioNativo() {
+            const audio = document.getElementById('alarma-audio');
+            if (audio) {
+                audio.volume = 1.0;
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audioDesbloqueado = true;
+                    document.getElementById('banner-audio').classList.add('hidden');
+                    alert('¡Alarma de sonido activada con éxito!');
+                }).catch(err => {
+                    console.log("No se pudo desbloquear el audio:", err);
+                    alert('Por favor, asegúrate de subir el volumen de tu teléfono.');
                 });
             }
         }
 
-        function activarSistemaAlertas() {
-            solicitarPermisoNotificaciones();
-            try {
-                audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtxGlobal.state === 'suspended') {
-                    audioCtxGlobal.resume();
-                }
-                reproducirAlertaSonora();
-                document.getElementById('banner-audio').classList.add('hidden');
-            } catch (e) {
-                console.log("Error al activar alertas:", e);
-            }
-        }
-
-        // Tono web, vibración y notificación del sistema combinados
+        // Reproductor de alarma blindado usando elementos de audio nativos y vibración
         function reproducirAlertaSonora() {
             try {
-                if (!audioCtxGlobal) {
-                    audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (audioCtxGlobal.state === 'suspended') {
-                    audioCtxGlobal.resume();
-                }
-
-                const now = audioCtxGlobal.currentTime;
-                const osc = audioCtxGlobal.createOscillator();
-                const gain = audioCtxGlobal.createGain();
-
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(659.25, now);
-                osc.frequency.setValueAtTime(880, now + 0.15);
-
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-
-                osc.connect(gain);
-                gain.connect(audioCtxGlobal.destination);
-
-                osc.start(now);
-                osc.stop(now + 0.6);
-
-                // Vibración fuerte de respaldo
+                // 1. Vibración de alta intensidad
                 if ("vibrate" in navigator) {
-                    navigator.vibrate([500, 250, 500, 250, 500]);
+                    navigator.vibrate([600, 200, 600, 200, 600]);
                 }
 
-                // Notificación nativa flotante para forzar el sonido general del teléfono
-                if ("Notification" in window && Notification.permission === "granted") {
-                    new Notification("¡Nueva Carrera Pendiente! 🚗", {
-                        body: "Tienes una solicitud de servicio disponible en EN-VIA.",
-                        tag: "alerta-carrera",
-                        requireInteraction: true
+                // 2. Reproducción de audio nativo
+                const audio = document.getElementById('alarma-audio');
+                if (audio) {
+                    audio.currentTime = 0;
+                    audio.play().catch(e => {
+                        console.log("Reproducción bloqueada, intentando forzar interacción:", e);
                     });
                 }
             } catch (e) {
-                console.log("Error al emitir alerta:", e);
+                console.log("Error al reproducir alerta:", e);
             }
         }
 
@@ -208,7 +187,6 @@
             sessionStorage.setItem('conductor_en_via', conductorActual);
             if (conductorIdActual) sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
 
-            activarSistemaAlertas();
             mostrarPortal();
         }
 
@@ -245,6 +223,7 @@
 
             const cantidadActualPendientes = pendData ? pendData.length : 0;
             
+            // Si hay más carreras pendientes que antes, suena la alarma y vibra
             if (cantidadActualPendientes > cantidadPendientesAnterior && cantidadPendientesAnterior !== 0) {
                 reproducirAlertaSonora();
             }

@@ -10,8 +10,6 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Librería QRCode.js para generar el QR mediante código -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Cliente de Supabase -->
     <script src="../js/supabaseClient.js"></script>
     <style>
@@ -199,7 +197,7 @@
                     </div>
                 </div>
 
-                <!-- CONTENEDOR DE DATOS BANCARIOS Y QR (Visible en el trayecto y al finalizar) -->
+                <!-- CONTENEDOR DE DATOS BANCARIOS Y QR OFICIAL (Visible en el trayecto y al finalizar) -->
                 <div id="seccion-cobro-cliente" class="hidden"></div>
 
                 <!-- Mapa de seguimiento -->
@@ -631,7 +629,7 @@
                     location.reload();
                 }, 4000);
             } else if (finRecorridoAt || inicioCarreraAt) {
-                // SE MUESTRAN LOS DATOS BANCARIOS Y EL QR DESDE QUE INICIA LA CARRERA O AL FINALIZAR
+                // SE MUESTRAN LOS DATOS BANCARIOS Y LA IMAGEN OFICIAL DEL QR DESDE QUE INICIA LA CARRERA O AL FINALIZAR
                 contenedorBotonCancelar.classList.add('hidden');
                 
                 if (finRecorridoAt) {
@@ -646,7 +644,7 @@
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
 
-                // Consultar los datos bancarios del conductor asignado desde la tabla 'conductores'
+                // Consultar los datos bancarios y la URL de la imagen oficial del QR desde la tabla 'conductores'
                 let datosBancarios = {};
                 if (conductor) {
                     const { data: condData } = await supabaseClient
@@ -663,9 +661,9 @@
                 const bancoNombre = datosBancarios.banco || 'Banco';
                 const bancoTlf = datosBancarios.telefono || 'N/A';
                 const bancoCedula = datosBancarios.cedula_rif || 'N/A';
-                const qrString = datosBancarios.qr_codigo || '';
+                const qrImageUrl = datosBancarios.qr_url || ''; // URL pública de la imagen real en Supabase Storage
 
-                // Cuadro de pago con los datos, el QR generado y botones de Descargar/Copiar
+                // Cuadro de pago con los datos y la imagen oficial del QR cargada por URL
                 seccionCobroCliente.classList.remove('hidden');
                 seccionCobroCliente.innerHTML = `
                     <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
@@ -678,14 +676,16 @@
                             <p class="text-slate-300"><strong>Cédula / RIF:</strong> ${bancoCedula}</p>
                         </div>
 
-                        <p class="text-[11px] text-slate-300">Escanea el código QR, descárgalo o copia los datos para adelantar tu pago en el trayecto.</p>
+                        <p class="text-[11px] text-slate-300">Escanea el código QR oficial, descárgalo o copia los datos para adelantar tu pago.</p>
                         
-                        <!-- Contenedor del QR generado por código -->
-                        <div id="usuario-qr-container" class="flex justify-center p-3 bg-white rounded-xl w-fit mx-auto shadow-md"></div>
+                        <!-- Contenedor de la imagen real del QR -->
+                        <div class="flex justify-center p-3 bg-white rounded-xl w-fit mx-auto shadow-md">
+                            ${qrImageUrl ? `<img src="${qrImageUrl}" alt="QR de Pago" class="w-36 h-36 object-contain" id="img-qr-oficial">` : `<p class="text-xs text-black">QR no configurado</p>`}
+                        </div>
 
                         <!-- Botones de Acción Rápida para el Cliente -->
                         <div class="grid grid-cols-2 gap-2 pt-1">
-                            <button onclick="descargarQRImagen()" class="py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1">
+                            <button onclick="descargarImagenReal('${qrImageUrl}')" class="py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1">
                                 📥 Descargar QR
                             </button>
                             <button onclick="copiarDatosPago('${bancoNombre}', '${bancoTlf}', '${bancoCedula}', '${precio}')" class="py-2 px-3 bg-[#222222] hover:bg-[#2e2e2e] border border-[#333333] text-slate-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1">
@@ -698,23 +698,6 @@
                         </div>
                     </div>
                 `;
-
-                if (qrString) {
-                    setTimeout(() => {
-                        const qrContainer = document.getElementById('usuario-qr-container');
-                        if (qrContainer) {
-                            qrContainer.innerHTML = '';
-                            new QRCode(qrContainer, {
-                                text: qrString,
-                                width: 160,
-                                height: 160,
-                                colorDark : "#000000",
-                                colorLight : "#ffffff",
-                                correctLevel : QRCode.CorrectLevel.M
-                            });
-                        }
-                    }, 100);
-                }
 
             } else if (estado === 'asignada') {
                 seccionCobroCliente.classList.add('hidden');
@@ -751,30 +734,19 @@
             }
         }
 
-        // Función para que el cliente descargue el QR generado como imagen PNG
-        function descargarQRImagen() {
-            const qrContainer = document.getElementById('usuario-qr-container');
-            if (!qrContainer) return;
-            const canvas = qrContainer.querySelector('canvas');
-            const imgTag = qrContainer.querySelector('img');
-
-            let imageUrl = '';
-            if (canvas) {
-                imageUrl = canvas.toDataURL("image/png");
-            } else if (imgTag) {
-                imageUrl = imgTag.src;
+        // Función para descargar directamente la imagen oficial del QR mediante su URL
+        function descargarImagenReal(url) {
+            if (!url) {
+                alert('No hay imagen de QR disponible.');
+                return;
             }
-
-            if (imageUrl) {
-                const link = document.createElement('a');
-                link.href = imageUrl;
-                link.download = 'QR_Pago_EN_VIA.png';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } else {
-                alert('El código QR aún se está generando, intenta de nuevo en un segundo.');
-            }
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.download = 'QR_Pago_Oficial.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // Función para copiar rápidamente la información bancaria al portapapeles

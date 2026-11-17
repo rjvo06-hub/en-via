@@ -629,7 +629,6 @@
                     location.reload();
                 }, 4000);
             } else if (finRecorridoAt || inicioCarreraAt) {
-                // SE MUESTRAN LOS DATOS BANCARIOS Y LA IMAGEN OFICIAL DEL QR DESDE QUE INICIA LA CARRERA O AL FINALIZAR
                 contenedorBotonCancelar.classList.add('hidden');
                 
                 if (finRecorridoAt) {
@@ -644,7 +643,6 @@
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
 
-                // Consultar los datos bancarios y la URL de la imagen oficial del QR desde la tabla 'conductores'
                 let datosBancarios = {};
                 if (conductor) {
                     const { data: condData } = await supabaseClient
@@ -661,9 +659,8 @@
                 const bancoNombre = datosBancarios.banco || 'Banco';
                 const bancoTlf = datosBancarios.telefono || 'N/A';
                 const bancoCedula = datosBancarios.cedula_rif || 'N/A';
-                const qrImageUrl = datosBancarios.qr_url || ''; // URL pública de la imagen real en Supabase Storage
+                const qrImageUrl = datosBancarios.qr_url || '';
 
-                // Cuadro de pago con los datos y la imagen oficial del QR cargada por URL
                 seccionCobroCliente.classList.remove('hidden');
                 seccionCobroCliente.innerHTML = `
                     <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
@@ -678,12 +675,10 @@
 
                         <p class="text-[11px] text-slate-300">Escanea el código QR oficial, descárgalo o copia los datos para adelantar tu pago.</p>
                         
-                        <!-- Contenedor de la imagen real del QR -->
                         <div class="flex justify-center p-3 bg-white rounded-xl w-fit mx-auto shadow-md">
                             ${qrImageUrl ? `<img src="${qrImageUrl}" alt="QR de Pago" class="w-36 h-36 object-contain" id="img-qr-oficial">` : `<p class="text-xs text-black">QR no configurado</p>`}
                         </div>
 
-                        <!-- Botones de Acción Rápida para el Cliente -->
                         <div class="grid grid-cols-2 gap-2 pt-1">
                             <button onclick="descargarImagenReal('${qrImageUrl}')" class="py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1">
                                 📥 Descargar QR
@@ -734,22 +729,39 @@
             }
         }
 
-        // Función para descargar directamente la imagen oficial del QR mediante su URL
-        function descargarImagenReal(url) {
+        // Función de descarga optimizada mediante Blob (sin mostrar links ni abrir pestañas)
+        async function descargarImagenReal(url) {
             if (!url) {
                 alert('No hay imagen de QR disponible.');
                 return;
             }
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.download = 'QR_Pago_Oficial.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = 'QR_Pago_EN-VIA.png';
+                
+                document.body.appendChild(link);
+                link.click();
+                
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                console.error("Error al descargar la imagen:", error);
+                const fallbackLink = document.createElement('a');
+                fallbackLink.href = url;
+                fallbackLink.download = 'QR_Pago_EN-VIA.png';
+                fallbackLink.target = '_self';
+                document.body.appendChild(fallbackLink);
+                fallbackLink.click();
+                document.body.removeChild(fallbackLink);
+            }
         }
 
-        // Función para copiar rápidamente la información bancaria al portapapeles
         function copiarDatosPago(banco, telefono, cedula, monto) {
             const textoACopiar = `Banco: ${banco}\nTeléfono: ${telefono}\nCédula/RIF: ${cedula}\nMonto: ${monto}`;
             

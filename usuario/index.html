@@ -729,7 +729,7 @@
             }
         }
 
-        // Función de descarga optimizada mediante Blob (sin mostrar links ni abrir pestañas)
+        // Función de descarga optimizada forzando el tipo MIME 'image/png' estricto para evitar extensiones dobles o previsualizaciones
         async function descargarImagenReal(url) {
             if (!url) {
                 alert('No hay imagen de QR disponible.');
@@ -739,7 +739,9 @@
             try {
                 const response = await fetch(url);
                 const blob = await response.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
+                const cleanBlob = new Blob([blob], { type: 'image/png' });
+                
+                const blobUrl = window.URL.createObjectURL(cleanBlob);
                 
                 const link = document.createElement('a');
                 link.href = blobUrl;
@@ -754,8 +756,7 @@
                 console.error("Error al descargar la imagen:", error);
                 const fallbackLink = document.createElement('a');
                 fallbackLink.href = url;
-                fallbackLink.download = 'QR_Pago_EN-VIA.png';
-                fallbackLink.target = '_self';
+                fallbackLink.setAttribute('download', 'QR_Pago_EN-VIA.png');
                 document.body.appendChild(fallbackLink);
                 fallbackLink.click();
                 document.body.removeChild(fallbackLink);

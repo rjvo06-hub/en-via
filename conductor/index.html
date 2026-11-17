@@ -52,6 +52,14 @@
             </button>
         </header>
 
+        <!-- Botón visible para garantizar que el navegador active el sonido y vibración -->
+        <div id="banner-audio" class="bg-purple-900/40 border border-purple-500/40 p-3 rounded-2xl flex items-center justify-between text-xs">
+            <span class="text-purple-200">🔔 Alertas de audio y vibración listas</span>
+            <button onclick="activarAudioManual()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition cursor-pointer">
+                Activar Alarma
+            </button>
+        </div>
+
         <!-- Sección de Carrera Asignada Actual -->
         <div id="seccion-asignada" class="space-y-3 hidden">
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Tu Carrera en Curso</h2>
@@ -75,34 +83,61 @@
         let timerInterval = null;
         let pollingInterval = null;
         let cantidadPendientesAnterior = 0;
+        let audioCtxGlobal = null;
         
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Tono de alerta generado por JavaScript (Web Audio API)
+        // Función para activar el contexto de audio manualmente mediante el botón del banner
+        function activarAudioManual() {
+            try {
+                audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtxGlobal.state === 'suspended') {
+                    audioCtxGlobal.resume();
+                }
+                // Reproduce un pequeño tono silencioso o de prueba para desbloquear el navegador
+                reproducirAlertaSonora();
+                document.getElementById('banner-audio').classList.add('hidden');
+            } catch (e) {
+                console.log("Error al activar audio:", e);
+            }
+        }
+
+        // Tono de alerta avanzado generado por JavaScript (Web Audio API) + Vibración móvil
         function reproducirAlertaSonora() {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
+                if (!audioCtxGlobal) {
+                    audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
                 }
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
+                if (audioCtxGlobal.state === 'suspended') {
+                    audioCtxGlobal.resume();
+                }
+
+                // Generamos un tono de alarma doble (beep-beep)
+                const now = audioCtxGlobal.currentTime;
+
+                const osc = audioCtxGlobal.createOscillator();
+                const gain = audioCtxGlobal.createGain();
 
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota D5
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // Nota A5
+                osc.frequency.setValueAtTime(659.25, now); // E5
+                osc.frequency.setValueAtTime(880, now + 0.15); // A5
 
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
 
                 osc.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(audioCtxGlobal.destination);
 
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.6);
+                osc.start(now);
+                osc.stop(now + 0.5);
+
+                // Activamos también la vibración del teléfono si el dispositivo lo soporta
+                if ("vibrate" in navigator) {
+                    navigator.vibrate([400, 200, 400]);
+                }
             } catch (e) {
-                console.log("Audio bloqueado por políticas del navegador:", e);
+                console.log("Audio o vibración restringidos:", e);
             }
         }
 
@@ -158,12 +193,7 @@
             sessionStorage.setItem('conductor_en_via', conductorActual);
             if (conductorIdActual) sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
 
-            // Desbloqueamos el contexto de audio con la interacción del botón
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-            } catch(e) {}
-
+            activarAudioManual();
             mostrarPortal();
         }
 
@@ -175,11 +205,10 @@
             cargarDatosConductor();
             suscripcionRealtime();
             
-            // Intervalo de respaldo (Polling cada 5 segundos) para asegurar que la alarma suene siempre
             if (pollingInterval) clearInterval(pollingInterval);
             pollingInterval = setInterval(() => {
                 cargarDatosConductor();
-            }, 5000);
+            }, 4000);
         }
 
         function cerrarSesion() {
@@ -201,7 +230,7 @@
 
             const cantidadActualPendientes = pendData ? pendData.length : 0;
             
-            // Si hay más carreras pendientes que en la lectura anterior, se dispara la alarma
+            // Si hay nuevas carreras pendientes respecto a la lectura anterior, suena la alarma
             if (cantidadActualPendientes > cantidadPendientesAnterior && cantidadPendientesAnterior !== 0) {
                 reproducirAlertaSonora();
             }

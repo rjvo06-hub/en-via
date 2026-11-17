@@ -52,11 +52,11 @@
             </button>
         </header>
 
-        <!-- Botón visible para garantizar que el navegador active el sonido y vibración -->
+        <!-- Botón visible para activar notificaciones y audio del sistema -->
         <div id="banner-audio" class="bg-purple-900/40 border border-purple-500/40 p-3 rounded-2xl flex items-center justify-between text-xs">
-            <span class="text-purple-200">🔔 Alertas de audio y vibración listas</span>
-            <button onclick="activarAudioManual()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition cursor-pointer">
-                Activar Alarma
+            <span class="text-purple-200">🔔 Alertas de sistema y audio listas</span>
+            <button onclick="activarSistemaAlertas()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition cursor-pointer">
+                Activar Permisos
             </button>
         </div>
 
@@ -88,22 +88,30 @@
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Función para activar el contexto de audio manualmente mediante el botón del banner
-        function activarAudioManual() {
+        // Solicitar permisos nativos de notificación al navegador
+        function solicitarPermisoNotificaciones() {
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission().then(permission => {
+                    console.log("Permiso de notificaciones:", permission);
+                });
+            }
+        }
+
+        function activarSistemaAlertas() {
+            solicitarPermisoNotificaciones();
             try {
                 audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtxGlobal.state === 'suspended') {
                     audioCtxGlobal.resume();
                 }
-                // Reproduce un pequeño tono silencioso o de prueba para desbloquear el navegador
                 reproducirAlertaSonora();
                 document.getElementById('banner-audio').classList.add('hidden');
             } catch (e) {
-                console.log("Error al activar audio:", e);
+                console.log("Error al activar alertas:", e);
             }
         }
 
-        // Tono de alerta avanzado generado por JavaScript (Web Audio API) + Vibración móvil
+        // Tono web, vibración y notificación del sistema combinados
         function reproducirAlertaSonora() {
             try {
                 if (!audioCtxGlobal) {
@@ -113,31 +121,38 @@
                     audioCtxGlobal.resume();
                 }
 
-                // Generamos un tono de alarma doble (beep-beep)
                 const now = audioCtxGlobal.currentTime;
-
                 const osc = audioCtxGlobal.createOscillator();
                 const gain = audioCtxGlobal.createGain();
 
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(659.25, now); // E5
-                osc.frequency.setValueAtTime(880, now + 0.15); // A5
+                osc.frequency.setValueAtTime(659.25, now);
+                osc.frequency.setValueAtTime(880, now + 0.15);
 
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
 
                 osc.connect(gain);
                 gain.connect(audioCtxGlobal.destination);
 
                 osc.start(now);
-                osc.stop(now + 0.5);
+                osc.stop(now + 0.6);
 
-                // Activamos también la vibración del teléfono si el dispositivo lo soporta
+                // Vibración fuerte de respaldo
                 if ("vibrate" in navigator) {
-                    navigator.vibrate([400, 200, 400]);
+                    navigator.vibrate([500, 250, 500, 250, 500]);
+                }
+
+                // Notificación nativa flotante para forzar el sonido general del teléfono
+                if ("Notification" in window && Notification.permission === "granted") {
+                    new Notification("¡Nueva Carrera Pendiente! 🚗", {
+                        body: "Tienes una solicitud de servicio disponible en EN-VIA.",
+                        tag: "alerta-carrera",
+                        requireInteraction: true
+                    });
                 }
             } catch (e) {
-                console.log("Audio o vibración restringidos:", e);
+                console.log("Error al emitir alerta:", e);
             }
         }
 
@@ -193,7 +208,7 @@
             sessionStorage.setItem('conductor_en_via', conductorActual);
             if (conductorIdActual) sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
 
-            activarAudioManual();
+            activarSistemaAlertas();
             mostrarPortal();
         }
 
@@ -230,7 +245,6 @@
 
             const cantidadActualPendientes = pendData ? pendData.length : 0;
             
-            // Si hay nuevas carreras pendientes respecto a la lectura anterior, suena la alarma
             if (cantidadActualPendientes > cantidadPendientesAnterior && cantidadPendientesAnterior !== 0) {
                 reproducirAlertaSonora();
             }

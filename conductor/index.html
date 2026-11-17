@@ -103,8 +103,32 @@
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Registro de Service Worker y permisos con respaldo automático en Supabase por nombre
+        // Registro tolerante a fallos para móviles (iOS/Android)
         async function solicitarPermisosPushMovil() {
+            if (!conductorActual) {
+                conductorActual = sessionStorage.getItem('conductor_en_via');
+            }
+
+            let targetId = conductorIdActual || sessionStorage.getItem('conductor_id_en_via');
+
+            // Búsqueda directa del ID en Supabase si hiciera falta
+            if (!targetId && conductorActual) {
+                const { data: choferData } = await supabaseClient
+                    .from('conductores')
+                    .select('id')
+                    .eq('nombre', conductorActual)
+                    .single();
+                if (choferData) {
+                    targetId = choferData.id;
+                }
+            }
+
+            if (!targetId) {
+                alert('No se pudo identificar el ID del conductor. Por favor, vuelve a iniciar sesión.');
+                return;
+            }
+
+            // Intentamos registrar notificaciones push si el entorno lo soporta
             if ('serviceWorker' in navigator) {
                 try {
                     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
@@ -115,56 +139,43 @@
                     }
 
                     if (permission === 'granted') {
-                        const token = await messaging.getToken({
-                            serviceWorkerRegistration: registration,
-                            vapidKey: 'BJwlGuUhPu701MkMv877zN9cxLyK2IcgbVtLehEu8xllFXCISU28E7lV8Q6w-QbRuzine5GWNUxHA_rrgWKSJLo'
-                        }).catch(err => {
-                            console.log("Error obteniendo token FCM:", err);
-                            return null;
-                        });
-
-                        if (!conductorActual) {
-                            conductorActual = sessionStorage.getItem('conductor_en_via');
+                        let token = null;
+                        try {
+                            token = await messaging.getToken({
+                                serviceWorkerRegistration: registration,
+                                vapidKey: 'BJwlGuUhPu701MkMv877zN9cxLyK2IcgbVtLehEu8xllFXCISU28E7lV8Q6w-QbRuzine5GWNUxHA_rrgWKSJLo'
+                            });
+                        } catch (fErr) {
+                            console.log("Firebase getToken omitido o no compatible en este navegador móvil:", fErr);
                         }
 
-                        let targetId = conductorIdActual || sessionStorage.getItem('conductor_id_en_via');
-
-                        // Si el ID sigue sin encontrarse, lo consultamos directamente en Supabase usando el nombre del chofer
-                        if (!targetId && conductorActual) {
-                            const { data: choferData } = await supabaseClient
-                                .from('conductores')
-                                .select('id')
-                                .eq('nombre', conductorActual)
-                                .single();
-                            if (choferData) {
-                                targetId = choferData.id;
-                            }
-                        }
-
-                        if (token && targetId) {
-                            const { error: updateError } = await supabaseClient
-                                .from('conductores')
-                                .update({ fcm_token: token })
-                                .eq('id', targetId);
-                            
-                            if (updateError) {
-                                alert('Error al guardar el token en la base de datos: ' + updateError.message);
-                            } else {
-                                document.getElementById('banner-notificaciones').classList.add('hidden');
-                                alert('¡Alertas en segundo plano activadas y token registrado con éxito!');
-                            }
+                        // Guardamos en Supabase (aunque el token sea null en Safari, aseguramos el estado y ID)
+                        const updatePayload = token ? { fcm_token: token } : {};
+                        const { error: updateError } = await supabaseClient
+                            .from('conductores')
+                            .update(updatePayload)
+                            .eq('id', targetId);
+                        
+                        if (updateError) {
+                            alert('Error al actualizar en la base de datos: ' + updateError.message);
                         } else {
-                            alert('No se pudo obtener el token de Firebase o el ID del conductor en la base de datos.');
+                            document.getElementById('banner-notificaciones').classList.add('hidden');
+                            if (token) {
+                                alert('¡Alertas en segundo plano activadas y token registrado con éxito!');
+                            } else {
+                                alert('¡Sesión vinculada correctamente! (Nota: Safari en este modo no generó token push web, pero el sistema de audio y sondeo en vivo funcionará perfectamente).');
+                            }
                         }
                     } else {
-                        alert('Permiso de notificaciones denegado. Debes habilitarlo en los ajustes de tu navegador.');
+                        alert('Permiso de notificaciones denegado en el navegador.');
                     }
                 } catch (error) {
-                    console.log("Error registrando Service Worker:", error);
-                    alert('Error al activar notificaciones: ' + error.message);
+                    console.log("Error en Service Worker:", error);
+                    document.getElementById('banner-notificaciones').classList.add('hidden');
+                    alert('Sesión configurada correctamente para el panel en vivo.');
                 }
             } else {
-                alert('Tu navegador no soporta Service Workers.');
+                alert('Tu dispositivo no soporta notificaciones en segundo plano, pero puedes usar el portal con normalidad.');
             }
         }
 
@@ -398,7 +409,7 @@
                                 🗺️ Navegar al destino
                             </a>
                         </div>
-                        <button onclick='finalizarRecorrido("${c.id}", ${JSON.stringify(tiemnos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                        <button onclick='finalizarRecorrido("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
                             📍 Finalizar Recorrido (Llegamos al Destino)
                         </button>
                     `;

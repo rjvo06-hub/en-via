@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EN-VIA - Portal de Conductores</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Tu cliente de Supabase centralizado -->
+    <script src="../js/supabaseClient.js"></script>
+    <!-- Firebase App y Messaging SDKs (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+</head>
+<body class="bg-black min-h-screen text-slate-100 antialiased flex flex-col items-center justify-start p-6">
+
+    <!-- Elemento de audio nativo de respaldo para garantizar reproducción móvil -->
+    <audio id="alarma-audio" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- SECCIÓN 1: PANTALLA DE SELECCIÓN DE CONDUCTOR -->
+    <div id="login-container" class="max-w-md w-full bg-[#111111] border border-[#222222] p-6 rounded-2xl shadow-2xl space-y-4 my-auto">
+        <div class="text-center space-y-1">
+            <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Portal de Chofer</h1>
+            <p class="text-slate-400 text-xs">Selecciona tu nombre de la lista para ingresar</p>
+        </div>
+
+        <div class="space-y-3 pt-2">
+            <div>
+                <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Seleccionar Conductor</label>
+                <select id="login-select" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-purple-500 rounded-xl px-3 py-2.5 text-white outline-none text-xs">
+                    <option value="">Cargando conductores...</option>
+                </select>
+            </div>
+            <div id="login-error" class="text-red-400 text-xs text-center hidden">Por favor, selecciona un conductor.</div>
+
+            <button onclick="ingresarAlPortal()" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                Entrar al Portal
+            </button>
+            <a href="../index.html" class="block text-center text-slate-500 hover:text-slate-300 text-xs pt-2">← Volver al Menú Principal</a>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: PORTAL DE CARRERAS -->
+    <div id="portal-container" class="max-w-3xl w-full space-y-6 hidden my-0">
+        <header class="flex justify-between items-center border-b border-[#222222] pb-4">
+            <div>
+                <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Panel de Chofer</h1>
+                <p class="text-slate-400 text-xs">Conectado como: <span id="driver-name-display" class="text-white font-bold"></span></p>
+            </div>
+            <button onclick="cerrarSesion()" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition text-red-400 cursor-pointer">
+                Cambiar de Conductor
+            </button>
+        </header>
+
+        <!-- Botón para habilitar las notificaciones push en dispositivos móviles -->
+        <div id="banner-notificaciones" class="bg-purple-900/30 border-2 border-purple-500/60 p-4 rounded-xl flex items-center justify-between shadow-xl">
+            <div>
+                <p class="text-xs font-bold text-purple-400 uppercase">🔔 Activar Alertas Push</p>
+                <p class="text-[11px] text-slate-300">Toca aquí para registrar el dispositivo y recibir avisos.</p>
+            </div>
+            <button onclick="solicitarPermisosPushMovil()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg cursor-pointer shrink-0">
+                Activar Alertas
+            </button>
+        </div>
+
+        <!-- Sección de Carrera Asignada Actual -->
+        <div id="seccion-asignada" class="space-y-3 hidden">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Tu Carrera en Curso</h2>
+            <div id="carrera-asignada-container"></div>
+        </div>
+
+        <!-- Sección de Carreras Disponibles -->
+        <div class="space-y-3 pt-2">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
+            <div id="lista-carreras" class="grid grid-cols-1 gap-3">
+                <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
+                    Buscando carreras...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzo57FlzJSzSDDjTW7w8ODlXtXcS1LvY4",
+            authDomain: "envia-notificaciones.firebaseapp.com",
+            projectId: "envia-notificaciones",
+            storageBucket: "envia-notificaciones.firebasestorage.app",
+            messagingSenderId: "887034908416",
+            appId: "1:887034908416:web:2981b1705ef93c42bd6de5"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const messaging = firebase.messaging();
+
+        let conductorActual = "";
+        let conductorIdActual = null;
+        let timerInterval = null;
+        let pollingInterval = null;
+        let primeraCargaRealizada = false;
+        let cantidadPendientesAnterior = 0;
+        let audioCtx = null;
+        
+        const baseLat = "10.670389";
+        const baseLng = "-71.658972";
+
+        async function solicitarPermisosPushMovil() {
+            if (!conductorActual) {
+                conductorActual = sessionStorage.getItem('conductor_en_via');
+            }
+
+            let targetId = conductorIdActual || sessionStorage.getItem('conductor_id_en_via');
+
+            if (!targetId && conductorActual) {
+                const { data: choferData } = await supabaseClient
+                    .from('conductores')
+                    .select('id')
+                    .eq('nombre', conductorActual)
+                    .single();
+                if (choferData) {
+                    targetId = choferData.id;
+                }
+            }
+
+            if (!targetId) {
+                alert('No se pudo identificar el ID del conductor. Vuelve a iniciar sesión.');
+                return;
+            }
+
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                    
+                    let permission = 'granted';
+                    if (typeof window.Notification !== 'undefined' && 'requestPermission' in window.Notification) {
+                        permission = await Notification.requestPermission();
+                    }
+
+                    if (permission === 'granted') {
+                        let token = null;
+                        try {
+                            token = await messaging.getToken({
+                                serviceWorkerRegistration: registration,
+                                vapidKey: 'BJwlGuUhPu701MkMv877zN9cxLyK2IcgbVtLehEu8xllFXCISU28E7lV8Q6w-QbRuzine5GWNUxHA_rrgWKSJLo'
+                            });
+                        } catch (fErr) {
+                            console.log("Token FCM móvil omitido:", fErr);
+                        }
+
+                        const updatePayload = token ? { fcm_token: token } : {};
+                        const { error: updateError } = await supabaseClient
+                            .from('conductores')
+                            .update(updatePayload)
+                            .eq('id', targetId);
+                        
+                        if (updateError) {
+                            alert('Error al actualizar base de datos: ' + updateError.message);
+                        } else {
+                            document.getElementById('banner-notificaciones').classList.add('hidden');
+                            alert('¡Alertas en segundo plano activadas y token registrado con éxito!');
+                        }
+                    } else {
+                        alert('Permiso de notificaciones denegado.');
+                    }
+                } catch (error) {
+                    console.log("Error Service Worker:", error);
+                    alert('Configuración aplicada con éxito.');
+                }
+            } else {
+                alert('Tu dispositivo no soporta Service Workers.');
+            }
+        }
+
+        // Función de alarma robusta compatible con dispositivos móviles (HTML5 Audio + Sintetizador)
+        function reproducirAlarmaEscritorio() {
+            try {
+                // Intento 1: Reproducir audio nativo optimizado para móviles
+                const audioElement = document.getElementById('alarma-audio');
+                if (audioElement) {
+                    audioElement.currentTime = 0;
+                    audioElement.play().catch(err => {
+                        console.log("Reproducción de audio nativo bloqueada por política móvil:", err);
+                    });
+                }
+
+                // Intento 2: Sintetizador Web Audio API de respaldo
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        if (!audioCtx) return;
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.2);
+
+                        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.3);
+                    }, i * 350);
+                }
+
+                if ("vibrate" in navigator) {
+                    navigator.vibrate([500, 250, 500, 250, 500]);
+                }
+            } catch (e) {
+                console.log("Error al reproducir alarma:", e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sesionGuardada = sessionStorage.getItem('conductor_en_via');
+            const sesionIdGuardada = sessionStorage.getItem('conductor_id_en_via');
+
+            if (sesionGuardada) {
+                conductorActual = sesionGuardada;
+                conductorIdActual = sesionIdGuardada || null;
+                mostrarPortal();
+            } else {
+                cargarConductoresSelect();
+            }
+        });
+
+        async function cargarConductoresSelect() {
+            const select = document.getElementById('login-select');
+            const { data, error } = await supabaseClient
+                .from('conductores')
+                .select('id, nombre')
+                .eq('activo', true)
+                .order('nombre', { ascending: true });
+
+            if (error || !data || data.length === 0) {
+                select.innerHTML = '<option value="">No hay conductores activos registrados</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
+            data.forEach(c => {
+                select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
+            });
+        }
+
+        function ingresarAlPortal() {
+            const select = document.getElementById('login-select');
+            const nombreSeleccionado = select.value;
+            const errorDiv = document.getElementById('login-error');
+
+            if (!nombreSeleccionado) {
+                errorDiv.textContent = "Por favor, selecciona tu nombre de la lista.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+            conductorActual = nombreSeleccionado;
+
+            const selectedOption = select.options[select.selectedIndex];
+            conductorIdActual = selectedOption.getAttribute('data-id') || selectedOption.dataset.id || null;
+
+            if (!conductorIdActual) {
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === nombreSeleccionado) {
+                        conductorIdActual = select.options[i].getAttribute('data-id');
+                        break;
+                    }
+                }
+            }
+
+            sessionStorage.setItem('conductor_en_via', conductorActual);
+            if (conductorIdActual) {
+                sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
+            }
+
+            // Desbloqueo inicial automático del elemento de audio al iniciar sesión en móviles
+            const audioElement = document.getElementById('alarma-audio');
+            if (audioElement) {
+                audioElement.play().then(() => {
+                    audioElement.pause();
+                    audioElement.currentTime = 0;
+                }).catch(() => {});
+            }
+
+            mostrarPortal();
+        }
+
+        function mostrarPortal() {
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('portal-container').classList.remove('hidden');
+            document.getElementById('driver-name-display').textContent = conductorActual;
+            
+            cargarDatosConductor();
+            suscripcionRealtime();
+            
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(() => {
+                cargarDatosConductor();
+            }, 4000);
+        }
+
+        function cerrarSesion() {
+            sessionStorage.removeItem('conductor_en_via');
+            sessionStorage.removeItem('conductor_id_en_via');
+            if (timerInterval) clearInterval(timerInterval);
+            if (pollingInterval) clearInterval(pollingInterval);
+            location.reload();
+        }
+
+        async function cargarDatosConductor() {
+            const { data: pendData, error: pendError } = await supabaseClient
+                .from('carreras')
+                .select('*')
+                .eq('estado', 'pendiente')
+                .order('created_at', { ascending: false });
+
+            if (pendError) console.error("Error al cargar pendientes:", pendError);
+
+            const cantidadActualPendientes = pendData ? pendData.length : 0;
+            
+            if (!primeraCargaRealizada) {
+                cantidadPendientesAnterior = cantidadActualPendientes;
+                primeraCargaRealizada = true;
+            } else {
+                if (cantidadActualPendientes > cantidadPendientesAnterior) {
+                    reproducirAlarmaEscritorio();
+                }
+                cantidadPendientesAnterior = cantidadActualPendientes;
+            }
+
+            const { data: asigData, error: asigError } = await supabaseClient
+                .from('carreras')
+                .select('*')
+                .eq('estado', 'asignada')
+                .eq('conductor_asignado', conductorActual);
+
+            if (asigError) console.error("Error al cargar asignada:", asigError);
+
+            renderizarAsignada(asigData);
+            renderizarPendientes(pendData);
+        }
+
+        async function tomarCarrera(idCarrera) {
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ 
+                    estado: 'asignada', 
+                    conductor_asignado: conductorActual 
+                })
+                .eq('id', idCarrera);
+
+            if (error) {
+                alert('Error al tomar la carrera: ' + error.message);
+            } else {
+                cargarDatosConductor();
+            }
+        }
+
+        function renderizarAsignada(asignadas) {
+            const seccionAsignada = document.getElementById('seccion-asignada');
+            const contenedor = document.getElementById('carrera-asignada-container');
+            
+            if (!asignadas || asignadas.length === 0) {
+                seccionAsignada.classList.add('hidden');
+                contenedor.innerHTML = '';
+                if (timerInterval) clearInterval(timerInterval);
+                return;
+            }
+
+            seccionAsignada.classList.remove('hidden');
+            contenedor.innerHTML = '';
+
+            asignadas.forEach(c => {
+                const urlNavegacionBase = `https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
+                const urlNavegacionDestino = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(c.origen)}&destination=${encodeURIComponent(c.destino)}&travelmode=driving`;
+                
+                const tiempos = c.tiempos || {};
+                const yaLlego = tiempos.llegada_conductor_at != null;
+                const carreraIniciada = tiempos.inicio_carrera_at != null;
+                const recorridoFinalizado = tiempos.fin_recorrido_at != null;
+
+                let contenidoAcciones = '';
+
+                if (!yaLlego) {
+                    contenidoAcciones = `
+                        <a href="${urlNavegacionBase}" target="_blank" class="w-full text-center block py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg">
+                            🧭 Navegar desde Base al Origen
+                        </a>
+                        <button onclick='conductorLlego("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            📍 Ya estoy en el lugar
+                        </button>
+                    `;
+                } else if (!carreraIniciada) {
+                    contenidoAcciones = `
+                        <div class="bg-[#161616] p-3 rounded-xl border border-amber-500/30 text-center space-y-1">
+                            <p class="text-[11px] text-amber-400 font-bold uppercase">⏱️ Tiempo de espera transcurriendo:</p>
+                            <p id="cronometro-conductor" class="text-lg font-extrabold text-white">00:00</p>
+                        </div>
+                        <button onclick='iniciarCarrera("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            🚀 Iniciar Carrera
+                        </button>
+                    `;
+                } else if (!recorridoFinalizado) {
+                    contenidoAcciones = `
+                        <div class="bg-[#161616] p-3 rounded-xl border border-emerald-500/30 text-center space-y-1">
+                            <p class="text-[11px] text-emerald-400 font-bold uppercase">⏱️ Tiempo de viaje activo:</p>
+                            <p id="cronometro-viaje" class="text-lg font-extrabold text-white">00:00</p>
+                        </div>
+                        <div class="flex justify-between items-center pt-1">
+                            <a href="${urlNavegacionDestino}" target="_blank" class="text-[11px] text-slate-400 hover:text-purple-400 underline transition cursor-pointer">
+                                🗺️ Navegar al destino
+                            </a>
+                        </div>
+                        <button onclick='finalizarRecorrido("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            📍 Finalizar Recorrido (Llegamos al Destino)
+                        </button>
+                    `;
+                } else {
+                    contenidoAcciones = `
+                        <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
+                            <p class="text-xs uppercase font-bold text-purple-400">💳 Confirmación de Pago</p>
+                            <p class="text-3xl font-black text-amber-400 tracking-tight">${c.precio || '$0.00'}</p>
+                            <p class="text-[11px] text-slate-300">Verifica que el pasajero haya realizado el pago antes de confirmar.</p>
+                        </div>
+                        <button onclick='confirmarPagoYFinalizar("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            ✅ Confirmar Pago y Finalizar Servicio
+                        </button>
+                    `;
+                }
+
+                contenedor.innerHTML += `
+                    <div class="bg-[#111111] border-2 border-emerald-500/50 p-4 rounded-2xl shadow-2xl space-y-3">
+                        <div class="flex justify-between items-start text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase">✅ Asignada a ti</span>
+                            <span class="text-emerald-400 font-bold text-sm">${c.precio || '$0.00'}</span>
+                        </div>
+                        
+                        <div class="space-y-1 text-xs">
+                            <p class="text-slate-300"><strong class="text-slate-400">👤 Cliente:</strong> ${c.cliente_nombre || 'N/A'}</p>
+                            <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
+                            <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
+                            <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
+                        </div>
+
+                        ${contenidoAcciones}
+                    </div>
+                `;
+
+                if (yaLlego && !carreraIniciada) {
+                    iniciarCronometro(tiempos.llegada_conductor_at, 'cronometro-conductor');
+                } else if (carreraIniciada && !recorridoFinalizado) {
+                    iniciarCronometro(tiempos.inicio_carrera_at, 'cronometro-viaje');
+                }
+            });
+        }
+
+        async function conductorLlego(idCarrera, tiemposActuales) {
+            const ahora = new Date().toISOString();
+            const nuevosTiempos = {
+                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
+                llegada_conductor_at: ahora
+            };
+
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ tiempos: nuevosTiempos })
+                .eq('id', idCarrera);
+
+            if (error) alert('Error al actualizar: ' + error.message);
+            else cargarDatosConductor();
+        }
+
+        async function iniciarCarrera(idCarrera, tiemposActuales) {
+            const ahora = new Date().toISOString();
+            if (timerInterval) clearInterval(timerInterval);
+
+            const nuevosTiempos = {
+                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
+                inicio_carrera_at: ahora
+            };
+
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ tiempos: nuevosTiempos })
+                .eq('id', idCarrera);
+
+            if (error) alert('Error al iniciar la carrera: ' + error.message);
+            else cargarDatosConductor();
+        }
+
+        async function finalizarRecorrido(idCarrera, tiemposActuales) {
+            if (timerInterval) clearInterval(timerInterval);
+            const ahora = new Date().toISOString();
+            const nuevosTiempos = {
+                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
+                fin_recorrido_at: ahora
+            };
+
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ tiempos: nuevosTiempos })
+                .eq('id', idCarrera);
+
+            if (error) alert('Error al finalizar recorrido: ' + error.message);
+            else cargarDatosConductor();
+        }
+
+        async function confirmarPagoYFinalizar(idCarrera, tiemposActuales) {
+            if (!confirm('¿Confirmas que el pasajero pagó y deseas finalizar el servicio por completo?')) return;
+            const ahora = new Date().toISOString();
+
+            const nuevosTiempos = {
+                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
+                fin_carrera_at: ahora
+            };
+
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ estado: 'completada', tiempos: nuevosTiempos })
+                .eq('id', idCarrera);
+
+            if (error) {
+                alert('Error al finalizar: ' + error.message);
+            } else {
+                alert('¡Servicio finalizado y cobro confirmado con éxito!');
+                location.reload();
+            }
+        }
+
+        function iniciarCronometro(isoStringInicio, elementoId) {
+            if (timerInterval) clearInterval(timerInterval);
+            const tiempoInicio = new Date(isoStringInicio).getTime();
+
+            timerInterval = setInterval(() => {
+                const ahora = new Date().getTime();
+                const diferenciaSecs = Math.floor((ahora - tiempoInicio) / 1000);
+
+                if (diferenciaSecs >= 0) {
+                    const mins = Math.floor(diferenciaSecs / 60).toString().padStart(2, '0');
+                    const secs = (diferenciaSecs % 60).toString().padStart(2, '0');
+                    const el = document.getElementById(elementoId);
+                    if (el) el.textContent = `${mins}:${secs}`;
+                }
+            }, 1000);
+        }
+
+        function renderizarPendientes(carreras) {
+            const contenedor = document.getElementById('lista-carreras');
+            contenedor.innerHTML = '';
+
+            if (!carreras || carreras.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="bg-[#111111] border border-[#222222] p-6 rounded-2xl text-center text-slate-500 italic text-xs">
+                        No hay carreras pendientes en este momento.
+                    </div>
+                `;
+                return;
+            }
+
+            carreras.forEach(c => {
+                contenedor.innerHTML += `
+                    <div class="bg-[#111111] border border-[#222222] hover:border-purple-500/40 p-4 rounded-2xl shadow-xl transition space-y-3">
+                        <div class="flex justify-between items-start text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">Pendiente</span>
+                            <span class="text-emerald-400 font-bold text-sm">${c.precio || '$0.00'}</span>
+                        </div>
+                        
+                        <div class="space-y-1 text-xs">
+                            <p class="text-slate-300"><strong class="text-slate-400">👤 Cliente:</strong> ${c.cliente_nombre || 'N/A'}</p>
+                            <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
+                            <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
+                            <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
+                        </div>
+
+                        <button onclick="tomarCarrera('${c.id}')" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            🙋‍♂️ Tomar esta Carrera
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        async function suscripcionRealtime() {
+            supabaseClient
+                .channel('cambios-carreras-conductor-actualizado')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, () => {
+                    cargarDatosConductor();
+                })
+                .subscribe();
+        }
+    </script>
+</body>
+</html>

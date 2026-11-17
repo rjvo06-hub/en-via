@@ -197,7 +197,7 @@
                     </div>
                 </div>
 
-                <!-- CONTENEDOR DE DATOS BANCARIOS Y QR OFICIAL (Visible en el trayecto y al finalizar) -->
+                <!-- CONTENEDOR DE DATOS BANCARIOS Y QR OFICIAL -->
                 <div id="seccion-cobro-cliente" class="hidden"></div>
 
                 <!-- Mapa de seguimiento -->
@@ -205,7 +205,7 @@
                     <div id="map-seguimiento"></div>
                 </div>
 
-                <!-- Botón Cancelar (Visible SOLO en estado pendiente) -->
+                <!-- Botón Cancelar -->
                 <div id="contenedor-boton-cancelar">
                     <button onclick="cancelarOReiniciarSolicitud()" class="w-full py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
                         Cancelar Solicitud
@@ -729,7 +729,6 @@
             }
         }
 
-        // Función de descarga optimizada forzando el tipo MIME 'image/png' estricto para evitar extensiones dobles o previsualizaciones
         async function descargarImagenReal(url) {
             if (!url) {
                 alert('No hay imagen de QR disponible.');
@@ -739,19 +738,18 @@
             try {
                 const response = await fetch(url);
                 const blob = await response.blob();
-                const cleanBlob = new Blob([blob], { type: 'image/png' });
                 
-                const blobUrl = window.URL.createObjectURL(cleanBlob);
-                
-                const link = document.createElement('a');
-                link.href = blobUrl;
-                link.download = 'QR_Pago_EN-VIA.png';
-                
-                document.body.appendChild(link);
-                link.click();
-                
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(blobUrl);
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    const base64data = reader.result;
+                    const link = document.createElement('a');
+                    link.href = base64data;
+                    link.download = 'QR_Pago_EN-VIA.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+                reader.readAsDataURL(blob);
             } catch (error) {
                 console.error("Error al descargar la imagen:", error);
                 const fallbackLink = document.createElement('a');

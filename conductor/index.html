@@ -73,9 +73,34 @@
         let conductorActual = "";
         let conductorIdActual = null;
         let timerInterval = null;
+        let cantidadPendientesAnterior = 0;
         
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
+
+        // Tono de alerta generado por JavaScript (Web Audio API)
+        function reproducirAlertaSonora() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota D5
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // Nota A5
+
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            } catch (e) {
+                console.log("Audio bloqueado por políticas del navegador hasta que el usuario interactúe.");
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const sesionGuardada = sessionStorage.getItem('conductor_en_via');
@@ -129,6 +154,12 @@
             sessionStorage.setItem('conductor_en_via', conductorActual);
             if (conductorIdActual) sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
 
+            // Desbloqueamos el contexto de audio del navegador al hacer clic en Entrar
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            } catch(e) {}
+
             mostrarPortal();
         }
 
@@ -157,6 +188,14 @@
 
             if (pendError) console.error("Error al cargar pendientes:", pendError);
 
+            const cantidadActualPendientes = pendData ? pendData.length : 0;
+            
+            // Si hay nuevas carreras pendientes, suena el tono generado por JavaScript
+            if (cantidadActualPendientes > cantidadPendientesAnterior && cantidadPendientesAnterior !== 0) {
+                reproducirAlertaSonora();
+            }
+            cantidadPendientesAnterior = cantidadActualPendientes;
+
             const { data: asigData, error: asigError } = await supabaseClient
                 .from('carreras')
                 .select('*')
@@ -169,7 +208,6 @@
             renderizarPendientes(pendData);
         }
 
-        // Función para que el conductor tome una carrera pendiente
         async function tomarCarrera(idCarrera) {
             const { error } = await supabaseClient
                 .from('carreras')

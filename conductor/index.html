@@ -154,7 +154,6 @@
             sessionStorage.setItem('conductor_en_via', conductorActual);
             if (conductorIdActual) sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
 
-            // Desbloqueamos el contexto de audio del navegador al hacer clic en Entrar
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -190,7 +189,6 @@
 
             const cantidadActualPendientes = pendData ? pendData.length : 0;
             
-            // Si hay nuevas carreras pendientes, suena el tono generado por JavaScript
             if (cantidadActualPendientes > cantidadPendientesAnterior && cantidadPendientesAnterior !== 0) {
                 reproducirAlertaSonora();
             }

@@ -56,6 +56,17 @@
             </button>
         </header>
 
+        <!-- Botón anti-suspensión en segundo plano (Truco iOS) -->
+        <div class="bg-amber-900/30 border-2 border-amber-500/60 p-4 rounded-xl flex items-center justify-between shadow-xl">
+            <div>
+                <p class="text-xs font-bold text-amber-400 uppercase">🛡️ Activar Modo Segundo Plano (iOS)</p>
+                <p class="text-[11px] text-slate-300">Mantén el proceso activo con el teléfono bloqueado.</p>
+            </div>
+            <button onclick="activarModoSegundoPlano()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg cursor-pointer shrink-0">
+                Activar Persistencia
+            </button>
+        </div>
+
         <!-- Botón para habilitar las notificaciones push en dispositivos móviles -->
         <div id="banner-notificaciones" class="bg-purple-900/30 border-2 border-purple-500/60 p-4 rounded-xl flex items-center justify-between shadow-xl">
             <div>
@@ -77,7 +88,7 @@
         <div class="space-y-3 pt-2">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
             <div id="lista-carreras" class="grid grid-cols-1 gap-3">
-                <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl text-center text-slate-500 italic text-xs">
+                <div class="bg-[#111111] border border-[#222222] p-6 rounded-2xl text-center text-slate-500 italic text-xs">
                     Buscando carreras...
                 </div>
             </div>
@@ -107,6 +118,42 @@
         
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
+
+        // ==========================================
+        // TRUCO DE PERSISTENCIA EN SEGUNDO PLANO (iOS)
+        // ==========================================
+        async function activarModoSegundoPlano() {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+                await audioCtx.resume();
+
+                // Enganchar la Media Session para que iOS crea que es un reproductor multimedia activo
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.setActionHandler('play', () => {});
+                    navigator.mediaSession.setActionHandler('pause', () => {});
+                    navigator.mediaSession.setHeader({
+                        title: 'EN-VIA Conductor',
+                        artist: 'En espera de servicios',
+                        album: 'Sistema de Alertas',
+                        artwork: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
+                    });
+                }
+
+                // Reproducir un bucle de audio silencioso ininterrumpido (anti-suspensión)
+                const buffer = audioCtx.createBuffer(1, 1, 22050);
+                const source = audioCtx.createBufferSource();
+                source.buffer = buffer;
+                source.loop = true;
+                source.connect(audioCtx.destination);
+                source.start(0);
+
+                alert("¡Modo segundo plano activado! iOS mantendrá el hilo activo.");
+            } catch (err) {
+                console.error("Error al activar la persistencia de audio:", err);
+                alert("Error al activar: " + err.message);
+            }
+        }
 
         async function solicitarPermisosPushMovil() {
             if (!conductorActual) {
@@ -175,7 +222,7 @@
             }
         }
 
-        // Función de alarma robusta compatible con dispositivos móviles (HTML5 Audio + Sintetizador)
+        // Función de alarma robusta compatible con dispositivos móviles
         function reproducirAlarmaEscritorio() {
             try {
                 // Intento 1: Reproducir audio nativo optimizado para móviles
@@ -287,7 +334,6 @@
                 sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
             }
 
-            // Desbloqueo inicial automático del elemento de audio al iniciar sesión en móviles
             const audioElement = document.getElementById('alarma-audio');
             if (audioElement) {
                 audioElement.play().then(() => {

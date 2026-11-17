@@ -73,6 +73,7 @@
         let conductorActual = "";
         let conductorIdActual = null;
         let timerInterval = null;
+        let pollingInterval = null;
         let cantidadPendientesAnterior = 0;
         
         const baseLat = "10.670389";
@@ -82,6 +83,9 @@
         function reproducirAlertaSonora() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
 
@@ -89,16 +93,16 @@
                 osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota D5
                 osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // Nota A5
 
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
 
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
 
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.5);
+                osc.stop(audioCtx.currentTime + 0.6);
             } catch (e) {
-                console.log("Audio bloqueado por políticas del navegador hasta que el usuario interactúe.");
+                console.log("Audio bloqueado por políticas del navegador:", e);
             }
         }
 
@@ -154,6 +158,7 @@
             sessionStorage.setItem('conductor_en_via', conductorActual);
             if (conductorIdActual) sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
 
+            // Desbloqueamos el contexto de audio con la interacción del botón
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -169,12 +174,19 @@
             
             cargarDatosConductor();
             suscripcionRealtime();
+            
+            // Intervalo de respaldo (Polling cada 5 segundos) para asegurar que la alarma suene siempre
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(() => {
+                cargarDatosConductor();
+            }, 5000);
         }
 
         function cerrarSesion() {
             sessionStorage.removeItem('conductor_en_via');
             sessionStorage.removeItem('conductor_id_en_via');
             if (timerInterval) clearInterval(timerInterval);
+            if (pollingInterval) clearInterval(pollingInterval);
             location.reload();
         }
 
@@ -189,6 +201,7 @@
 
             const cantidadActualPendientes = pendData ? pendData.length : 0;
             
+            // Si hay más carreras pendientes que en la lectura anterior, se dispara la alarma
             if (cantidadActualPendientes > cantidadPendientesAnterior && cantidadPendientesAnterior !== 0) {
                 reproducirAlertaSonora();
             }

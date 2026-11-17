@@ -120,7 +120,7 @@
         const baseLng = "-71.658972";
 
         // ==========================================
-        // TRUCO DE PERSISTENCIA EN SEGUNDO PLANO (iOS)
+        // TRUCO DE PERSISTENCIA EN SEGUNDO PLANO (iOS) - CORREGIDO
         // ==========================================
         async function activarModoSegundoPlano() {
             try {
@@ -128,16 +128,17 @@
                 audioCtx = new AudioContextClass();
                 await audioCtx.resume();
 
-                // Enganchar la Media Session para que iOS crea que es un reproductor multimedia activo
+                // Configuración correcta con MediaMetadata para iOS/Safari
                 if ('mediaSession' in navigator) {
-                    navigator.mediaSession.setActionHandler('play', () => {});
-                    navigator.mediaSession.setActionHandler('pause', () => {});
-                    navigator.mediaSession.setHeader({
+                    navigator.mediaSession.metadata = new MediaMetadata({
                         title: 'EN-VIA Conductor',
                         artist: 'En espera de servicios',
                         album: 'Sistema de Alertas',
                         artwork: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
                     });
+                    
+                    navigator.mediaSession.setActionHandler('play', () => {});
+                    navigator.mediaSession.setActionHandler('pause', () => {});
                 }
 
                 // Reproducir un bucle de audio silencioso ininterrumpido (anti-suspensión)
@@ -148,7 +149,7 @@
                 source.connect(audioCtx.destination);
                 source.start(0);
 
-                alert("¡Modo segundo plano activado! iOS mantendrá el hilo activo.");
+                alert("¡Modo segundo plano activado con éxito!");
             } catch (err) {
                 console.error("Error al activar la persistencia de audio:", err);
                 alert("Error al activar: " + err.message);
@@ -462,7 +463,7 @@
                     `;
                 } else if (!recorridoFinalizado) {
                     contenidoAcciones = `
-                        <div class="bg-[#161616] p-3 rounded-xl border border-emerald-500/30 text-center space-y-1">
+                        <div class="bg-[#161616] p-3 rounded-xl border border-amber-500/30 text-center space-y-1">
                             <p class="text-[11px] text-emerald-400 font-bold uppercase">⏱️ Tiempo de viaje activo:</p>
                             <p id="cronometro-viaje" class="text-lg font-extrabold text-white">00:00</p>
                         </div>

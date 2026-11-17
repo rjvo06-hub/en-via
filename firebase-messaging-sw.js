@@ -14,15 +14,45 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Manejo opcional de notificaciones en segundo plano si la app está cerrada
+// Intercepta las notificaciones push cuando la app está en segundo plano o cerrada
 messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Mensaje recibido en segundo plano: ', payload);
-    
-    const notificationTitle = payload.notification.title || 'Nueva notificación de EN-VIA';
+    console.log('[firebase-messaging-sw.js] Notificación recibida en segundo plano:', payload);
+
+    // Extrae los datos enviados por la notificación o usa valores por defecto
+    const notificationTitle = payload.notification?.title || payload.data?.title || '🚨 ¡Nueva Carrera Disponible!';
     const notificationOptions = {
-        body: payload.notification.body || 'Tienes una nueva actualización en la plataforma.',
-        icon: '/favicon.ico'
+        body: payload.notification?.body || payload.data?.body || 'Tienes una nueva solicitud de viaje en EN-VIA.',
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'envia-carrera-alerta',
+        renotify: true,
+        // Configuración clave para forzar banner superior y sonido nativo en móviles
+        requireInteraction: true,
+        data: {
+            url: payload.data?.url || '/conductor/'
+        }
     };
 
+    // Muestra la notificación nativa flotante arriba (Banner + Sonido del sistema)
     self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Maneja el evento de clic sobre la notificación flotante para abrir la app del conductor
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const targetUrl = event.notification.data?.url || '/conductor/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                if (client.url.includes('/conductor/') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
 });

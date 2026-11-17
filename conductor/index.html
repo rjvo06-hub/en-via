@@ -48,7 +48,7 @@
             </button>
         </header>
 
-        <!-- Botón obligatorio de activación de audio para evitar el bloqueo del navegador -->
+        <!-- Botón obligatorio de activación de audio -->
         <div id="banner-audio" class="bg-amber-500/20 border-2 border-amber-500/60 p-4 rounded-xl flex items-center justify-between shadow-xl">
             <div>
                 <p class="text-xs font-bold text-amber-400 uppercase">🔊 Alarma de Audio Silenciada por el Navegador</p>
@@ -81,13 +81,13 @@
         let conductorIdActual = null;
         let timerInterval = null;
         let pollingInterval = null;
+        let primeraCargaRealizada = false;
         let cantidadPendientesAnterior = 0;
         let audioCtx = null;
         
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Función que desbloquea el motor de audio mediante el clic del usuario
         function desbloquearAudio() {
             try {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -102,7 +102,6 @@
             }
         }
 
-        // Alarma sonora potente de escritorio
         function reproducirAlarmaEscritorio() {
             try {
                 if (!audioCtx) {
@@ -225,10 +224,17 @@
 
             const cantidadActualPendientes = pendData ? pendData.length : 0;
             
-            if (cantidadActualPendientes > cantidadPendientesAnterior && cantidadPendientesAnterior !== 0) {
-                reproducirAlarmaEscritorio();
+            if (!primeraCargaRealizada) {
+                // Registramos cuántas hay al abrir el portal sin hacer sonar la alarma
+                cantidadPendientesAnterior = cantidadActualPendientes;
+                primeraCargaRealizada = true;
+            } else {
+                // A partir de ahora, si la cantidad aumenta (ej: de 0 a 1, o de 1 a 2), suena la alarma
+                if (cantidadActualPendientes > cantidadPendientesAnterior) {
+                    reproducirAlarmaEscritorio();
+                }
+                cantidadPendientesAnterior = cantidadActualPendientes;
             }
-            cantidadPendientesAnterior = cantidadActualPendientes;
 
             const { data: asigData, error: asigError } = await supabaseClient
                 .from('carreras')

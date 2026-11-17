@@ -103,7 +103,7 @@
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Registro de Service Worker y permisos con validación segura para móviles
+        // Registro de Service Worker y permisos con validación robusta y directa
         async function solicitarPermisosPushMovil() {
             if ('serviceWorker' in navigator) {
                 try {
@@ -123,21 +123,26 @@
                             return null;
                         });
 
-                        // Aseguramos recuperar el ID de sessionStorage si por alguna razón la variable global quedó vacía en móvil
+                        // Aseguramos recuperar el ID de sessionStorage si la variable global estuviera vacía
                         if (!conductorIdActual) {
                             conductorIdActual = sessionStorage.getItem('conductor_id_en_via');
                         }
 
                         if (token && conductorIdActual) {
-                            await supabaseClient
+                            const { error: updateError } = await supabaseClient
                                 .from('conductores')
                                 .update({ fcm_token: token })
                                 .eq('id', conductorIdActual);
                             
-                            document.getElementById('banner-notificaciones').classList.add('hidden');
-                            alert('¡Alertas en segundo plano activadas y token registrado con éxito!');
+                            if (updateError) {
+                                console.error("Error al actualizar en Supabase:", updateError);
+                                alert('Error al guardar el token en la base de datos: ' + updateError.message);
+                            } else {
+                                document.getElementById('banner-notificaciones').classList.add('hidden');
+                                alert('¡Alertas en segundo plano activadas y token registrado con éxito!');
+                            }
                         } else {
-                            alert('Permiso concedido, pero faltaba el ID del conductor (ID: ' + conductorIdActual + ').');
+                            alert('Falta el token de Firebase o el ID del conductor.');
                         }
                     } else {
                         alert('Permiso de notificaciones denegado. Debes habilitarlo en los ajustes de tu navegador.');
@@ -235,11 +240,9 @@
             errorDiv.classList.add('hidden');
             conductorActual = nombreSeleccionado;
 
-            // Captura ultra robusta compatible con móviles (Safari/Chrome Mobile)
             const selectedOption = select.options[select.selectedIndex];
             conductorIdActual = selectedOption.getAttribute('data-id') || selectedOption.dataset.id || null;
 
-            // Si no se pudo obtener mediante el selector directo, buscamos el ID consultando el select completo por texto
             if (!conductorIdActual) {
                 for (let i = 0; i < select.options.length; i++) {
                     if (select.options[i].value === nombreSeleccionado) {

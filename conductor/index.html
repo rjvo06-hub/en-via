@@ -10,9 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Tu cliente de Supabase centralizado -->
     <script src="../js/supabaseClient.js"></script>
-    <!-- Firebase App y Messaging SDKs (Compat) -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
 </head>
 <body class="bg-black min-h-screen text-slate-100 antialiased flex flex-col items-center justify-start p-6">
 
@@ -33,7 +30,7 @@
             <div id="login-error" class="text-red-400 text-xs text-center hidden">Por favor, selecciona un conductor.</div>
 
             <button onclick="ingresarAlPortal()" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                Entrar al Portal y Activar Alertas
+                Entrar al Portal
             </button>
             <a href="../index.html" class="block text-center text-slate-500 hover:text-slate-300 text-xs pt-2">← Volver al Menú Principal</a>
         </div>
@@ -51,9 +48,15 @@
             </button>
         </header>
 
-        <div class="bg-purple-900/30 border border-purple-500/40 p-3 rounded-xl flex items-center justify-between text-xs">
-            <span class="text-purple-200">🔊 Monitoreo en tiempo real y Notificaciones Push activas</span>
-            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+        <!-- Botón obligatorio de activación de audio para evitar el bloqueo del navegador -->
+        <div id="banner-audio" class="bg-amber-500/20 border-2 border-amber-500/60 p-4 rounded-xl flex items-center justify-between shadow-xl">
+            <div>
+                <p class="text-xs font-bold text-amber-400 uppercase">🔊 Alarma de Audio Silenciada por el Navegador</p>
+                <p class="text-[11px] text-slate-300">Haz clic aquí para autorizar el sonido de las nuevas carreras.</p>
+            </div>
+            <button onclick="desbloquearAudio()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                Habilitar Sonido
+            </button>
         </div>
 
         <!-- Sección de Carrera Asignada Actual -->
@@ -74,19 +77,6 @@
     </div>
 
     <script>
-        // Configuración de Firebase con tus credenciales reales[span_1](start_span)[span_1](end_span)
-        const firebaseConfig = {
-            apiKey: "AIzaSyAzo57FlzJSzSDDjTW7w8ODlXtXcS1LvY4",
-            authDomain: "envia-notificaciones.firebaseapp.com",
-            projectId: "envia-notificaciones",
-            storageBucket: "envia-notificaciones.firebasestorage.app",
-            messagingSenderId: "887034908416",
-            appId: "1:887034908416:web:2981b1705ef93c42bd6de5"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const messaging = firebase.messaging();
-
         let conductorActual = "";
         let conductorIdActual = null;
         let timerInterval = null;
@@ -97,28 +87,22 @@
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Solicitar permisos de notificaciones push del navegador/teléfono
-        async function solicitarPermisosPush() {
+        // Función que desbloquea el motor de audio mediante el clic del usuario
+        function desbloquearAudio() {
             try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    const token = await messaging.getToken({
-                        vapidKey: 'AQUÍ_PEGA_TU_CLAVE_VAPID_DE_FIREBASE' // Opcional si usas VAPID key
-                    }).catch(() => null);
-
-                    if (token && conductorIdActual) {
-                        await supabaseClient
-                            .from('conductores')
-                            .update({ fcm_token: token })
-                            .eq('id', conductorIdActual);
-                    }
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
                 }
-            } catch (error) {
-                console.log("Permiso de notificaciones denegado o no soportado:", error);
+                reproducirAlarmaEscritorio();
+                document.getElementById('banner-audio').classList.add('hidden');
+                alert('¡Sistema de alarma sonora habilitado con éxito!');
+            } catch (e) {
+                console.log("Error al desbloquear audio:", e);
             }
         }
 
-        // Alarma sonora por Web Audio API
+        // Alarma sonora potente de escritorio
         function reproducirAlarmaEscritorio() {
             try {
                 if (!audioCtx) {
@@ -138,7 +122,7 @@
                         osc.frequency.setValueAtTime(880, audioCtx.currentTime);
                         osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.2);
 
-                        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
                         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
 
                         osc.connect(gain);
@@ -147,10 +131,6 @@
                         osc.start();
                         osc.stop(audioCtx.currentTime + 0.3);
                     }, i * 350);
-                }
-
-                if ("vibrate" in navigator) {
-                    navigator.vibrate([500, 250, 500]);
                 }
             } catch (e) {
                 console.log("Error al reproducir audio:", e);
@@ -209,12 +189,6 @@
             sessionStorage.setItem('conductor_en_via', conductorActual);
             if (conductorIdActual) sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
 
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                audioCtx.resume();
-            } catch (e) {}
-
-            solicitarPermisosPush();
             mostrarPortal();
         }
 
@@ -330,7 +304,7 @@
                     `;
                 } else if (!recorridoFinalizado) {
                     contenidoAcciones = `
-                        <div class="bg-[#161616] p-3 rounded-xl border border-amber-500/30 text-center space-y-1">
+                        <div class="bg-[#161616] p-3 rounded-xl border border-emerald-500/30 text-center space-y-1">
                             <p class="text-[11px] text-emerald-400 font-bold uppercase">⏱️ Tiempo de viaje activo:</p>
                             <p id="cronometro-viaje" class="text-lg font-extrabold text-white">00:00</p>
                         </div>
@@ -510,7 +484,7 @@
 
         function suscripcionRealtime() {
             supabaseClient
-                .channel('cambios-carreras-conductor-firebase')
+                .channel('cambios-carreras-conductor-pc')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, () => {
                     cargarDatosConductor();
                 })

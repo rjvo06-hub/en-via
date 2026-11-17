@@ -103,7 +103,7 @@
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Registro de Service Worker y permisos con validación robusta y directa
+        // Registro de Service Worker y permisos con respaldo automático en Supabase por nombre
         async function solicitarPermisosPushMovil() {
             if ('serviceWorker' in navigator) {
                 try {
@@ -123,26 +123,38 @@
                             return null;
                         });
 
-                        // Aseguramos recuperar el ID de sessionStorage si la variable global estuviera vacía
-                        if (!conductorIdActual) {
-                            conductorIdActual = sessionStorage.getItem('conductor_id_en_via');
+                        if (!conductorActual) {
+                            conductorActual = sessionStorage.getItem('conductor_en_via');
                         }
 
-                        if (token && conductorIdActual) {
+                        let targetId = conductorIdActual || sessionStorage.getItem('conductor_id_en_via');
+
+                        // Si el ID sigue sin encontrarse, lo consultamos directamente en Supabase usando el nombre del chofer
+                        if (!targetId && conductorActual) {
+                            const { data: choferData } = await supabaseClient
+                                .from('conductores')
+                                .select('id')
+                                .eq('nombre', conductorActual)
+                                .single();
+                            if (choferData) {
+                                targetId = choferData.id;
+                            }
+                        }
+
+                        if (token && targetId) {
                             const { error: updateError } = await supabaseClient
                                 .from('conductores')
                                 .update({ fcm_token: token })
-                                .eq('id', conductorIdActual);
+                                .eq('id', targetId);
                             
                             if (updateError) {
-                                console.error("Error al actualizar en Supabase:", updateError);
                                 alert('Error al guardar el token en la base de datos: ' + updateError.message);
                             } else {
                                 document.getElementById('banner-notificaciones').classList.add('hidden');
                                 alert('¡Alertas en segundo plano activadas y token registrado con éxito!');
                             }
                         } else {
-                            alert('Falta el token de Firebase o el ID del conductor.');
+                            alert('No se pudo obtener el token de Firebase o el ID del conductor en la base de datos.');
                         }
                     } else {
                         alert('Permiso de notificaciones denegado. Debes habilitarlo en los ajustes de tu navegador.');
@@ -386,7 +398,7 @@
                                 🗺️ Navegar al destino
                             </a>
                         </div>
-                        <button onclick='finalizarRecorrido("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                        <button onclick='finalizarRecorrido("${c.id}", ${JSON.stringify(tiemnos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
                             📍 Finalizar Recorrido (Llegamos al Destino)
                         </button>
                     `;

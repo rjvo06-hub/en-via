@@ -169,6 +169,23 @@
             renderizarPendientes(pendData);
         }
 
+        // Función para que el conductor tome una carrera pendiente
+        async function tomarCarrera(idCarrera) {
+            const { error } = await supabaseClient
+                .from('carreras')
+                .update({ 
+                    estado: 'asignada', 
+                    conductor_asignado: conductorActual 
+                })
+                .eq('id', idCarrera);
+
+            if (error) {
+                alert('Error al tomar la carrera: ' + error.message);
+            } else {
+                cargarDatosConductor();
+            }
+        }
+
         function renderizarAsignada(asignadas) {
             const seccionAsignada = document.getElementById('seccion-asignada');
             const contenedor = document.getElementById('carrera-asignada-container');
@@ -229,12 +246,11 @@
                         </button>
                     `;
                 } else {
-                    // Cuadro de confirmación de pago con monto GRANDE para el conductor
                     contenidoAcciones = `
                         <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
                             <p class="text-xs uppercase font-bold text-purple-400">💳 Confirmación de Pago</p>
                             <p class="text-3xl font-black text-amber-400 tracking-tight">${c.precio || '$0.00'}</p>
-                            <p class="text-[11px] text-slate-300">Recibe el pago del pasajero (efectivo/transferencia) y confirma cuando esté acreditado.</p>
+                            <p class="text-[11px] text-slate-300">Verifica que el pasajero haya realizado el pago (transferencia, pago móvil o efectivo) antes de confirmar.</p>
                         </div>
                         <button onclick='confirmarPagoYFinalizar("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
                             ✅ Confirmar Pago y Finalizar Servicio
@@ -386,43 +402,18 @@
                             <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
                         </div>
 
-                        <button onclick="tomarCarrera('${c.id}', ${JSON.stringify(c.tiempos || {})})" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                            🚀 ¡Tomar esta Carrera!
+                        <button onclick="tomarCarrera('${c.id}')" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                            🙋‍♂️ Tomar esta Carrera
                         </button>
                     </div>
                 `;
             });
         }
 
-        async function tomarCarrera(idCarrera, tiemposActuales) {
-            const ahora = new Date().toISOString();
-            const nuevosTiempos = {
-                ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
-                tomo_servicio_at: ahora
-            };
-
-            const { error } = await supabaseClient
-                .from('carreras')
-                .update({ 
-                    estado: 'asignada', 
-                    conductor_asignado: conductorActual,
-                    conductor_id: conductorIdActual || null,
-                    tiempos: nuevosTiempos
-                })
-                .eq('id', idCarrera)
-                .eq('estado', 'pendiente');
-
-            if (error) alert('Error al tomar la carrera: ' + error.message);
-            else {
-                alert('¡Has tomado la carrera con éxito!');
-                cargarDatosConductor();
-            }
-        }
-
         function suscripcionRealtime() {
             supabaseClient
-                .channel('cambios-carreras')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, payload => {
+                .channel('cambios-carreras-conductor')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, () => {
                     cargarDatosConductor();
                 })
                 .subscribe();

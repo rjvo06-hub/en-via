@@ -4,71 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Panel Principal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
     <style>
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased flex flex-col justify-between p-4 sm:p-8">
-
-    <div class="max-w-xl mx-auto w-full space-y-6 my-auto">
-        <header class="text-center space-y-2">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-500 tracking-tight">EN-VIA</h1>
-            <p class="text-slate-400 text-xs sm:text-sm">Sistema central de gestión de rutas y servicios</p>
+<body>
+    <div class="max-w-xl">
+        <header>
+            <h1>EN-VIA</h1>
+            <p>Sistema central de gestión de rutas y servicios</p>
         </header>
 
-        <div class="grid grid-cols-1 gap-3 sm:gap-4 pt-2">
-            <!-- Portal de Usuario -->
-            <a href="usuario/index.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-emerald-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-lg font-bold border border-emerald-500/20">👤</div>
-                    <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-emerald-400 transition">Portal de Usuario</h2>
-                        <p class="text-slate-400 text-xs">Calcular ruta, costo y solicitar servicio</p>
-                    </div>
-                </div>
-                <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>
+        <div>
+            <a href="usuario/index.html">
+                <h2>👤 Portal de Usuario</h2>
+                <p>Calcular ruta, costo y solicitar servicio</p>
             </a>
 
-            <!-- Portal de Conductor -->
-            <a href="conductor/index.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-purple-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 text-lg font-bold border border-purple-500/20">🚗</div>
-                    <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-purple-400 transition">Portal de Conductor (En Vivo)</h2>
-                        <p class="text-slate-400 text-xs">Ver carreras activas y tomarlas en tiempo real</p>
-                    </div>
-                </div>
-                <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>
+            <a href="conductor/index.html">
+                <h2>🚗 Portal de Conductor (En Vivo)</h2>
+                <p>Ver carreras activas y tomarlas en tiempo real</p>
             </a>
 
-            <!-- Administración de Clientes -->
-            <a href="admin/clientes.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-blue-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 text-lg font-bold border border-blue-500/20">👥</div>
-                    <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-blue-400 transition">Admin: Clientes</h2>
-                        <p class="text-slate-400 text-xs">Crear, modificar y eliminar registros de clientes</p>
-                    </div>
-                </div>
-                <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>
+            <a href="admin/clientes.html">
+                <h2>👥 Admin: Clientes</h2>
+                <p>Crear, modificar y eliminar registros de clientes</p>
             </a>
 
-            <!-- Administración de Conductores -->
-            <a href="admin/conductores.html" class="group bg-[#111111] hover:bg-[#161616] border border-[#222222] hover:border-amber-500/50 p-4 sm:p-5 rounded-2xl shadow-xl transition flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 text-lg font-bold border border-amber-500/20">📋</div>
-                    <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white group-hover:text-amber-400 transition">Admin: Conductores</h2>
-                        <p class="text-slate-400 text-xs">Crear, modificar y eliminar registros de choferes</p>
-                    </div>
-                </div>
-                <span class="text-slate-500 group-hover:text-white transition text-lg">→</span>
+            <a href="admin/conductores.html">
+                <h2>📋 Admin: Conductores</h2>
+                <p>Crear, modificar y eliminar registros de choferes</p>
             </a>
         </div>
     </div>
 
-    <footer class="text-center text-slate-600 text-[11px] py-4">EN-VIA &copy; 2026 - Todos los derechos reservados</footer>
+    <footer style="text-align:center; color:#64748b; font-size:11px; padding:16px 0;">
+        EN-VIA &copy; 2026 - Todos los derechos reservados
+    </footer>
 </body>
 </html>

@@ -10,8 +10,133 @@
       var SUPABASE_URL = 'https://sgpwdejwfbqsswoibohu.supabase.co';
       var SUPABASE_ANON_KEY = 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
 
-      if (window.supabase && typeof window.supabase.createClient === 'function') {
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      function createRestFallbackClient(url, key) {
+          var baseUrl = url.replace(/\/+$/, '') + '/rest/v1/';
+          var headers = {
+              'apikey': key,
+              'Authorization': 'Bearer ' + key,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+          };
+
+          function makeQuery(table, initCols) {
+              var state = {
+                  table: table,
+                  selectCols: initCols || '*',
+                  filters: [],
+                  orderBy: null,
+                  limitNum: null,
+                  singleMode: false,
+                  method: 'GET',
+                  bodyPayload: null
+              };
+
+              function buildGetUrl() {
+                  var qs = ['select=' + encodeURIComponent(state.selectCols)];
+                  for (var i = 0; i < state.filters.length; i++) {
+                      qs.push(state.filters[i]);
+                  }
+                  if (state.orderBy) {
+                      qs.push('order=' + encodeURIComponent(state.orderBy));
+                  }
+                  if (state.limitNum !== null) {
+                      qs.push('limit=' + state.limitNum);
+                  }
+                  return baseUrl + state.table + '?' + qs.join('&');
+              }
+
+              function execRequest() {
+                  var targetUrl = state.method === 'POST' ? (baseUrl + state.table) : buildGetUrl();
+                  var opts = { method: state.method, headers: headers };
+                  if (state.bodyPayload !== null) {
+                      opts.body = JSON.stringify(state.bodyPayload);
+                  }
+                  return fetch(targetUrl, opts).then(function (r) {
+                      return r.json().then(function (json) {
+                          if (!r.ok) {
+                              return { data: null, error: { message: (json && json.message) ? json.message : r.statusText } };
+                          }
+                          if (state.singleMode) {
+                              return { data: Array.isArray(json) ? (json[0] || null) : json, error: null };
+                          }
+                          return { data: json, error: null };
+                      });
+                  });
+              }
+
+              var qb = {
+                  select: function (cols) {
+                      if (cols) state.selectCols = cols;
+                      return qb;
+                  },
+                  eq: function (col, val) {
+                      state.filters.push(encodeURIComponent(col) + '=eq.' + encodeURIComponent(val));
+                      return qb;
+                  },
+                  in: function (col, arr) {
+                      var encodedVals = (arr || []).map(function (v) { return encodeURIComponent(v); }).join(',');
+                      state.filters.push(encodeURIComponent(col) + '=in.(' + encodedVals + ')');
+                      return qb;
+                  },
+                  not: function (col, op, val) {
+                      var right = (val === null || op === 'is') ? 'is.null' : (op + '.' + val);
+                      state.filters.push(encodeURIComponent(col) + '=not.' + right);
+                      return qb;
+                  },
+                  order: function (col, opts) {
+                      var dir = (opts && opts.ascending === false) ? 'desc' : 'asc';
+                      state.orderBy = col + '.' + dir;
+                      return qb;
+                  },
+                  limit: function (n) {
+                      state.limitNum = n;
+                      return qb;
+                  },
+                  single: function () {
+                      state.singleMode = true;
+                      state.limitNum = 1;
+                      return qb;
+                  },
+                  maybeSingle: function () {
+                      state.singleMode = true;
+                      state.limitNum = 1;
+                      return qb;
+                  },
+                  insert: function (rows) {
+                      state.method = 'POST';
+                      state.bodyPayload = Array.isArray(rows) ? rows : [rows];
+                      return qb;
+                  },
+                  update: function (values) {
+                      state.method = 'PATCH';
+                      state.bodyPayload = values;
+                      return qb;
+                  },
+                  then: function (resolve, reject) {
+                      return execRequest().then(resolve, reject);
+                  }
+              };
+              return qb;
+          }
+
+          return {
+              _isRestFallback: true,
+              from: function (table) {
+                  return makeQuery(table, '*');
+              }
+          };
+      }
+
+      window.supabaseIsRealtime = false;
+      try {
+          if (window.supabase && typeof window.supabase.createClient === 'function') {
+              window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+              window.supabaseIsRealtime = true;
+          } else {
+              window.supabaseClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          }
+      } catch (e) {
+          window.supabaseClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       }
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -98,11 +223,8 @@
 
         function getDb() {
             if (window.supabaseClient) return window.supabaseClient;
-            if (window.supabase && typeof window.supabase.createClient === 'function') {
-                window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                return window.supabaseClient;
-            }
-            return null;
+            window.supabaseClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            return window.supabaseClient;
         }
 
         function activarModoSegundoPlano() {
@@ -126,10 +248,6 @@
 
         function solicitarPermisosPushMovil() {
             var db = getDb();
-            if (!db) {
-                alert('Cliente de Supabase no disponible.');
-                return;
-            }
             if (!conductorActual) {
                 conductorActual = sessionStorage.getItem('conductor_en_via');
             }
@@ -240,11 +358,6 @@
             var select = document.getElementById('login-select');
             var db = getDb();
 
-            if (!db) {
-                select.innerHTML = '<option value="">No se pudo iniciar Supabase en este navegador</option>';
-                return;
-            }
-
             db.from('conductores')
                 .select('id, nombre')
                 .eq('activo', true)
@@ -326,7 +439,6 @@
 
         function cargarDatosConductor() {
             var db = getDb();
-            if (!db) return;
 
             db.from('carreras')
                 .select('*')
@@ -360,7 +472,6 @@
 
         function tomarCarrera(idCarrera) {
             var db = getDb();
-            if (!db) return;
 
             db.from('carreras')
                 .update({
@@ -441,7 +552,6 @@
 
         function actualizarTiemposCarrera(idCarrera, tiemposActuales, campoNuevo, finalizarCompleta) {
             var db = getDb();
-            if (!db) return;
             var ahora = new Date().toISOString();
             var nuevosTiempos = Object.assign({}, (typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}));
             nuevosTiempos[campoNuevo] = ahora;
@@ -521,13 +631,13 @@
 
         function suscripcionRealtime() {
             var db = getDb();
-            if (!db) return;
-
-            db.channel('cambios-carreras-conductor-actualizado')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, function () {
-                    cargarDatosConductor();
-                })
-                .subscribe();
+            if (window.supabaseIsRealtime && typeof db.channel === 'function') {
+                db.channel('cambios-carreras-conductor-actualizado')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, function () {
+                        cargarDatosConductor();
+                    })
+                    .subscribe();
+            }
         }
     </script>
 </body>

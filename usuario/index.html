@@ -11,8 +11,133 @@
       var SUPABASE_URL = 'https://sgpwdejwfbqsswoibohu.supabase.co';
       var SUPABASE_ANON_KEY = 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
 
-      if (window.supabase && typeof window.supabase.createClient === 'function') {
-        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      function createRestFallbackClient(url, key) {
+          var baseUrl = url.replace(/\/+$/, '') + '/rest/v1/';
+          var headers = {
+              'apikey': key,
+              'Authorization': 'Bearer ' + key,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+          };
+
+          function makeQuery(table, initCols) {
+              var state = {
+                  table: table,
+                  selectCols: initCols || '*',
+                  filters: [],
+                  orderBy: null,
+                  limitNum: null,
+                  singleMode: false,
+                  method: 'GET',
+                  bodyPayload: null
+              };
+
+              function buildGetUrl() {
+                  var qs = ['select=' + encodeURIComponent(state.selectCols)];
+                  for (var i = 0; i < state.filters.length; i++) {
+                      qs.push(state.filters[i]);
+                  }
+                  if (state.orderBy) {
+                      qs.push('order=' + encodeURIComponent(state.orderBy));
+                  }
+                  if (state.limitNum !== null) {
+                      qs.push('limit=' + state.limitNum);
+                  }
+                  return baseUrl + state.table + '?' + qs.join('&');
+              }
+
+              function execRequest() {
+                  var targetUrl = state.method === 'POST' ? (baseUrl + state.table) : buildGetUrl();
+                  var opts = { method: state.method, headers: headers };
+                  if (state.bodyPayload !== null) {
+                      opts.body = JSON.stringify(state.bodyPayload);
+                  }
+                  return fetch(targetUrl, opts).then(function (r) {
+                      return r.json().then(function (json) {
+                          if (!r.ok) {
+                              return { data: null, error: { message: (json && json.message) ? json.message : r.statusText } };
+                          }
+                          if (state.singleMode) {
+                              return { data: Array.isArray(json) ? (json[0] || null) : json, error: null };
+                          }
+                          return { data: json, error: null };
+                      });
+                  });
+              }
+
+              var qb = {
+                  select: function (cols) {
+                      if (cols) state.selectCols = cols;
+                      return qb;
+                  },
+                  eq: function (col, val) {
+                      state.filters.push(encodeURIComponent(col) + '=eq.' + encodeURIComponent(val));
+                      return qb;
+                  },
+                  in: function (col, arr) {
+                      var encodedVals = (arr || []).map(function (v) { return encodeURIComponent(v); }).join(',');
+                      state.filters.push(encodeURIComponent(col) + '=in.(' + encodedVals + ')');
+                      return qb;
+                  },
+                  not: function (col, op, val) {
+                      var right = (val === null || op === 'is') ? 'is.null' : (op + '.' + val);
+                      state.filters.push(encodeURIComponent(col) + '=not.' + right);
+                      return qb;
+                  },
+                  order: function (col, opts) {
+                      var dir = (opts && opts.ascending === false) ? 'desc' : 'asc';
+                      state.orderBy = col + '.' + dir;
+                      return qb;
+                  },
+                  limit: function (n) {
+                      state.limitNum = n;
+                      return qb;
+                  },
+                  single: function () {
+                      state.singleMode = true;
+                      state.limitNum = 1;
+                      return qb;
+                  },
+                  maybeSingle: function () {
+                      state.singleMode = true;
+                      state.limitNum = 1;
+                      return qb;
+                  },
+                  insert: function (rows) {
+                      state.method = 'POST';
+                      state.bodyPayload = Array.isArray(rows) ? rows : [rows];
+                      return qb;
+                  },
+                  update: function (values) {
+                      state.method = 'PATCH';
+                      state.bodyPayload = values;
+                      return qb;
+                  },
+                  then: function (resolve, reject) {
+                      return execRequest().then(resolve, reject);
+                  }
+              };
+              return qb;
+          }
+
+          return {
+              _isRestFallback: true,
+              from: function (table) {
+                  return makeQuery(table, '*');
+              }
+          };
+      }
+
+      window.supabaseIsRealtime = false;
+      try {
+          if (window.supabase && typeof window.supabase.createClient === 'function') {
+              window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+              window.supabaseIsRealtime = true;
+          } else {
+              window.supabaseClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          }
+      } catch (e) {
+          window.supabaseClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       }
     </script>
 </head>
@@ -135,6 +260,7 @@
         var clienteActual = "";
         var clienteIdActual = null;
         var timerClientInterval = null;
+        var pollEstadoInterval = null;
 
         var currentMode = 'origin';
         var maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
@@ -146,11 +272,8 @@
 
         function getDb() {
             if (window.supabaseClient) return window.supabaseClient;
-            if (window.supabase && typeof window.supabase.createClient === 'function') {
-                window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                return window.supabaseClient;
-            }
-            return null;
+            window.supabaseClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            return window.supabaseClient;
         }
 
         window.addEventListener('load', function () {
@@ -194,11 +317,6 @@
             var select = document.getElementById('select-cliente');
             var db = getDb();
 
-            if (!db) {
-                select.innerHTML = '<option value="">No se pudo iniciar Supabase en este navegador</option>';
-                return Promise.resolve();
-            }
-
             return db.from('clientes')
                 .select('id, nombre')
                 .eq('activo', true)
@@ -230,10 +348,6 @@
 
             if (!select.value) {
                 errorDiv.classList.remove('hidden');
-                return;
-            }
-            if (!db) {
-                alert('Cliente de Supabase no disponible.');
                 return;
             }
 
@@ -274,6 +388,7 @@
             sessionStorage.removeItem('cliente_id_en_via');
             sessionStorage.removeItem('carrera_activa_id');
             if (timerClientInterval) clearInterval(timerClientInterval);
+            if (pollEstadoInterval) clearInterval(pollEstadoInterval);
             location.reload();
         }
 
@@ -486,10 +601,6 @@
                 alert('Faltan el origen o el destino.');
                 return;
             }
-            if (!db) {
-                alert('Cliente de Supabase no disponible.');
-                return;
-            }
 
             db.from('carreras').insert([{
                 cliente_id: clienteIdActual || null,
@@ -549,6 +660,7 @@
                 seccionLlegada.classList.remove('hidden');
                 labelLlegada.innerHTML = '<strong>¡Gracias por viajar con EN-VIA!</strong>';
                 if (timerClientInterval) clearInterval(timerClientInterval);
+                if (pollEstadoInterval) clearInterval(pollEstadoInterval);
                 setTimeout(function () {
                     sessionStorage.removeItem('carrera_activa_id');
                     location.reload();
@@ -560,7 +672,7 @@
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
 
-                var promesaBancos = (conductor && db)
+                var promesaBancos = conductor
                     ? db.from('conductores').select('datos_bancarios').eq('nombre', conductor).maybeSingle()
                     : Promise.resolve({ data: null });
 
@@ -715,33 +827,48 @@
 
         function cancelarOReiniciarSolicitud() {
             var db = getDb();
-            var promesa = (idCarreraActiva && db)
+            var promesa = idCarreraActiva
                 ? db.from('carreras').update({ estado: 'cancelada' }).eq('id', idCarreraActiva)
                 : Promise.resolve();
 
             promesa.then(function () {
                 sessionStorage.removeItem('carrera_activa_id');
                 if (timerClientInterval) clearInterval(timerClientInterval);
+                if (pollEstadoInterval) clearInterval(pollEstadoInterval);
                 location.reload();
             });
         }
 
         function suscripcionRealtime(id) {
             var db = getDb();
-            if (!db) return;
+            if (window.supabaseIsRealtime && typeof db.channel === 'function') {
+                db.channel('carrera-' + id)
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'carreras', filter: 'id=eq.' + id }, function (payload) {
+                        var carreraActualizada = payload.new;
+                        actualizarBadgeYConductor(
+                            carreraActualizada.estado,
+                            carreraActualizada.conductor_asignado,
+                            carreraActualizada.origen,
+                            carreraActualizada.tiempos,
+                            carreraActualizada.precio
+                        );
+                    })
+                    .subscribe();
+            }
 
-            db.channel('carrera-' + id)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'carreras', filter: 'id=eq.' + id }, function (payload) {
-                    var carreraActualizada = payload.new;
-                    actualizarBadgeYConductor(
-                        carreraActualizada.estado,
-                        carreraActualizada.conductor_asignado,
-                        carreraActualizada.origen,
-                        carreraActualizada.tiempos,
-                        carreraActualizada.precio
-                    );
-                })
-                .subscribe();
+            if (pollEstadoInterval) clearInterval(pollEstadoInterval);
+            pollEstadoInterval = setInterval(function () {
+                db.from('carreras')
+                    .select('*')
+                    .eq('id', id)
+                    .maybeSingle()
+                    .then(function (res) {
+                        if (res.data) {
+                            var c = res.data;
+                            actualizarBadgeYConductor(c.estado, c.conductor_asignado, c.origen, c.tiempos, c.precio);
+                        }
+                    });
+            }, 4000);
         }
 
         function copyCoords(type) {

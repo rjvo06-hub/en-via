@@ -218,6 +218,10 @@
         var cantidadPendientesAnterior = 0;
         var audioCtx = null;
 
+        var alarmaInterval = null;
+        var alarmaActiva = false;
+        var hayCarreraNuevaSinVer = false;
+
         var baseLat = "10.670389";
         var baseLng = "-71.658972";
 
@@ -301,7 +305,7 @@
             });
         }
 
-        function reproducirAlarmaEscritorio() {
+        function dispararPulsoTimbre() {
             try {
                 var audioElement = document.getElementById('alarma-audio');
                 if (audioElement) {
@@ -310,35 +314,80 @@
                 }
 
                 if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContextClass();
                 }
-                if (audioCtx.state === 'suspended') {
+                if (audioCtx.state === 'suspended' && audioCtx.resume) {
                     audioCtx.resume();
                 }
 
-                for (var i = 0; i < 3; i++) {
-                    setTimeout(function () {
-                        if (!audioCtx) return;
-                        var osc = audioCtx.createOscillator();
-                        var gain = audioCtx.createGain();
-                        osc.type = 'square';
-                        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                        osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.2);
-                        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                        osc.connect(gain);
-                        gain.connect(audioCtx.destination);
-                        osc.start();
-                        osc.stop(audioCtx.currentTime + 0.3);
-                    }, i * 350);
-                }
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.35);
 
                 if ("vibrate" in navigator) {
-                    navigator.vibrate([500, 250, 500, 250, 500]);
+                    navigator.vibrate([600, 300, 600]);
                 }
             } catch (e) {
-                console.log("Error alarma:", e);
+                console.log("Error en timbre:", e);
             }
+        }
+
+        function iniciarAlarmaPersistente() {
+            hayCarreraNuevaSinVer = true;
+            if (alarmaActiva) return;
+
+            alarmaActiva = true;
+            dispararPulsoTimbre();
+
+            alarmaInterval = setInterval(function () {
+                if (!alarmaActiva || !hayCarreraNuevaSinVer) {
+                    detenerAlarmaPersistente();
+                    return;
+                }
+                dispararPulsoTimbre();
+            }, 2000);
+        }
+
+        function detenerAlarmaPersistente() {
+            alarmaActiva = false;
+            hayCarreraNuevaSinVer = false;
+            if (alarmaInterval) {
+                clearInterval(alarmaInterval);
+                alarmaInterval = null;
+            }
+            var audioElement = document.getElementById('alarma-audio');
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.currentTime = 0;
+            }
+            if ("vibrate" in navigator) {
+                navigator.vibrate(0);
+            }
+        }
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden && alarmaActiva) {
+                detenerAlarmaPersistente();
+                cargarDatosConductor();
+            }
+        });
+
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+            window.Capacitor.Plugins.App.addListener('appStateChange', function (state) {
+                if (state && state.isActive && alarmaActiva) {
+                    detenerAlarmaPersistente();
+                    cargarDatosConductor();
+                }
+            });
         }
 
         window.addEventListener('load', function () {
@@ -430,6 +479,7 @@
         }
 
         function cerrarSesion() {
+            detenerAlarmaPersistente();
             sessionStorage.removeItem('conductor_en_via');
             sessionStorage.removeItem('conductor_id_en_via');
             if (timerInterval) clearInterval(timerInterval);
@@ -452,10 +502,13 @@
                         cantidadPendientesAnterior = cantidadActualPendientes;
                         primeraCargaRealizada = true;
                     } else if (cantidadActualPendientes > cantidadPendientesAnterior) {
-                        reproducirAlarmaEscritorio();
+                        iniciarAlarmaPersistente();
                         cantidadPendientesAnterior = cantidadActualPendientes;
                     } else {
                         cantidadPendientesAnterior = cantidadActualPendientes;
+                        if (cantidadActualPendientes === 0) {
+                            detenerAlarmaPersistente();
+                        }
                     }
 
                     renderizarPendientes(pendData);
@@ -471,6 +524,7 @@
         }
 
         function tomarCarrera(idCarrera) {
+            detenerAlarmaPersistente();
             var db = getDb();
 
             db.from('carreras')

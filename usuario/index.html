@@ -4,213 +4,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Solicitar Carrera</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Maps API -->
+    <link rel="stylesheet" href="../css/styles.css">
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
-    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Cliente de Supabase -->
     <script src="../js/supabaseClient.js"></script>
     <style>
         #map { height: 350px; width: 100%; }
         #map-seguimiento { height: 260px; width: 100%; }
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
-
-        .custom-suggestions-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            z-index: 50;
-            background-color: #141414;
-            border: 1px solid #2e2e2e;
-            border-radius: 0.75rem;
-            margin-top: 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.9);
-        }
-        .suggestion-item {
-            padding: 9px 12px;
-            font-size: 0.85rem;
-            color: #cbd5e1;
-            border-bottom: 1px solid #1f1f1f;
-            cursor: pointer;
-            transition: background 0.15s ease;
-        }
-        .suggestion-item:hover { background-color: #1f1f1f; color: #ffffff; }
-        .interactive-card { cursor: pointer; transition: all 0.2s ease; }
-        .interactive-card:hover { border-color: #10b981 !important; }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased overflow-x-hidden">
-
-    <div class="max-w-4xl mx-auto px-3 py-4 sm:py-6">
-        <!-- Encabezado -->
-        <header class="mb-4 flex justify-between items-center border-b border-[#222222] pb-3">
-            <div>
-                <h1 class="text-lg sm:text-xl font-extrabold text-emerald-500 tracking-tight">EN-VIA - Portal de Usuario</h1>
-                <p class="text-slate-400 text-xs">Calcula tu ruta y solicita tu servicio</p>
+<body>
+    <div class="max-w-4xl">
+        <header>
+            <h1>EN-VIA - Portal de Usuario</h1>
+            <p>Calcula tu ruta y solicita tu servicio</p>
+            <div style="margin-top: 10px;">
+                <a href="../index.html" style="display:inline-block; padding:6px 12px; font-size:12px;">← Menú Principal</a>
             </div>
-            <a href="../index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
-                ← Menú Principal
-            </a>
         </header>
 
-        <!-- Selector de Cliente (Identificación inicial) -->
-        <div id="identificacion-container" class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl mb-4 space-y-2">
-            <label class="block text-[10px] uppercase font-bold text-emerald-400">Identificación del Cliente</label>
-            <div class="flex gap-2">
-                <select id="select-cliente" class="flex-1 bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2.5 text-white outline-none text-xs">
+        <div id="identificacion-container">
+            <label style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#34d399;">Identificación del Cliente</label>
+            <div>
+                <select id="select-cliente">
                     <option value="">Cargando clientes registrados...</option>
                 </select>
-                <button onclick="fijarCliente()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer shadow-lg">
-                    Continuar
-                </button>
+                <button type="button" onclick="fijarCliente()">Continuar</button>
             </div>
-            <div id="cliente-error" class="text-red-400 text-xs hidden">Por favor, selecciona tu nombre de la lista.</div>
+            <div id="cliente-error" style="color:#f87171; font-size:12px;" class="hidden">Por favor, selecciona tu nombre de la lista.</div>
         </div>
 
-        <!-- VISTA 1: FORMULARIO DE SOLICITUD -->
-        <div id="vista-formulario" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-            <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-2xl space-y-3.5 flex flex-col justify-between">
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center bg-[#161616] px-3 py-2 rounded-xl border border-[#262626]">
-                        <span class="text-xs text-slate-400">Cliente activo: <strong id="cliente-actual-display" class="text-white"></strong></span>
-                        <button onclick="cambiarCliente()" class="text-[10px] text-emerald-400 hover:underline cursor-pointer font-bold">Cambiar</button>
-                    </div>
-
-                    <div class="flex bg-[#161616] p-1 rounded-xl border border-[#262626]">
-                        <button id="btn-mode-origin" onclick="setMode('origin')" class="flex-1 py-2 text-xs font-bold uppercase rounded-lg transition bg-emerald-600 text-white shadow-sm cursor-pointer">
-                            1. Buscar Origen
-                        </button>
-                        <button id="btn-mode-dest" onclick="setMode('dest')" class="flex-1 py-2 text-xs font-bold uppercase rounded-lg transition text-slate-400 hover:text-white cursor-pointer">
-                            2. Buscar Destino
-                        </button>
-                    </div>
-
-                    <div class="space-y-1 relative">
-                        <label id="search-label" class="block text-[10px] font-bold uppercase tracking-wider text-emerald-400">Escribiendo Dirección de Origen...</label>
-                        <div class="relative">
-                            <input type="text" id="unified-input" placeholder="Ej. Centro Comercial Sambil..." class="w-full bg-[#161616] border border-[#10b981] focus:border-emerald-400 rounded-xl px-3 py-2 text-white outline-none transition" autocomplete="off">
-                            <div id="unified-suggestions" class="custom-suggestions-list hidden"></div>
-                        </div>
-                    </div>
-
-                    <!-- Tarjetas de Resumen -->
-                    <div class="space-y-2 pt-1 border-t border-[#222222]">
-                        <div onclick="setMode('origin')" class="interactive-card p-2.5 bg-[#161616] rounded-xl border border-[#262626] space-y-1">
-                            <div class="flex justify-between items-center text-[10px] font-bold uppercase text-slate-400">
-                                <span>📍 Origen (Clic para editar):</span>
-                                <span id="origin-status" class="text-amber-500 font-medium">Pendiente</span>
-                            </div>
-                            <input type="text" id="campo-libre-origen" placeholder="Sin seleccionar..." class="w-full bg-transparent text-xs text-slate-200 font-medium outline-none truncate pointer-events-none" readonly>
-                            <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-[#222222]">
-                                <div><span class="font-bold text-slate-300">Lat:</span> <span id="origin-lat">-</span> | <span class="font-bold text-slate-300">Lon:</span> <span id="origin-lon">-</span></div>
-                                <button onclick="event.stopPropagation(); copyCoords('origin')" id="btn-copy-origin" class="hidden text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-emerald-500/10 transition">Copiar</button>
-                            </div>
-                        </div>
-
-                        <div onclick="setMode('dest')" class="interactive-card p-2.5 bg-[#161616] rounded-xl border border-[#262626] space-y-1">
-                            <div class="flex justify-between items-center text-[10px] font-bold uppercase text-slate-400">
-                                <span>🏁 Destino (Clic para editar):</span>
-                                <span id="dest-status" class="text-amber-500 font-medium">Pendiente</span>
-                            </div>
-                            <input type="text" id="campo-libre-destino" placeholder="Sin seleccionar..." class="w-full bg-transparent text-xs text-slate-200 font-medium outline-none truncate pointer-events-none" readonly>
-                            <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-[#222222]">
-                                <div><span class="font-bold text-slate-300">Lat:</span> <span id="dest-lat">-</span> | <span class="font-bold text-slate-300">Lon:</span> <span id="dest-lon">-</span></div>
-                                <button onclick="event.stopPropagation(); copyCoords('dest')" id="btn-copy-dest" class="hidden text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer px-2 py-0.5 rounded bg-emerald-500/10 transition">Copiar</button>
-                            </div>
-                        </div>
-                    </div>
+        <div id="vista-formulario" class="hidden">
+            <div>
+                <div>
+                    <span>Cliente activo: <strong id="cliente-actual-display"></strong></span>
+                    <button type="button" onclick="cambiarCliente()" style="margin-left:8px; padding:4px 10px; font-size:11px;">Cambiar</button>
                 </div>
 
-                <div class="bg-[#161616] p-3 rounded-xl border border-[#262626] space-y-2 mt-2">
-                    <div class="flex justify-between text-xs">
-                        <span class="text-slate-400">Distancia por carretera:</span>
-                        <span id="route-distance" class="font-bold text-emerald-400">-</span>
+                <div style="margin-top:10px;">
+                    <button type="button" id="btn-mode-origin" onclick="setMode('origin')">1. Buscar Origen</button>
+                    <button type="button" id="btn-mode-dest" onclick="setMode('dest')">2. Buscar Destino</button>
+                </div>
+
+                <div style="margin-top:10px; position:relative;">
+                    <label id="search-label" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#34d399;">Escribiendo Dirección de Origen...</label>
+                    <input type="text" id="unified-input" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
+                    <div id="unified-suggestions" class="custom-suggestions-list hidden"></div>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <div onclick="setMode('origin')" style="cursor:pointer;">
+                        <div>
+                            <span>📍 Origen (Clic para editar):</span>
+                            <span id="origin-status" style="margin-left:8px; color:#f59e0b;">Pendiente</span>
+                        </div>
+                        <input type="text" id="campo-libre-origen" placeholder="Sin seleccionar..." readonly>
+                        <div>
+                            <span>Lat: <span id="origin-lat">-</span> | Lon: <span id="origin-lon">-</span></span>
+                            <button type="button" onclick="event.stopPropagation(); copyCoords('origin')" id="btn-copy-origin" class="hidden" style="margin-left:8px; padding:4px 8px; font-size:11px;">Copiar</button>
+                        </div>
                     </div>
-                    <div class="flex justify-between text-xs">
-                        <span class="text-slate-400">Tiempo estimado de viaje:</span>
-                        <span id="route-duration" class="font-bold text-slate-200">-</span>
+
+                    <div onclick="setMode('dest')" style="cursor:pointer; margin-top:10px;">
+                        <div>
+                            <span>🏁 Destino (Clic para editar):</span>
+                            <span id="dest-status" style="margin-left:8px; color:#f59e0b;">Pendiente</span>
+                        </div>
+                        <input type="text" id="campo-libre-destino" placeholder="Sin seleccionar..." readonly>
+                        <div>
+                            <span>Lat: <span id="dest-lat">-</span> | Lon: <span id="dest-lon">-</span></span>
+                            <button type="button" onclick="event.stopPropagation(); copyCoords('dest')" id="btn-copy-dest" class="hidden" style="margin-left:8px; padding:4px 8px; font-size:11px;">Copiar</button>
+                        </div>
                     </div>
-                    <div class="flex justify-between text-xs pt-1 border-t border-[#222222]">
-                        <span class="text-slate-400">Costo estimado:</span>
-                        <span id="route-cost" class="font-bold text-amber-400">-</span>
-                    </div>
-                    <div id="status-msg" class="text-slate-400 italic text-[11px] pt-1 border-t border-[#222222]">Selecciona origen y destino.</div>
-                    
-                    <button onclick="solicitarCarrera()" id="btn-solicitar" class="hidden w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                        🚀 Solicitar Carrera Ahora
-                    </button>
                 </div>
             </div>
 
-            <div class="bg-[#111111] border border-[#222222] p-3 rounded-2xl shadow-2xl flex flex-col justify-between">
-                <div class="rounded-xl overflow-hidden border border-[#262626] h-full">
-                    <div id="map"></div>
-                </div>
+            <div style="margin-top:12px;">
+                <p>Distancia por carretera: <strong id="route-distance">-</strong></p>
+                <p>Tiempo estimado de viaje: <strong id="route-duration">-</strong></p>
+                <p>Costo estimado: <strong id="route-cost">-</strong></p>
+                <p id="status-msg" style="font-style:italic; margin-top:6px;">Selecciona origen y destino.</p>
+                <button type="button" onclick="solicitarCarrera()" id="btn-solicitar" class="hidden" style="width:100%; margin-top:10px;">🚀 Solicitar Carrera Ahora</button>
+            </div>
+
+            <div style="margin-top:12px;">
+                <div id="map"></div>
             </div>
         </div>
 
-        <!-- VISTA 2: ESTADO DE CARRERA ACTIVA -->
-        <div id="vista-estado" class="max-w-xl mx-auto space-y-4 hidden">
-            <div class="bg-[#111111] border border-[#222222] p-5 rounded-2xl shadow-2xl space-y-4">
-                <div class="text-center space-y-1">
-                    <div id="badge-estado" class="inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider animate-pulse">
-                        🔍 Buscando Conductor...
-                    </div>
-                    <h2 class="text-base font-bold text-white pt-1">Estado de tu Solicitud</h2>
+        <div id="vista-estado" class="hidden">
+            <div>
+                <div id="badge-estado">🔍 Buscando Conductor...</div>
+                <h2>Estado de tu Solicitud</h2>
+                <p>Cliente: <strong id="estado-cliente">-</strong></p>
+                <p>Costo de la carrera: <strong id="estado-precio">-</strong></p>
+                <p>📍 Origen: <span id="estado-origen"></span></p>
+                <p>🏁 Destino: <span id="estado-destino"></span></p>
+                <p>Distancia: <strong id="estado-distancia">-</strong></p>
+                <p>Conductor Asignado: <strong id="estado-conductor">Esperando asignación...</strong></p>
+                <div id="seccion-llegada" class="hidden">
+                    <p>Estado del servicio: <span id="estado-llegada">Calculando...</span></p>
                 </div>
+            </div>
 
-                <!-- Tarjeta de Detalles -->
-                <div class="bg-[#161616] p-4 rounded-xl border border-[#262626] space-y-3 text-xs">
-                    <div class="flex justify-between items-center border-b border-[#222222] pb-2">
-                        <span class="text-slate-400">Cliente:</span>
-                        <span id="estado-cliente" class="text-emerald-400 font-bold">-</span>
-                    </div>
-                    <div class="flex justify-between items-center border-b border-[#222222] pb-2">
-                        <span class="text-slate-400">Costo de la carrera:</span>
-                        <span id="estado-precio" class="text-amber-400 font-extrabold text-sm">-</span>
-                    </div>
-                    <div>
-                        <strong class="text-slate-400 block pb-0.5">📍 Origen:</strong>
-                        <span id="estado-origen" class="text-slate-200 font-medium"></span>
-                    </div>
-                    <div>
-                        <strong class="text-slate-400 block pb-0.5">🏁 Destino:</strong>
-                        <span id="estado-destino" class="text-slate-200 font-medium"></span>
-                    </div>
-                    <div class="flex justify-between pt-2 border-t border-[#222222]">
-                        <span class="text-slate-400">Distancia:</span>
-                        <span id="estado-distancia" class="text-emerald-400 font-bold">-</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-400">Conductor Asignado:</span>
-                        <span id="estado-conductor" class="text-purple-400 font-bold">Esperando asignación...</span>
-                    </div>
-                    <div id="seccion-llegada" class="flex justify-between pt-2 border-t border-[#222222] hidden">
-                        <span class="text-slate-400">Estado del servicio:</span>
-                        <span id="estado-llegada" class="text-emerald-400 font-bold">Calculando...</span>
-                    </div>
-                </div>
+            <div id="seccion-cobro-cliente" class="hidden"></div>
 
-                <!-- CONTENEDOR DE DATOS BANCARIOS Y QR OFICIAL -->
-                <div id="seccion-cobro-cliente" class="hidden"></div>
+            <div id="contenedor-mapa-seguimiento" class="hidden">
+                <div id="map-seguimiento"></div>
+            </div>
 
-                <!-- Mapa de seguimiento -->
-                <div id="contenedor-mapa-seguimiento" class="rounded-xl overflow-hidden border border-[#262626] hidden">
-                    <div id="map-seguimiento"></div>
-                </div>
-
-                <!-- Botón Cancelar -->
-                <div id="contenedor-boton-cancelar">
-                    <button onclick="cancelarOReiniciarSolicitud()" class="w-full py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
-                        Cancelar Solicitud
-                    </button>
-                </div>
+            <div id="contenedor-boton-cancelar">
+                <button type="button" onclick="cancelarOReiniciarSolicitud()" style="width:100%; background-color:#262626;">Cancelar Solicitud</button>
             </div>
         </div>
     </div>
@@ -228,7 +134,7 @@
         let clienteActual = "";
         let clienteIdActual = null;
         let timerClientInterval = null;
-        
+
         let currentMode = 'origin';
         const maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
         const baseCoords = { lat: 10.670389, lng: -71.658972 };
@@ -274,21 +180,30 @@
 
         async function cargarClientesSelect() {
             const select = document.getElementById('select-cliente');
-            const { data, error } = await supabaseClient
-                .from('clientes')
-                .select('id, nombre')
-                .eq('activo', true)
-                .order('nombre', { ascending: true });
+            try {
+                const { data, error } = await supabaseClient
+                    .from('clientes')
+                    .select('id, nombre')
+                    .eq('activo', true)
+                    .order('nombre', { ascending: true });
 
-            if (error || !data || data.length === 0) {
-                select.innerHTML = '<option value="">No hay clientes activos registrados</option>';
-                return;
+                if (error) {
+                    select.innerHTML = `<option value="">Error Supabase: ${error.message}</option>`;
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    select.innerHTML = '<option value="">No hay clientes activos registrados</option>';
+                    return;
+                }
+
+                select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
+                data.forEach(c => {
+                    select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
+                });
+            } catch (err) {
+                select.innerHTML = `<option value="">Error de conexión o JS: ${err.message}</option>`;
             }
-
-            select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
-            data.forEach(c => {
-                select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
-            });
         }
 
         async function fijarCliente() {
@@ -302,7 +217,7 @@
 
             errorDiv.classList.add('hidden');
             clienteActual = select.value;
-            
+
             const selectedOption = select.options[select.selectedIndex];
             clienteIdActual = selectedOption.getAttribute('data-id') || null;
 
@@ -341,7 +256,7 @@
         }
 
         function inicializarMapaFormulario() {
-            if (map) return;
+            if (map || typeof google === 'undefined' || !google.maps) return;
             map = new google.maps.Map(document.getElementById('map'), {
                 center: maracaiboCenter,
                 zoom: 13,
@@ -353,8 +268,6 @@
 
         function setMode(mode) {
             currentMode = mode;
-            const btnOrigin = document.getElementById('btn-mode-origin');
-            const btnDest = document.getElementById('btn-mode-dest');
             const searchLabel = document.getElementById('search-label');
             const input = document.getElementById('unified-input');
 
@@ -362,16 +275,12 @@
             document.getElementById('unified-suggestions').classList.add('hidden');
 
             if (mode === 'origin') {
-                btnOrigin.className = "flex-1 py-2 text-xs font-bold uppercase rounded-lg transition bg-emerald-600 text-white shadow-sm cursor-pointer";
-                btnDest.className = "flex-1 py-2 text-xs font-bold uppercase rounded-lg transition text-slate-400 hover:text-white cursor-pointer";
                 searchLabel.textContent = "Escribiendo Dirección de Origen...";
-                searchLabel.className = "block text-[10px] font-bold uppercase tracking-wider text-emerald-400";
+                searchLabel.style.color = "#34d399";
                 input.placeholder = "Ej. Centro Comercial Sambil...";
             } else {
-                btnDest.className = "flex-1 py-2 text-xs font-bold uppercase rounded-lg transition bg-emerald-600 text-white shadow-sm cursor-pointer";
-                btnOrigin.className = "flex-1 py-2 text-xs font-bold uppercase rounded-lg transition text-slate-400 hover:text-white cursor-pointer";
                 searchLabel.textContent = "Escribiendo Dirección de Destino...";
-                searchLabel.className = "block text-[10px] font-bold uppercase tracking-wider text-amber-400";
+                searchLabel.style.color = "#fbbf24";
                 input.placeholder = "Ej. Vereda del Lago...";
             }
             input.focus();
@@ -417,7 +326,7 @@
                                 const div = document.createElement('div');
                                 div.className = 'suggestion-item';
                                 div.textContent = placePrediction.text.toString();
-                                
+
                                 div.addEventListener('click', async () => {
                                     input.value = '';
                                     suggestionsBox.classList.add('hidden');
@@ -430,7 +339,7 @@
                                     if (location) {
                                         const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
                                         const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
-                                        
+
                                         let nombreLugar = place.displayName || place.formattedAddress || placePrediction.text.toString();
                                         const direccionFinal = limpiarDireccion(nombreLugar);
                                         const coords = { lat, lng };
@@ -442,7 +351,7 @@
                                             document.getElementById('origin-lon').textContent = lng.toFixed(6);
                                             document.getElementById('btn-copy-origin').classList.remove('hidden');
                                             document.getElementById('origin-status').textContent = "Listo";
-                                            document.getElementById('origin-status').className = "text-emerald-500 font-bold";
+                                            document.getElementById('origin-status').style.color = "#10b981";
                                             updateMarker('origin', coords);
                                             setMode('dest');
                                         } else {
@@ -452,7 +361,7 @@
                                             document.getElementById('dest-lon').textContent = lng.toFixed(6);
                                             document.getElementById('btn-copy-dest').classList.remove('hidden');
                                             document.getElementById('dest-status').textContent = "Listo";
-                                            document.getElementById('dest-status').className = "text-emerald-500 font-bold";
+                                            document.getElementById('dest-status').style.color = "#10b981";
                                             updateMarker('dest', coords);
                                         }
 
@@ -478,6 +387,7 @@
         }
 
         function updateMarker(type, coord) {
+            if (!map) return;
             if (type === 'origin') {
                 if (originMarker) originMarker.setMap(null);
                 originMarker = new google.maps.Marker({ map: map, position: coord, title: "Origen", icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" });
@@ -500,7 +410,7 @@
         async function verificarYCalcularRuta() {
             if (origenCoords && destCoords) {
                 document.getElementById('status-msg').textContent = "Calculando ruta y tarifa...";
-                
+
                 try {
                     const body = {
                         origin: { location: { latLng: { latitude: origenCoords.lat, longitude: origenCoords.lng } } },
@@ -526,7 +436,7 @@
                         const distanceMeters = route.distanceMeters;
                         const distanceKm = distanceMeters / 1000;
                         distanciaCalculada = distanceKm.toFixed(1) + " km";
-                        
+
                         let costoTotal = distanceKm * COSTO_POR_KM;
                         if (costoTotal < TARIFA_MINIMA) costoTotal = TARIFA_MINIMA;
                         costoCalculado = costoTotal.toFixed(2);
@@ -539,7 +449,7 @@
 
                         const decodedPath = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
                         if (window.currentRoutePolyline) window.currentRoutePolyline.setMap(null);
-                        
+
                         window.currentRoutePolyline = new google.maps.Polyline({
                             path: decodedPath,
                             geodesic: true,
@@ -585,7 +495,6 @@
                 mostrarVistaEstado(data[0]);
                 suscripcionRealtime(idCarreraActiva);
 
-                // Disparamos la notificación push directamente por HTTP a Firebase
                 await enviarNotificacionPushFirebase({
                     origen: origen,
                     destino: destino,
@@ -596,7 +505,7 @@
 
         async function enviarNotificacionPushFirebase(datos) {
             const firebaseKey = 'BJwlGuUhPu701MkMv877zN9cxLyK2IcgbVtLehEu8xllFXCISU28E7lV8Q6w-QbRuzine5GWNUxHA_rrgWKSJLo';
-            
+
             const { data: conductores } = await supabaseClient
                 .from('conductores')
                 .select('fcm_token')
@@ -664,10 +573,9 @@
             if (finCarreraAt || estado === 'completada') {
                 contenedorBotonCancelar.classList.add('hidden');
                 seccionCobroCliente.classList.add('hidden');
-                badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider";
                 badge.textContent = "🏁 ¡Servicio Finalizado y Pagado!";
                 seccionLlegada.classList.remove('hidden');
-                labelLlegada.innerHTML = `<span class="text-emerald-400 font-extrabold">¡Gracias por viajar con EN-VIA!</span>`;
+                labelLlegada.innerHTML = `<strong>¡Gracias por viajar con EN-VIA!</strong>`;
                 if (timerClientInterval) clearInterval(timerClientInterval);
                 setTimeout(() => {
                     sessionStorage.removeItem('carrera_activa_id');
@@ -675,15 +583,7 @@
                 }, 4000);
             } else if (finRecorridoAt || inicioCarreraAt) {
                 contenedorBotonCancelar.classList.add('hidden');
-                
-                if (finRecorridoAt) {
-                    badge.className = "inline-block px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/40 text-xs font-bold uppercase tracking-wider animate-pulse";
-                    badge.textContent = "💳 Confirmación de Pago";
-                } else {
-                    badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 text-xs font-bold uppercase tracking-wider";
-                    badge.textContent = "🚗 ¡Carrera en Curso (Adelanta tu pago)!";
-                }
-
+                badge.textContent = finRecorridoAt ? "💳 Confirmación de Pago" : "🚗 ¡Carrera en Curso (Adelanta tu pago)!";
                 seccionLlegada.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
@@ -695,7 +595,7 @@
                         .select('datos_bancarios')
                         .eq('nombre', conductor)
                         .maybeSingle();
-                    
+
                     if (condData && condData.datos_bancarios) {
                         datosBancarios = condData.datos_bancarios;
                     }
@@ -708,65 +608,40 @@
 
                 seccionCobroCliente.classList.remove('hidden');
                 seccionCobroCliente.innerHTML = `
-                    <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
-                        <p class="text-xs uppercase font-bold text-purple-400">💳 Datos de Pago - ${bancoNombre}</p>
-                        <p class="text-3xl font-black text-amber-400 tracking-tight">${precio || '$0.00'}</p>
-                        
-                        <div class="bg-[#111111] p-3 rounded-xl border border-[#262626] text-left text-xs space-y-1">
-                            <p class="text-slate-300"><strong>Banco:</strong> ${bancoNombre}</p>
-                            <p class="text-slate-300"><strong>Teléfono (Pago Móvil):</strong> ${bancoTlf}</p>
-                            <p class="text-slate-300"><strong>Cédula / RIF:</strong> ${bancoCedula}</p>
-                        </div>
-
-                        <p class="text-[11px] text-slate-300">Escanea el código QR oficial, descárgalo o copia los datos para adelantar tu pago.</p>
-                        
-                        <div class="flex justify-center p-3 bg-white rounded-xl w-fit mx-auto shadow-md">
-                            ${qrImageUrl ? `<img src="${qrImageUrl}" alt="QR de Pago" class="w-36 h-36 object-contain" id="img-qr-oficial">` : `<p class="text-xs text-black">QR no configurado</p>`}
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2 pt-1">
-                            <button onclick="descargarImagenReal('${qrImageUrl}')" class="py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow cursor-pointer flex items-center justify-center gap-1">
-                                📥 Descargar QR
-                            </button>
-                            <button onclick="copiarDatosPago('${bancoNombre}', '${bancoTlf}', '${bancoCedula}', '${precio}')" class="py-2 px-3 bg-[#222222] hover:bg-[#2e2e2e] border border-[#333333] text-slate-200 font-bold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1">
-                                📋 Copiar Datos
-                            </button>
-                        </div>
-
-                        <div class="inline-block px-3 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/25 text-[11px] font-bold mt-1">
-                            ${finRecorridoAt ? '⌛ Esperando confirmación del conductor...' : '🚀 Viaje en curso - Pago habilitado'}
+                    <div>
+                        <p><strong>💳 Datos de Pago - ${bancoNombre}</strong></p>
+                        <p style="font-size:24px; font-weight:800; color:#fbbf24;">${precio || '$0.00'}</p>
+                        <p><strong>Banco:</strong> ${bancoNombre}</p>
+                        <p><strong>Teléfono (Pago Móvil):</strong> ${bancoTlf}</p>
+                        <p><strong>Cédula / RIF:</strong> ${bancoCedula}</p>
+                        ${qrImageUrl ? `<div style="background:#fff; padding:8px; display:inline-block; margin:8px 0;"><img src="${qrImageUrl}" alt="QR de Pago" style="width:140px; height:140px; object-fit:contain;"></div>` : ''}
+                        <div>
+                            <button type="button" onclick="descargarImagenReal('${qrImageUrl}')">📥 Descargar QR</button>
+                            <button type="button" onclick="copiarDatosPago('${bancoNombre}', '${bancoTlf}', '${bancoCedula}', '${precio}')">📋 Copiar Datos</button>
                         </div>
                     </div>
                 `;
-
             } else if (estado === 'asignada') {
                 seccionCobroCliente.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.remove('hidden');
                 inicializarMapaSeguimiento(origenTexto);
                 contenedorBotonCancelar.classList.add('hidden');
-
                 labelConductor.textContent = conductor || "Asignado";
-                labelConductor.className = "text-emerald-400 font-extrabold";
 
                 if (llegadaConductorAt) {
-                    badge.className = "inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider animate-pulse";
                     badge.textContent = "🚗 ¡El conductor ya llegó al lugar!";
                     seccionLlegada.classList.remove('hidden');
-                    labelLlegada.innerHTML = `Tiempo de espera: <span id="cronometro-cliente" class="text-amber-400 font-extrabold">00:00</span>`;
+                    labelLlegada.innerHTML = `Tiempo de espera: <span id="cronometro-cliente">00:00</span>`;
                     iniciarCronometroCliente(llegadaConductorAt);
                 } else {
-                    badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-bold uppercase tracking-wider";
                     badge.textContent = "✅ ¡Conductor Asignado en Camino!";
                     seccionLlegada.classList.remove('hidden');
                     labelLlegada.textContent = "En camino al punto de recogida";
                 }
             } else {
                 seccionCobroCliente.classList.add('hidden');
-                badge.className = "inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider animate-pulse";
                 badge.textContent = "🔍 Buscando Conductor...";
                 labelConductor.textContent = "Esperando asignación...";
-                labelConductor.className = "text-purple-400 font-bold";
-
                 contenedorBotonCancelar.classList.remove('hidden');
                 seccionLlegada.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.add('hidden');
@@ -779,16 +654,13 @@
                 alert('No hay imagen de QR disponible.');
                 return;
             }
-
             try {
                 const response = await fetch(url);
                 const blob = await response.blob();
-                
                 const reader = new FileReader();
                 reader.onloadend = function() {
-                    const base64data = reader.result;
                     const link = document.createElement('a');
-                    link.href = base64data;
+                    link.href = reader.result;
                     link.download = 'QR_Pago_EN-VIA.png';
                     document.body.appendChild(link);
                     link.click();
@@ -796,7 +668,6 @@
                 };
                 reader.readAsDataURL(blob);
             } catch (error) {
-                console.error("Error al descargar la imagen:", error);
                 const fallbackLink = document.createElement('a');
                 fallbackLink.href = url;
                 fallbackLink.setAttribute('download', 'QR_Pago_EN-VIA.png');
@@ -808,10 +679,9 @@
 
         function copiarDatosPago(banco, telefono, cedula, monto) {
             const textoACopiar = `Banco: ${banco}\nTeléfono: ${telefono}\nCédula/RIF: ${cedula}\nMonto: ${monto}`;
-            
             navigator.clipboard.writeText(textoACopiar).then(() => {
-                alert('¡Datos bancarios copiados al portapapeles! Ya puedes pegarlos en tu aplicación de pago.');
-            }).catch(err => {
+                alert('¡Datos bancarios copiados al portapapeles!');
+            }).catch(() => {
                 alert('No se pudieron copiar los datos automáticamente.');
             });
         }
@@ -823,7 +693,6 @@
             timerClientInterval = setInterval(() => {
                 const ahora = new Date().getTime();
                 const diferenciaSecs = Math.floor((ahora - tiempoInicio) / 1000);
-
                 if (diferenciaSecs >= 0) {
                     const mins = Math.floor(diferenciaSecs / 60).toString().padStart(2, '0');
                     const secs = (diferenciaSecs % 60).toString().padStart(2, '0');
@@ -834,6 +703,7 @@
         }
 
         async function inicializarMapaSeguimiento(origenTexto) {
+            if (typeof google === 'undefined' || !google.maps) return;
             if (!mapSeguimiento) {
                 mapSeguimiento = new google.maps.Map(document.getElementById('map-seguimiento'), {
                     center: baseCoords,
@@ -884,7 +754,6 @@
 
                         if (data.routes && data.routes.length > 0) {
                             const decodedPath = google.maps.geometry.encoding.decodePath(data.routes[0].polyline.encodedPolyline);
-
                             if (window.seguimientoPolyline) window.seguimientoPolyline.setMap(null);
 
                             window.seguimientoPolyline = new google.maps.Polyline({
@@ -915,9 +784,7 @@
                     .update({ estado: 'cancelada' })
                     .eq('id', idCarreraActiva);
 
-                if (error) {
-                    console.error("Error al cancelar en Supabase:", error);
-                }
+                if (error) console.error("Error al cancelar en Supabase:", error);
             }
 
             sessionStorage.removeItem('carrera_activa_id');
@@ -931,9 +798,9 @@
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'carreras', filter: `id=eq.${id}` }, payload => {
                     const carreraActualizada = payload.new;
                     actualizarBadgeYConductor(
-                        carreraActualizada.estado, 
-                        carreraActualizada.conductor_asignado, 
-                        carreraActualizada.origen, 
+                        carreraActualizada.estado,
+                        carreraActualizada.conductor_asignado,
+                        carreraActualizada.origen,
                         carreraActualizada.tiempos,
                         carreraActualizada.precio
                     );

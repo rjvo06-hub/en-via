@@ -8,23 +8,13 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script>
-      // Prueba directa en HTML sin archivo externo
       var SUPABASE_URL = 'https://sgpwdejwfbqsswoibohu.supabase.co';
       var SUPABASE_ANON_KEY = 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
 
-      if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
         window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        var supabaseClient = window.supabaseClient;
-      } else {
-        alert('No cargó window.supabase desde el CDN');
       }
     </script>
-    <style>
-        #map { height: 350px; width: 100%; }
-        #map-seguimiento { height: 260px; width: 100%; }
-        input, select { font-size: 16px !important; }
-        @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
-    </style>
 </head>
 <body>
     <div class="max-w-4xl">
@@ -133,8 +123,8 @@
     </div>
 
     <script>
-        var map;
-        var mapSeguimiento;
+        var map = null;
+        var mapSeguimiento = null;
         var originMarker = null;
         var destMarker = null;
         var origenCoords = null;
@@ -154,13 +144,8 @@
         var COSTO_POR_KM = 1;
         var TARIFA_MINIMA = 3;
 
-        function obtenerDb() {
-            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-                return supabaseClient;
-            }
-            if (window.supabaseClient) {
-                return window.supabaseClient;
-            }
+        function getDb() {
+            if (window.supabaseClient) return window.supabaseClient;
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 return window.supabaseClient;
@@ -168,99 +153,92 @@
             return null;
         }
 
-        window.addEventListener('load', async function () {
-            await cargarClientesSelect();
+        window.addEventListener('load', function () {
+            cargarClientesSelect().then(function () {
+                var clienteGuardado = sessionStorage.getItem('cliente_en_via');
+                var clienteIdGuardado = sessionStorage.getItem('cliente_id_en_via');
+                var db = getDb();
 
-            var clienteGuardado = sessionStorage.getItem('cliente_en_via');
-            var clienteIdGuardado = sessionStorage.getItem('cliente_id_en_via');
-            var clienteDb = obtenerDb();
+                if (clienteGuardado && db) {
+                    clienteActual = clienteGuardado;
+                    clienteIdActual = clienteIdGuardado || null;
+                    document.getElementById('select-cliente').value = clienteActual;
+                    document.getElementById('cliente-actual-display').textContent = clienteActual;
+                    document.getElementById('identificacion-container').classList.add('hidden');
 
-            if (clienteGuardado && clienteDb) {
-                clienteActual = clienteGuardado;
-                clienteIdActual = clienteIdGuardado || null;
-                document.getElementById('select-cliente').value = clienteActual;
-                document.getElementById('cliente-actual-display').textContent = clienteActual;
-                document.getElementById('identificacion-container').classList.add('hidden');
-
-                var res = await clienteDb
-                    .from('carreras')
-                    .select('*')
-                    .eq('cliente_nombre', clienteActual)
-                    .in('estado', ['pendiente', 'asignada'])
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                var carreraActiva = res.data;
-
-                if (carreraActiva) {
-                    idCarreraActiva = carreraActiva.id;
-                    sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
-                    mostrarVistaEstado(carreraActiva);
-                    suscripcionRealtime(idCarreraActiva);
-                } else {
-                    sessionStorage.removeItem('carrera_activa_id');
-                    document.getElementById('vista-formulario').classList.remove('hidden');
-                    inicializarMapaFormulario();
+                    db.from('carreras')
+                        .select('*')
+                        .eq('cliente_nombre', clienteActual)
+                        .in('estado', ['pendiente', 'asignada'])
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle()
+                        .then(function (res) {
+                            var carreraActiva = res.data;
+                            if (carreraActiva) {
+                                idCarreraActiva = carreraActiva.id;
+                                sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
+                                mostrarVistaEstado(carreraActiva);
+                                suscripcionRealtime(idCarreraActiva);
+                            } else {
+                                sessionStorage.removeItem('carrera_activa_id');
+                                document.getElementById('vista-formulario').classList.remove('hidden');
+                                inicializarMapaFormulario();
+                            }
+                        });
                 }
-            }
+            });
         });
 
-        async function cargarClientesSelect() {
+        function cargarClientesSelect() {
             var select = document.getElementById('select-cliente');
-            var clienteDb = obtenerDb();
+            var db = getDb();
 
-            if (!clienteDb) {
-                select.innerHTML = '<option value="">supabaseClient no disponible</option>';
-                return;
+            if (!db) {
+                select.innerHTML = '<option value="">No se pudo iniciar Supabase en este navegador</option>';
+                return Promise.resolve();
             }
 
-            try {
-                var res = await clienteDb
-                    .from('clientes')
-                    .select('id, nombre')
-                    .eq('activo', true)
-                    .order('nombre', { ascending: true });
-
-                if (res.error) {
-                    select.innerHTML = '<option value="">Error Supabase: ' + res.error.message + '</option>';
-                    return;
-                }
-
-                var data = res.data;
-                if (!data || data.length === 0) {
-                    select.innerHTML = '<option value="">No hay clientes activos registrados</option>';
-                    return;
-                }
-
-                select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
-                for (var i = 0; i < data.length; i++) {
-                    var c = data[i];
-                    select.innerHTML += '<option value="' + c.nombre + '" data-id="' + c.id + '">' + c.nombre + '</option>';
-                }
-            } catch (err) {
-                select.innerHTML = '<option value="">Error de conexión o JS: ' + err.message + '</option>';
-            }
+            return db.from('clientes')
+                .select('id, nombre')
+                .eq('activo', true)
+                .order('nombre', { ascending: true })
+                .then(function (res) {
+                    if (res.error) {
+                        select.innerHTML = '<option value="">Error Supabase: ' + res.error.message + '</option>';
+                        return;
+                    }
+                    var data = res.data || [];
+                    if (data.length === 0) {
+                        select.innerHTML = '<option value="">No hay clientes activos registrados</option>';
+                        return;
+                    }
+                    select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
+                    for (var i = 0; i < data.length; i++) {
+                        select.innerHTML += '<option value="' + data[i].nombre + '" data-id="' + data[i].id + '">' + data[i].nombre + '</option>';
+                    }
+                })
+                .catch(function (err) {
+                    select.innerHTML = '<option value="">Error: ' + err.message + '</option>';
+                });
         }
 
-        async function fijarCliente() {
+        function fijarCliente() {
             var select = document.getElementById('select-cliente');
             var errorDiv = document.getElementById('cliente-error');
-            var clienteDb = obtenerDb();
+            var db = getDb();
 
             if (!select.value) {
                 errorDiv.classList.remove('hidden');
                 return;
             }
-
-            if (!clienteDb) {
+            if (!db) {
                 alert('Cliente de Supabase no disponible.');
                 return;
             }
 
             errorDiv.classList.add('hidden');
             clienteActual = select.value;
-
             var selectedOption = select.options[select.selectedIndex];
             clienteIdActual = selectedOption.getAttribute('data-id') || null;
 
@@ -270,26 +248,25 @@
             document.getElementById('cliente-actual-display').textContent = clienteActual;
             document.getElementById('identificacion-container').classList.add('hidden');
 
-            var res = await clienteDb
-                .from('carreras')
+            db.from('carreras')
                 .select('*')
                 .eq('cliente_nombre', clienteActual)
                 .in('estado', ['pendiente', 'asignada'])
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .maybeSingle();
-
-            var carreraActiva = res.data;
-
-            if (carreraActiva) {
-                idCarreraActiva = carreraActiva.id;
-                sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
-                mostrarVistaEstado(carreraActiva);
-                suscripcionRealtime(idCarreraActiva);
-            } else {
-                document.getElementById('vista-formulario').classList.remove('hidden');
-                inicializarMapaFormulario();
-            }
+                .maybeSingle()
+                .then(function (res) {
+                    var carreraActiva = res.data;
+                    if (carreraActiva) {
+                        idCarreraActiva = carreraActiva.id;
+                        sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
+                        mostrarVistaEstado(carreraActiva);
+                        suscripcionRealtime(idCarreraActiva);
+                    } else {
+                        document.getElementById('vista-formulario').classList.remove('hidden');
+                        inicializarMapaFormulario();
+                    }
+                });
         }
 
         function cambiarCliente() {
@@ -350,78 +327,73 @@
                     return;
                 }
 
-                debounceTimer = setTimeout(async function () {
-                    try {
-                        var request = {
-                            input: query,
-                            includedRegionCodes: ['VE'],
-                            locationBias: { center: maracaiboCenter, radius: 25000 }
-                        };
-
-                        var resp = await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
-                        var suggestions = resp.suggestions;
-
-                        if (suggestions && suggestions.length > 0) {
-                            suggestionsBox.innerHTML = '';
-                            suggestionsBox.classList.remove('hidden');
-
-                            suggestions.forEach(function (suggestion) {
-                                var placePrediction = suggestion.placePrediction;
-                                if (!placePrediction) return;
-
-                                var div = document.createElement('div');
-                                div.className = 'suggestion-item';
-                                div.textContent = placePrediction.text.toString();
-
-                                div.addEventListener('click', async function () {
-                                    input.value = '';
-                                    suggestionsBox.classList.add('hidden');
-                                    suggestionsBox.innerHTML = '';
-
-                                    var place = placePrediction.toPlace();
-                                    await place.fetchFields({ fields: ['formattedAddress', 'displayName', 'location'] });
-
-                                    var location = place.location;
-                                    if (location) {
-                                        var lat = typeof location.lat === 'function' ? location.lat() : location.lat;
-                                        var lng = typeof location.lng === 'function' ? location.lng() : location.lng;
-
-                                        var nombreLugar = place.displayName || place.formattedAddress || placePrediction.text.toString();
-                                        var direccionFinal = limpiarDireccion(nombreLugar);
-                                        var coords = { lat: lat, lng: lng };
-
-                                        if (currentMode === 'origin') {
-                                            origenCoords = coords;
-                                            document.getElementById('campo-libre-origen').value = direccionFinal;
-                                            document.getElementById('origin-lat').textContent = lat.toFixed(6);
-                                            document.getElementById('origin-lon').textContent = lng.toFixed(6);
-                                            document.getElementById('btn-copy-origin').classList.remove('hidden');
-                                            document.getElementById('origin-status').textContent = "Listo";
-                                            document.getElementById('origin-status').style.color = "#10b981";
-                                            updateMarker('origin', coords);
-                                            setMode('dest');
-                                        } else {
-                                            destCoords = coords;
-                                            document.getElementById('campo-libre-destino').value = direccionFinal;
-                                            document.getElementById('dest-lat').textContent = lat.toFixed(6);
-                                            document.getElementById('dest-lon').textContent = lng.toFixed(6);
-                                            document.getElementById('btn-copy-dest').classList.remove('hidden');
-                                            document.getElementById('dest-status').textContent = "Listo";
-                                            document.getElementById('dest-status').style.color = "#10b981";
-                                            updateMarker('dest', coords);
-                                        }
-
-                                        verificarYCalcularRuta();
-                                    }
-                                });
-                                suggestionsBox.appendChild(div);
-                            });
-                        } else {
+                debounceTimer = setTimeout(function () {
+                    if (!google.maps.places || !google.maps.places.AutocompleteSuggestion) return;
+                    google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+                        input: query,
+                        includedRegionCodes: ['VE'],
+                        locationBias: { center: maracaiboCenter, radius: 25000 }
+                    }).then(function (resp) {
+                        var suggestions = resp.suggestions || [];
+                        if (suggestions.length === 0) {
                             suggestionsBox.classList.add('hidden');
+                            return;
                         }
-                    } catch (error) {
-                        console.error("Error al obtener sugerencias:", error);
-                    }
+                        suggestionsBox.innerHTML = '';
+                        suggestionsBox.classList.remove('hidden');
+
+                        suggestions.forEach(function (suggestion) {
+                            var placePrediction = suggestion.placePrediction;
+                            if (!placePrediction) return;
+
+                            var div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.textContent = placePrediction.text.toString();
+
+                            div.addEventListener('click', function () {
+                                input.value = '';
+                                suggestionsBox.classList.add('hidden');
+                                suggestionsBox.innerHTML = '';
+
+                                var place = placePrediction.toPlace();
+                                place.fetchFields({ fields: ['formattedAddress', 'displayName', 'location'] }).then(function () {
+                                    var location = place.location;
+                                    if (!location) return;
+                                    var lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+                                    var lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+                                    var nombreLugar = place.displayName || place.formattedAddress || placePrediction.text.toString();
+                                    var direccionFinal = limpiarDireccion(nombreLugar);
+                                    var coords = { lat: lat, lng: lng };
+
+                                    if (currentMode === 'origin') {
+                                        origenCoords = coords;
+                                        document.getElementById('campo-libre-origen').value = direccionFinal;
+                                        document.getElementById('origin-lat').textContent = lat.toFixed(6);
+                                        document.getElementById('origin-lon').textContent = lng.toFixed(6);
+                                        document.getElementById('btn-copy-origin').classList.remove('hidden');
+                                        document.getElementById('origin-status').textContent = "Listo";
+                                        document.getElementById('origin-status').style.color = "#10b981";
+                                        updateMarker('origin', coords);
+                                        setMode('dest');
+                                    } else {
+                                        destCoords = coords;
+                                        document.getElementById('campo-libre-destino').value = direccionFinal;
+                                        document.getElementById('dest-lat').textContent = lat.toFixed(6);
+                                        document.getElementById('dest-lon').textContent = lng.toFixed(6);
+                                        document.getElementById('btn-copy-dest').classList.remove('hidden');
+                                        document.getElementById('dest-status').textContent = "Listo";
+                                        document.getElementById('dest-status').style.color = "#10b981";
+                                        updateMarker('dest', coords);
+                                    }
+
+                                    verificarYCalcularRuta();
+                                });
+                            });
+                            suggestionsBox.appendChild(div);
+                        });
+                    }).catch(function (err) {
+                        console.error("Error sugerencias:", err);
+                    });
                 }, 250);
             });
 
@@ -453,75 +425,73 @@
             }
         }
 
-        async function verificarYCalcularRuta() {
-            if (origenCoords && destCoords) {
-                document.getElementById('status-msg').textContent = "Calculando ruta y tarifa...";
+        function verificarYCalcularRuta() {
+            if (!origenCoords || !destCoords) return;
+            document.getElementById('status-msg').textContent = "Calculando ruta y tarifa...";
 
-                try {
-                    var body = {
-                        origin: { location: { latLng: { latitude: origenCoords.lat, longitude: origenCoords.lng } } },
-                        destination: { location: { latLng: { latitude: destCoords.lat, longitude: destCoords.lng } } },
-                        travelMode: "DRIVE",
-                        routingPreference: "TRAFFIC_UNAWARE"
-                    };
+            fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Goog-Api-Key': apiKey,
+                    'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+                },
+                body: JSON.stringify({
+                    origin: { location: { latLng: { latitude: origenCoords.lat, longitude: origenCoords.lng } } },
+                    destination: { location: { latLng: { latitude: destCoords.lat, longitude: destCoords.lng } } },
+                    travelMode: "DRIVE",
+                    routingPreference: "TRAFFIC_UNAWARE"
+                })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.routes && data.routes.length > 0) {
+                    var route = data.routes[0];
+                    var distanceKm = (route.distanceMeters || 0) / 1000;
+                    distanciaCalculada = distanceKm.toFixed(1) + " km";
 
-                    var response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Goog-Api-Key': apiKey,
-                            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
-                        },
-                        body: JSON.stringify(body)
+                    var costoTotal = distanceKm * COSTO_POR_KM;
+                    if (costoTotal < TARIFA_MINIMA) costoTotal = TARIFA_MINIMA;
+                    costoCalculado = costoTotal.toFixed(2);
+
+                    document.getElementById('route-distance').textContent = distanciaCalculada;
+                    document.getElementById('route-duration').textContent = Math.round(parseInt(route.duration, 10) / 60) + " mins";
+                    document.getElementById('route-cost').textContent = '$' + costoCalculado;
+                    document.getElementById('status-msg').textContent = "¡Ruta calculada con éxito!";
+                    document.getElementById('btn-solicitar').classList.remove('hidden');
+
+                    var decodedPath = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
+                    if (window.currentRoutePolyline) window.currentRoutePolyline.setMap(null);
+                    window.currentRoutePolyline = new google.maps.Polyline({
+                        path: decodedPath,
+                        geodesic: true,
+                        strokeColor: '#10b981',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 5
                     });
-
-                    var data = await response.json();
-
-                    if (data.routes && data.routes.length > 0) {
-                        var route = data.routes[0];
-                        var distanceMeters = route.distanceMeters;
-                        var distanceKm = distanceMeters / 1000;
-                        distanciaCalculada = distanceKm.toFixed(1) + " km";
-
-                        var costoTotal = distanceKm * COSTO_POR_KM;
-                        if (costoTotal < TARIFA_MINIMA) costoTotal = TARIFA_MINIMA;
-                        costoCalculado = costoTotal.toFixed(2);
-
-                        document.getElementById('route-distance').textContent = distanciaCalculada;
-                        document.getElementById('route-duration').textContent = Math.round(parseInt(route.duration, 10) / 60) + " mins";
-                        document.getElementById('route-cost').textContent = '$' + costoCalculado;
-                        document.getElementById('status-msg').textContent = "¡Ruta calculada con éxito!";
-                        document.getElementById('btn-solicitar').classList.remove('hidden');
-
-                        var decodedPath = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
-                        if (window.currentRoutePolyline) window.currentRoutePolyline.setMap(null);
-
-                        window.currentRoutePolyline = new google.maps.Polyline({
-                            path: decodedPath,
-                            geodesic: true,
-                            strokeColor: '#10b981',
-                            strokeOpacity: 0.8,
-                            strokeWeight: 5
-                        });
-                        window.currentRoutePolyline.setMap(map);
-                    }
-                } catch (error) {
-                    console.error("Error Routes API:", error);
+                    window.currentRoutePolyline.setMap(map);
                 }
-            }
+            })
+            .catch(function (err) {
+                console.error("Error Routes API:", err);
+            });
         }
 
-        async function solicitarCarrera() {
+        function solicitarCarrera() {
             var origen = document.getElementById('campo-libre-origen').value;
             var destino = document.getElementById('campo-libre-destino').value;
-            var clienteDb = obtenerDb();
+            var db = getDb();
 
             if (!origen || !destino) {
                 alert('Faltan el origen o el destino.');
                 return;
             }
+            if (!db) {
+                alert('Cliente de Supabase no disponible.');
+                return;
+            }
 
-            var nuevaCarrera = {
+            db.from('carreras').insert([{
                 cliente_id: clienteIdActual || null,
                 cliente_nombre: clienteActual,
                 origen: origen,
@@ -530,66 +500,16 @@
                 precio: '$' + costoCalculado,
                 distancia: distanciaCalculada,
                 estado: 'pendiente'
-            };
-
-            var res = await clienteDb.from('carreras').insert([nuevaCarrera]).select();
-
-            if (res.error) {
-                alert('Error al solicitar la carrera: ' + res.error.message);
-            } else if (res.data && res.data.length > 0) {
-                idCarreraActiva = res.data[0].id;
-                sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
-                mostrarVistaEstado(res.data[0]);
-                suscripcionRealtime(idCarreraActiva);
-
-                await enviarNotificacionPushFirebase({
-                    origen: origen,
-                    destino: destino,
-                    precio: '$' + costoCalculado
-                });
-            }
-        }
-
-        async function enviarNotificacionPushFirebase(datos) {
-            var firebaseKey = 'BJwlGuUhPu701MkMv877zN9cxLyK2IcgbVtLehEu8xllFXCISU28E7lV8Q6w-QbRuzine5GWNUxHA_rrgWKSJLo';
-            var clienteDb = obtenerDb();
-            if (!clienteDb) return;
-
-            var res = await clienteDb
-                .from('conductores')
-                .select('fcm_token')
-                .eq('activo', true)
-                .not('fcm_token', 'is', null);
-
-            var conductores = res.data;
-            if (!conductores || conductores.length === 0) return;
-
-            for (var i = 0; i < conductores.length; i++) {
-                var c = conductores[i];
-                if (!c.fcm_token) continue;
-
-                var payload = {
-                    to: c.fcm_token,
-                    notification: {
-                        title: '¡Nueva Carrera Pendiente! 🚗',
-                        body: 'Origen: ' + datos.origen + ' | Destino: ' + datos.destino + ' - Precio: ' + datos.precio,
-                        sound: 'default'
-                    }
-                };
-
-                try {
-                    await fetch('https://fcm.googleapis.com/fcm/send', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': 'key=' + firebaseKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                } catch (err) {
-                    console.log("Error enviando push al conductor:", err);
+            }]).select().then(function (res) {
+                if (res.error) {
+                    alert('Error al solicitar la carrera: ' + res.error.message);
+                } else if (res.data && res.data.length > 0) {
+                    idCarreraActiva = res.data[0].id;
+                    sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
+                    mostrarVistaEstado(res.data[0]);
+                    suscripcionRealtime(idCarreraActiva);
                 }
-            }
+            });
         }
 
         function mostrarVistaEstado(carrera) {
@@ -606,7 +526,7 @@
             actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen, carrera.tiempos, carrera.precio);
         }
 
-        async function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos, precio) {
+        function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos, precio) {
             var badge = document.getElementById('badge-estado');
             var labelConductor = document.getElementById('estado-conductor');
             var contenedorBotonCancelar = document.getElementById('contenedor-boton-cancelar');
@@ -614,7 +534,7 @@
             var labelLlegada = document.getElementById('estado-llegada');
             var contenedorMapaSeguimiento = document.getElementById('contenedor-mapa-seguimiento');
             var seccionCobroCliente = document.getElementById('seccion-cobro-cliente');
-            var clienteDb = obtenerDb();
+            var db = getDb();
 
             var tiemposObj = tiempos || {};
             var llegadaConductorAt = tiemposObj.llegada_conductor_at;
@@ -640,38 +560,31 @@
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
 
-                var datosBancarios = {};
-                if (conductor && clienteDb) {
-                    var resCond = await clienteDb
-                        .from('conductores')
-                        .select('datos_bancarios')
-                        .eq('nombre', conductor)
-                        .maybeSingle();
+                var promesaBancos = (conductor && db)
+                    ? db.from('conductores').select('datos_bancarios').eq('nombre', conductor).maybeSingle()
+                    : Promise.resolve({ data: null });
 
-                    if (resCond.data && resCond.data.datos_bancarios) {
-                        datosBancarios = resCond.data.datos_bancarios;
-                    }
-                }
+                promesaBancos.then(function (resCond) {
+                    var datosBancarios = (resCond.data && resCond.data.datos_bancarios) ? resCond.data.datos_bancarios : {};
+                    var bancoNombre = datosBancarios.banco || 'Banco';
+                    var bancoTlf = datosBancarios.telefono || 'N/A';
+                    var bancoCedula = datosBancarios.cedula_rif || 'N/A';
+                    var qrImageUrl = datosBancarios.qr_url || '';
 
-                var bancoNombre = datosBancarios.banco || 'Banco';
-                var bancoTlf = datosBancarios.telefono || 'N/A';
-                var bancoCedula = datosBancarios.cedula_rif || 'N/A';
-                var qrImageUrl = datosBancarios.qr_url || '';
-
-                seccionCobroCliente.classList.remove('hidden');
-                seccionCobroCliente.innerHTML =
-                    '<div>' +
-                        '<p><strong>💳 Datos de Pago - ' + bancoNombre + '</strong></p>' +
-                        '<p style="font-size:24px; font-weight:800; color:#fbbf24;">' + (precio || '$0.00') + '</p>' +
-                        '<p><strong>Banco:</strong> ' + bancoNombre + '</p>' +
-                        '<p><strong>Teléfono (Pago Móvil):</strong> ' + bancoTlf + '</p>' +
-                        '<p><strong>Cédula / RIF:</strong> ' + bancoCedula + '</p>' +
-                        (qrImageUrl ? '<div style="background:#fff; padding:8px; display:inline-block; margin:8px 0;"><img src="' + qrImageUrl + '" alt="QR de Pago" style="width:140px; height:140px; object-fit:contain;"></div>' : '') +
+                    seccionCobroCliente.classList.remove('hidden');
+                    seccionCobroCliente.innerHTML =
                         '<div>' +
-                            '<button type="button" onclick="descargarImagenReal(\'' + qrImageUrl + '\')">📥 Descargar QR</button>' +
-                            '<button type="button" onclick="copiarDatosPago(\'' + bancoNombre + '\', \'' + bancoTlf + '\', \'' + bancoCedula + '\', \'' + precio + '\')">📋 Copiar Datos</button>' +
-                        '</div>' +
-                    '</div>';
+                            '<p><strong>💳 Datos de Pago - ' + bancoNombre + '</strong></p>' +
+                            '<p style="font-size:24px; font-weight:800; color:#fbbf24;">' + (precio || '$0.00') + '</p>' +
+                            '<p><strong>Banco:</strong> ' + bancoNombre + '</p>' +
+                            '<p><strong>Teléfono (Pago Móvil):</strong> ' + bancoTlf + '</p>' +
+                            '<p><strong>Cédula / RIF:</strong> ' + bancoCedula + '</p>' +
+                            (qrImageUrl ? '<div style="background:#fff; padding:8px; display:inline-block; margin:8px 0;"><img src="' + qrImageUrl + '" alt="QR de Pago" style="width:140px; height:140px; object-fit:contain;"></div>' : '') +
+                            '<div>' +
+                                '<button type="button" onclick="copiarDatosPago(\'' + bancoNombre + '\', \'' + bancoTlf + '\', \'' + bancoCedula + '\', \'' + precio + '\')">📋 Copiar Datos</button>' +
+                            '</div>' +
+                        '</div>';
+                });
             } else if (estado === 'asignada') {
                 seccionCobroCliente.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.remove('hidden');
@@ -700,25 +613,150 @@
             }
         }
 
-        async function descargarImagenReal(url) {
-            if (!url) {
-                alert('No hay imagen de QR disponible.');
-                return;
+        function copiarDatosPago(banco, telefono, cedula, monto) {
+            var textoACopiar = 'Banco: ' + banco + '\nTeléfono: ' + telefono + '\nCédula/RIF: ' + cedula + '\nMonto: ' + monto;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textoACopiar).then(function () {
+                    alert('¡Datos bancarios copiados al portapapeles!');
+                }).catch(function () {
+                    alert(textoACopiar);
+                });
+            } else {
+                alert(textoACopiar);
             }
-            try {
-                var response = await fetch(url);
-                var blob = await response.blob();
-                var reader = new FileReader();
-                reader.onloadend = function () {
-                    var link = document.createElement('a');
-                    link.href = reader.result;
-                    link.download = 'QR_Pago_EN-VIA.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                };
-                reader.readAsDataURL(blob);
-            } catch (error) {
-                var fallbackLink = document.createElement('a');
-                fallbackLink.href = url;
-                fallbackLink.setAttribute('download', 'QR_Pago
+        }
+
+        function iniciarCronometroCliente(isoStringInicio) {
+            if (timerClientInterval) clearInterval(timerClientInterval);
+            var tiempoInicio = new Date(isoStringInicio).getTime();
+
+            timerClientInterval = setInterval(function () {
+                var ahora = new Date().getTime();
+                var diferenciaSecs = Math.floor((ahora - tiempoInicio) / 1000);
+                if (diferenciaSecs >= 0) {
+                    var mins = Math.floor(diferenciaSecs / 60).toString().padStart(2, '0');
+                    var secs = (diferenciaSecs % 60).toString().padStart(2, '0');
+                    var el = document.getElementById('cronometro-cliente');
+                    if (el) el.textContent = mins + ':' + secs;
+                }
+            }, 1000);
+        }
+
+        function inicializarMapaSeguimiento(origenTexto) {
+            if (typeof google === 'undefined' || !google.maps) return;
+            if (!mapSeguimiento) {
+                mapSeguimiento = new google.maps.Map(document.getElementById('map-seguimiento'), {
+                    center: baseCoords,
+                    zoom: 13,
+                    mapTypeControl: false,
+                    streetViewControl: false
+                });
+            }
+
+            new google.maps.Marker({
+                position: baseCoords,
+                map: mapSeguimiento,
+                title: "Base del Conductor",
+                icon: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png"
+            });
+
+            var geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: origenTexto }, function (results, status) {
+                if (status === 'OK' && results[0]) {
+                    var origenClienteCoords = results[0].geometry.location;
+
+                    new google.maps.Marker({
+                        position: origenClienteCoords,
+                        map: mapSeguimiento,
+                        title: "Tu Ubicación (Origen)",
+                        icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                    });
+
+                    fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Goog-Api-Key': apiKey,
+                            'X-Goog-FieldMask': 'routes.polyline.encodedPolyline'
+                        },
+                        body: JSON.stringify({
+                            origin: { location: { latLng: { latitude: baseCoords.lat, longitude: baseCoords.lng } } },
+                            destination: { location: { latLng: { latitude: origenClienteCoords.lat(), longitude: origenClienteCoords.lng() } } },
+                            travelMode: "DRIVE",
+                            routingPreference: "TRAFFIC_UNAWARE"
+                        })
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.routes && data.routes.length > 0) {
+                            var decodedPath = google.maps.geometry.encoding.decodePath(data.routes[0].polyline.encodedPolyline);
+                            if (window.seguimientoPolyline) window.seguimientoPolyline.setMap(null);
+                            window.seguimientoPolyline = new google.maps.Polyline({
+                                path: decodedPath,
+                                geodesic: true,
+                                strokeColor: '#10b981',
+                                strokeOpacity: 0.8,
+                                strokeWeight: 5
+                            });
+                            window.seguimientoPolyline.setMap(mapSeguimiento);
+
+                            var bounds = new google.maps.LatLngBounds();
+                            bounds.extend(baseCoords);
+                            bounds.extend(origenClienteCoords);
+                            mapSeguimiento.fitBounds(bounds);
+                        }
+                    })
+                    .catch(function (err) {
+                        console.error("Error ruta seguimiento:", err);
+                    });
+                }
+            });
+        }
+
+        function cancelarOReiniciarSolicitud() {
+            var db = getDb();
+            var promesa = (idCarreraActiva && db)
+                ? db.from('carreras').update({ estado: 'cancelada' }).eq('id', idCarreraActiva)
+                : Promise.resolve();
+
+            promesa.then(function () {
+                sessionStorage.removeItem('carrera_activa_id');
+                if (timerClientInterval) clearInterval(timerClientInterval);
+                location.reload();
+            });
+        }
+
+        function suscripcionRealtime(id) {
+            var db = getDb();
+            if (!db) return;
+
+            db.channel('carrera-' + id)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'carreras', filter: 'id=eq.' + id }, function (payload) {
+                    var carreraActualizada = payload.new;
+                    actualizarBadgeYConductor(
+                        carreraActualizada.estado,
+                        carreraActualizada.conductor_asignado,
+                        carreraActualizada.origen,
+                        carreraActualizada.tiempos,
+                        carreraActualizada.precio
+                    );
+                })
+                .subscribe();
+        }
+
+        function copyCoords(type) {
+            var lat = document.getElementById((type === 'origin' ? 'origin' : 'dest') + '-lat').textContent;
+            var lon = document.getElementById((type === 'origin' ? 'origin' : 'dest') + '-lon').textContent;
+            var texto = lat + ', ' + lon;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto).then(function () {
+                    var btn = document.getElementById('btn-copy-' + type);
+                    var originalText = btn.textContent;
+                    btn.textContent = "¡Copiado!";
+                    setTimeout(function () { btn.textContent = originalText; }, 2000);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

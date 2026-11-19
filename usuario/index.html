@@ -8,14 +8,16 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script>
-      (function () {
-        var url = 'https://sgpwdejwfbqsswoibohu.supabase.co';
-        var key = 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
-        if (window.supabase && typeof window.supabase.createClient === 'function') {
-          window.supabaseClient = window.supabase.createClient(url, key);
-          window.supabaseReady = true;
-        }
-      })();
+      // Prueba directa en HTML sin archivo externo
+      var SUPABASE_URL = 'https://sgpwdejwfbqsswoibohu.supabase.co';
+      var SUPABASE_ANON_KEY = 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+
+      if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        var supabaseClient = window.supabaseClient;
+      } else {
+        alert('No cargó window.supabase desde el CDN');
+      }
     </script>
     <style>
         #map { height: 350px; width: 100%; }
@@ -131,7 +133,6 @@
     </div>
 
     <script>
-        var db = window.supabaseClient;
         var map;
         var mapSeguimiento;
         var originMarker = null;
@@ -154,36 +155,34 @@
         var TARIFA_MINIMA = 3;
 
         function obtenerDb() {
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                return supabaseClient;
+            }
             if (window.supabaseClient) {
-                db = window.supabaseClient;
-                return db;
+                return window.supabaseClient;
             }
             if (window.supabase && typeof window.supabase.createClient === 'function') {
-                window.supabaseClient = window.supabase.createClient(
-                    'https://sgpwdejwfbqsswoibohu.supabase.co',
-                    'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g'
-                );
-                db = window.supabaseClient;
-                return db;
+                window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
             }
             return null;
         }
 
         window.addEventListener('load', async function () {
-            obtenerDb();
             await cargarClientesSelect();
 
             var clienteGuardado = sessionStorage.getItem('cliente_en_via');
             var clienteIdGuardado = sessionStorage.getItem('cliente_id_en_via');
+            var clienteDb = obtenerDb();
 
-            if (clienteGuardado && obtenerDb()) {
+            if (clienteGuardado && clienteDb) {
                 clienteActual = clienteGuardado;
                 clienteIdActual = clienteIdGuardado || null;
                 document.getElementById('select-cliente').value = clienteActual;
                 document.getElementById('cliente-actual-display').textContent = clienteActual;
                 document.getElementById('identificacion-container').classList.add('hidden');
 
-                var res = await obtenerDb()
+                var res = await clienteDb
                     .from('carreras')
                     .select('*')
                     .eq('cliente_nombre', clienteActual)
@@ -212,7 +211,7 @@
             var clienteDb = obtenerDb();
 
             if (!clienteDb) {
-                select.innerHTML = '<option value="">No se pudo cargar el SDK de Supabase en este navegador</option>';
+                select.innerHTML = '<option value="">supabaseClient no disponible</option>';
                 return;
             }
 
@@ -722,158 +721,4 @@
             } catch (error) {
                 var fallbackLink = document.createElement('a');
                 fallbackLink.href = url;
-                fallbackLink.setAttribute('download', 'QR_Pago_EN-VIA.png');
-                document.body.appendChild(fallbackLink);
-                fallbackLink.click();
-                document.body.removeChild(fallbackLink);
-            }
-        }
-
-        function copiarDatosPago(banco, telefono, cedula, monto) {
-            var textoACopiar = 'Banco: ' + banco + '\nTeléfono: ' + telefono + '\nCédula/RIF: ' + cedula + '\nMonto: ' + monto;
-            navigator.clipboard.writeText(textoACopiar).then(function () {
-                alert('¡Datos bancarios copiados al portapapeles!');
-            }).catch(function () {
-                alert('No se pudieron copiar los datos automáticamente.');
-            });
-        }
-
-        function iniciarCronometroCliente(isoStringInicio) {
-            if (timerClientInterval) clearInterval(timerClientInterval);
-            var tiempoInicio = new Date(isoStringInicio).getTime();
-
-            timerClientInterval = setInterval(function () {
-                var ahora = new Date().getTime();
-                var diferenciaSecs = Math.floor((ahora - tiempoInicio) / 1000);
-                if (diferenciaSecs >= 0) {
-                    var mins = Math.floor(diferenciaSecs / 60).toString().padStart(2, '0');
-                    var secs = (diferenciaSecs % 60).toString().padStart(2, '0');
-                    var el = document.getElementById('cronometro-cliente');
-                    if (el) el.textContent = mins + ':' + secs;
-                }
-            }, 1000);
-        }
-
-        async function inicializarMapaSeguimiento(origenTexto) {
-            if (typeof google === 'undefined' || !google.maps) return;
-            if (!mapSeguimiento) {
-                mapSeguimiento = new google.maps.Map(document.getElementById('map-seguimiento'), {
-                    center: baseCoords,
-                    zoom: 13,
-                    mapTypeControl: false,
-                    streetViewControl: false
-                });
-            }
-
-            new google.maps.Marker({
-                position: baseCoords,
-                map: mapSeguimiento,
-                title: "Base del Conductor",
-                icon: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png"
-            });
-
-            var geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: origenTexto }, async function (results, status) {
-                if (status === 'OK' && results[0]) {
-                    var origenClienteCoords = results[0].geometry.location;
-
-                    new google.maps.Marker({
-                        position: origenClienteCoords,
-                        map: mapSeguimiento,
-                        title: "Tu Ubicación (Origen)",
-                        icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-                    });
-
-                    try {
-                        var body = {
-                            origin: { location: { latLng: { latitude: baseCoords.lat, longitude: baseCoords.lng } } },
-                            destination: { location: { latLng: { latitude: origenClienteCoords.lat(), longitude: origenClienteCoords.lng() } } },
-                            travelMode: "DRIVE",
-                            routingPreference: "TRAFFIC_UNAWARE"
-                        };
-
-                        var response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Goog-Api-Key': apiKey,
-                                'X-Goog-FieldMask': 'routes.polyline.encodedPolyline'
-                            },
-                            body: JSON.stringify(body)
-                        });
-
-                        var data = await response.json();
-
-                        if (data.routes && data.routes.length > 0) {
-                            var decodedPath = google.maps.geometry.encoding.decodePath(data.routes[0].polyline.encodedPolyline);
-                            if (window.seguimientoPolyline) window.seguimientoPolyline.setMap(null);
-
-                            window.seguimientoPolyline = new google.maps.Polyline({
-                                path: decodedPath,
-                                geodesic: true,
-                                strokeColor: '#10b981',
-                                strokeOpacity: 0.8,
-                                strokeWeight: 5
-                            });
-                            window.seguimientoPolyline.setMap(mapSeguimiento);
-
-                            var bounds = new google.maps.LatLngBounds();
-                            bounds.extend(baseCoords);
-                            bounds.extend(origenClienteCoords);
-                            mapSeguimiento.fitBounds(bounds);
-                        }
-                    } catch (error) {
-                        console.error("Error ruta seguimiento:", error);
-                    }
-                }
-            });
-        }
-
-        async function cancelarOReiniciarSolicitud() {
-            var clienteDb = obtenerDb();
-            if (idCarreraActiva && clienteDb) {
-                var res = await clienteDb
-                    .from('carreras')
-                    .update({ estado: 'cancelada' })
-                    .eq('id', idCarreraActiva);
-
-                if (res.error) console.error("Error al cancelar en Supabase:", res.error);
-            }
-
-            sessionStorage.removeItem('carrera_activa_id');
-            if (timerClientInterval) clearInterval(timerClientInterval);
-            location.reload();
-        }
-
-        function suscripcionRealtime(id) {
-            var clienteDb = obtenerDb();
-            if (!clienteDb) return;
-
-            clienteDb
-                .channel('carrera-' + id)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'carreras', filter: 'id=eq.' + id }, function (payload) {
-                    var carreraActualizada = payload.new;
-                    actualizarBadgeYConductor(
-                        carreraActualizada.estado,
-                        carreraActualizada.conductor_asignado,
-                        carreraActualizada.origen,
-                        carreraActualizada.tiempos,
-                        carreraActualizada.precio
-                    );
-                })
-                .subscribe();
-        }
-
-        function copyCoords(type) {
-            var lat = document.getElementById((type === 'origin' ? 'origin' : 'dest') + '-lat').textContent;
-            var lon = document.getElementById((type === 'origin' ? 'origin' : 'dest') + '-lon').textContent;
-            navigator.clipboard.writeText(lat + ', ' + lon).then(function () {
-                var btn = document.getElementById('btn-copy-' + type);
-                var originalText = btn.textContent;
-                btn.textContent = "¡Copiado!";
-                setTimeout(function () { btn.textContent = originalText; }, 2000);
-            });
-        }
-    </script>
-</body>
-</html>
+                fallbackLink.setAttribute('download', 'QR_Pago

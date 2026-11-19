@@ -4,93 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EN-VIA - Portal de Conductores</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Client -->
+    <link rel="stylesheet" href="../css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Tu cliente de Supabase centralizado -->
     <script src="../js/supabaseClient.js"></script>
-    <!-- Firebase App y Messaging SDKs (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased flex flex-col items-center justify-start p-6">
-
-    <!-- Elemento de audio nativo de respaldo para garantizar reproducción móvil -->
+<body>
     <audio id="alarma-audio" preload="auto">
         <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- SECCIÓN 1: PANTALLA DE SELECCIÓN DE CONDUCTOR -->
-    <div id="login-container" class="max-w-md w-full bg-[#111111] border border-[#222222] p-6 rounded-2xl shadow-2xl space-y-4 my-auto">
-        <div class="text-center space-y-1">
-            <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Portal de Chofer</h1>
-            <p class="text-slate-400 text-xs">Selecciona tu nombre de la lista para ingresar</p>
-        </div>
+    <div id="login-container" class="max-w-xl">
+        <header>
+            <h1>EN-VIA - Portal de Chofer</h1>
+            <p>Selecciona tu nombre de la lista para ingresar</p>
+        </header>
 
-        <div class="space-y-3 pt-2">
-            <div>
-                <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Seleccionar Conductor</label>
-                <select id="login-select" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-purple-500 rounded-xl px-3 py-2.5 text-white outline-none text-xs">
-                    <option value="">Cargando conductores...</option>
-                </select>
-            </div>
-            <div id="login-error" class="text-red-400 text-xs text-center hidden">Por favor, selecciona un conductor.</div>
+        <div>
+            <label style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Seleccionar Conductor</label>
+            <select id="login-select">
+                <option value="">Cargando conductores...</option>
+            </select>
+            <div id="login-error" style="color:#f87171; font-size:12px;" class="hidden">Por favor, selecciona un conductor.</div>
 
-            <button onclick="ingresarAlPortal()" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                Entrar al Portal
-            </button>
-            <a href="../index.html" class="block text-center text-slate-500 hover:text-slate-300 text-xs pt-2">← Volver al Menú Principal</a>
+            <button type="button" onclick="ingresarAlPortal()" style="width:100%; background-color:#9333ea;">Entrar al Portal</button>
+            <a href="../index.html" style="text-align:center;">← Volver al Menú Principal</a>
         </div>
     </div>
 
-    <!-- SECCIÓN 2: PORTAL DE CARRERAS -->
-    <div id="portal-container" class="max-w-3xl w-full space-y-6 hidden my-0">
-        <header class="flex justify-between items-center border-b border-[#222222] pb-4">
-            <div>
-                <h1 class="text-xl font-extrabold text-purple-500 tracking-tight">EN-VIA - Panel de Chofer</h1>
-                <p class="text-slate-400 text-xs">Conectado como: <span id="driver-name-display" class="text-white font-bold"></span></p>
-            </div>
-            <button onclick="cerrarSesion()" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition text-red-400 cursor-pointer">
-                Cambiar de Conductor
-            </button>
+    <div id="portal-container" class="max-w-3xl hidden">
+        <header>
+            <h1>EN-VIA - Panel de Chofer</h1>
+            <p>Conectado como: <strong id="driver-name-display" style="color:#ffffff;"></strong></p>
+            <button type="button" onclick="cerrarSesion()" style="background-color:#262626; color:#f87171; margin-top:8px;">Cambiar de Conductor</button>
         </header>
 
-        <!-- Botón anti-suspensión en segundo plano (Truco iOS) -->
-        <div class="bg-amber-900/30 border-2 border-amber-500/60 p-4 rounded-xl flex items-center justify-between shadow-xl">
-            <div>
-                <p class="text-xs font-bold text-amber-400 uppercase">🛡️ Activar Modo Segundo Plano (iOS)</p>
-                <p class="text-[11px] text-slate-300">Mantén el proceso activo con el teléfono bloqueado.</p>
-            </div>
-            <button onclick="activarModoSegundoPlano()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg cursor-pointer shrink-0">
-                Activar Persistencia
-            </button>
+        <div>
+            <p><strong>🛡️ Activar Modo Segundo Plano</strong> — Mantén el proceso activo en el dispositivo.</p>
+            <button type="button" onclick="activarModoSegundoPlano()" style="background-color:#d97706;">Activar Persistencia</button>
         </div>
 
-        <!-- Botón para habilitar las notificaciones push en dispositivos móviles -->
-        <div id="banner-notificaciones" class="bg-purple-900/30 border-2 border-purple-500/60 p-4 rounded-xl flex items-center justify-between shadow-xl">
-            <div>
-                <p class="text-xs font-bold text-purple-400 uppercase">🔔 Activar Alertas Push</p>
-                <p class="text-[11px] text-slate-300">Toca aquí para registrar el dispositivo y recibir avisos.</p>
-            </div>
-            <button onclick="solicitarPermisosPushMovil()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg cursor-pointer shrink-0">
-                Activar Alertas
-            </button>
+        <div id="banner-notificaciones">
+            <p><strong>🔔 Activar Alertas Push</strong> — Registra el dispositivo para recibir avisos.</p>
+            <button type="button" onclick="solicitarPermisosPushMovil()" style="background-color:#9333ea;">Activar Alertas</button>
         </div>
 
-        <!-- Sección de Carrera Asignada Actual -->
-        <div id="seccion-asignada" class="space-y-3 hidden">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Tu Carrera en Curso</h2>
+        <div id="seccion-asignada" class="hidden">
+            <h2 style="color:#34d399; margin-bottom:8px;">Tu Carrera en Curso</h2>
             <div id="carrera-asignada-container"></div>
         </div>
 
-        <!-- Sección de Carreras Disponibles -->
-        <div class="space-y-3 pt-2">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Carreras Pendientes para Tomar</h2>
-            <div id="lista-carreras" class="grid grid-cols-1 gap-3">
-                <div class="bg-[#111111] border border-[#222222] p-6 rounded-2xl text-center text-slate-500 italic text-xs">
-                    Buscando carreras...
-                </div>
+        <div style="margin-top:16px;">
+            <h2 style="color:#94a3b8; margin-bottom:8px;">Carreras Pendientes para Tomar</h2>
+            <div id="lista-carreras">
+                <div>Buscando carreras...</div>
             </div>
         </div>
     </div>
@@ -115,11 +83,10 @@
         let primeraCargaRealizada = false;
         let cantidadPendientesAnterior = 0;
         let audioCtx = null;
-        
+
         const baseLat = "10.670389";
         const baseLng = "-71.658972";
 
-        // Función de persistencia segura basada en Web Audio API y MediaMetadata
         async function activarModoSegundoPlano() {
             try {
                 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -133,7 +100,7 @@
                         album: 'Sistema de Alertas',
                         artwork: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
                     });
-                    
+
                     navigator.mediaSession.setActionHandler('play', () => {});
                     navigator.mediaSession.setActionHandler('pause', () => {});
                 }
@@ -147,7 +114,6 @@
 
                 alert("¡Modo segundo plano activado con éxito!");
             } catch (err) {
-                console.error("Error al activar la persistencia de audio:", err);
                 alert("Error al activar: " + err.message);
             }
         }
@@ -165,9 +131,7 @@
                     .select('id')
                     .eq('nombre', conductorActual)
                     .single();
-                if (choferData) {
-                    targetId = choferData.id;
-                }
+                if (choferData) targetId = choferData.id;
             }
 
             if (!targetId) {
@@ -178,7 +142,6 @@
             if ('serviceWorker' in navigator) {
                 try {
                     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                    
                     let permission = 'granted';
                     if (typeof window.Notification !== 'undefined' && 'requestPermission' in window.Notification) {
                         permission = await Notification.requestPermission();
@@ -200,7 +163,7 @@
                             .from('conductores')
                             .update(updatePayload)
                             .eq('id', targetId);
-                        
+
                         if (updateError) {
                             alert('Error al actualizar base de datos: ' + updateError.message);
                         } else {
@@ -211,7 +174,6 @@
                         alert('Permiso de notificaciones denegado.');
                     }
                 } catch (error) {
-                    console.log("Error Service Worker:", error);
                     alert('Configuración aplicada con éxito.');
                 }
             } else {
@@ -224,9 +186,7 @@
                 const audioElement = document.getElementById('alarma-audio');
                 if (audioElement) {
                     audioElement.currentTime = 0;
-                    audioElement.play().catch(err => {
-                        console.log("Reproducción de audio nativo bloqueada por política móvil:", err);
-                    });
+                    audioElement.play().catch(() => {});
                 }
 
                 if (!audioCtx) {
@@ -241,17 +201,13 @@
                         if (!audioCtx) return;
                         const osc = audioCtx.createOscillator();
                         const gain = audioCtx.createGain();
-
                         osc.type = 'square';
                         osc.frequency.setValueAtTime(880, audioCtx.currentTime);
                         osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.2);
-
                         gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
                         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-
                         osc.connect(gain);
                         gain.connect(audioCtx.destination);
-
                         osc.start();
                         osc.stop(audioCtx.currentTime + 0.3);
                     }, i * 350);
@@ -280,21 +236,30 @@
 
         async function cargarConductoresSelect() {
             const select = document.getElementById('login-select');
-            const { data, error } = await supabaseClient
-                .from('conductores')
-                .select('id, nombre')
-                .eq('activo', true)
-                .order('nombre', { ascending: true });
+            try {
+                const { data, error } = await supabaseClient
+                    .from('conductores')
+                    .select('id, nombre')
+                    .eq('activo', true)
+                    .order('nombre', { ascending: true });
 
-            if (error || !data || data.length === 0) {
-                select.innerHTML = '<option value="">No hay conductores activos registrados</option>';
-                return;
+                if (error) {
+                    select.innerHTML = `<option value="">Error Supabase: ${error.message}</option>`;
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    select.innerHTML = '<option value="">No hay conductores activos registrados</option>';
+                    return;
+                }
+
+                select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
+                data.forEach(c => {
+                    select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
+                });
+            } catch (err) {
+                select.innerHTML = `<option value="">Error de conexión o JS: ${err.message}</option>`;
             }
-
-            select.innerHTML = '<option value="">-- Selecciona quién eres --</option>';
-            data.forEach(c => {
-                select.innerHTML += `<option value="${c.nombre}" data-id="${c.id}">${c.nombre}</option>`;
-            });
         }
 
         function ingresarAlPortal() {
@@ -312,16 +277,7 @@
             conductorActual = nombreSeleccionado;
 
             const selectedOption = select.options[select.selectedIndex];
-            conductorIdActual = selectedOption.getAttribute('data-id') || selectedOption.dataset.id || null;
-
-            if (!conductorIdActual) {
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].value === nombreSeleccionado) {
-                        conductorIdActual = select.options[i].getAttribute('data-id');
-                        break;
-                    }
-                }
-            }
+            conductorIdActual = selectedOption.getAttribute('data-id') || null;
 
             sessionStorage.setItem('conductor_en_via', conductorActual);
             if (conductorIdActual) {
@@ -343,10 +299,10 @@
             document.getElementById('login-container').classList.add('hidden');
             document.getElementById('portal-container').classList.remove('hidden');
             document.getElementById('driver-name-display').textContent = conductorActual;
-            
+
             cargarDatosConductor();
             suscripcionRealtime();
-            
+
             if (pollingInterval) clearInterval(pollingInterval);
             pollingInterval = setInterval(() => {
                 cargarDatosConductor();
@@ -362,16 +318,14 @@
         }
 
         async function cargarDatosConductor() {
-            const { data: pendData, error: pendError } = await supabaseClient
+            const { data: pendData } = await supabaseClient
                 .from('carreras')
                 .select('*')
                 .eq('estado', 'pendiente')
                 .order('created_at', { ascending: false });
 
-            if (pendError) console.error("Error al cargar pendientes:", pendError);
-
             const cantidadActualPendientes = pendData ? pendData.length : 0;
-            
+
             if (!primeraCargaRealizada) {
                 cantidadPendientesAnterior = cantidadActualPendientes;
                 primeraCargaRealizada = true;
@@ -382,13 +336,11 @@
                 cantidadPendientesAnterior = cantidadActualPendientes;
             }
 
-            const { data: asigData, error: asigError } = await supabaseClient
+            const { data: asigData } = await supabaseClient
                 .from('carreras')
                 .select('*')
                 .eq('estado', 'asignada')
                 .eq('conductor_asignado', conductorActual);
-
-            if (asigError) console.error("Error al cargar asignada:", asigError);
 
             renderizarAsignada(asigData);
             renderizarPendientes(pendData);
@@ -397,9 +349,9 @@
         async function tomarCarrera(idCarrera) {
             const { error } = await supabaseClient
                 .from('carreras')
-                .update({ 
-                    estado: 'asignada', 
-                    conductor_asignado: conductorActual 
+                .update({
+                    estado: 'asignada',
+                    conductor_asignado: conductorActual
                 })
                 .eq('id', idCarrera);
 
@@ -413,7 +365,7 @@
         function renderizarAsignada(asignadas) {
             const seccionAsignada = document.getElementById('seccion-asignada');
             const contenedor = document.getElementById('carrera-asignada-container');
-            
+
             if (!asignadas || asignadas.length === 0) {
                 seccionAsignada.classList.add('hidden');
                 contenedor.innerHTML = '';
@@ -427,7 +379,7 @@
             asignadas.forEach(c => {
                 const urlNavegacionBase = `https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${encodeURIComponent(c.origen)}&travelmode=driving`;
                 const urlNavegacionDestino = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(c.origen)}&destination=${encodeURIComponent(c.destino)}&travelmode=driving`;
-                
+
                 const tiempos = c.tiempos || {};
                 const yaLlego = tiempos.llegada_conductor_at != null;
                 const carreraIniciada = tiempos.inicio_carrera_at != null;
@@ -437,65 +389,34 @@
 
                 if (!yaLlego) {
                     contenidoAcciones = `
-                        <a href="${urlNavegacionBase}" target="_blank" class="w-full text-center block py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg">
-                            🧭 Navegar desde Base al Origen
-                        </a>
-                        <button onclick='conductorLlego("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                            📍 Ya estoy en el lugar
-                        </button>
+                        <a href="${urlNavegacionBase}" target="_blank">🧭 Navegar desde Base al Origen</a>
+                        <button type="button" onclick='conductorLlego("${c.id}", ${JSON.stringify(tiempos)})'>📍 Ya estoy en el lugar</button>
                     `;
                 } else if (!carreraIniciada) {
                     contenidoAcciones = `
-                        <div class="bg-[#161616] p-3 rounded-xl border border-amber-500/30 text-center space-y-1">
-                            <p class="text-[11px] text-amber-400 font-bold uppercase">⏱️ Tiempo de espera transcurriendo:</p>
-                            <p id="cronometro-conductor" class="text-lg font-extrabold text-white">00:00</p>
-                        </div>
-                        <button onclick='iniciarCarrera("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                            🚀 Iniciar Carrera
-                        </button>
+                        <p>⏱️ Tiempo de espera: <strong id="cronometro-conductor">00:00</strong></p>
+                        <button type="button" onclick='iniciarCarrera("${c.id}", ${JSON.stringify(tiempos)})'>🚀 Iniciar Carrera</button>
                     `;
                 } else if (!recorridoFinalizado) {
                     contenidoAcciones = `
-                        <div class="bg-[#161616] p-3 rounded-xl border border-emerald-500/30 text-center space-y-1">
-                            <p class="text-[11px] text-emerald-400 font-bold uppercase">⏱️ Tiempo de viaje activo:</p>
-                            <p id="cronometro-viaje" class="text-lg font-extrabold text-white">00:00</p>
-                        </div>
-                        <div class="flex justify-between items-center pt-1">
-                            <a href="${urlNavegacionDestino}" target="_blank" class="text-[11px] text-slate-400 hover:text-purple-400 underline transition cursor-pointer">
-                                🗺️ Navegar al destino
-                            </a>
-                        </div>
-                        <button onclick='finalizarRecorrido("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                            📍 Finalizar Recorrido (Llegamos al Destino)
-                        </button>
+                        <p>⏱️ Tiempo de viaje: <strong id="cronometro-viaje">00:00</strong></p>
+                        <a href="${urlNavegacionDestino}" target="_blank">🗺️ Navegar al destino</a>
+                        <button type="button" onclick='finalizarRecorrido("${c.id}", ${JSON.stringify(tiempos)})'>📍 Finalizar Recorrido (Llegamos al Destino)</button>
                     `;
                 } else {
                     contenidoAcciones = `
-                        <div class="bg-[#161616] border-2 border-purple-500/50 p-5 rounded-2xl text-center space-y-3 shadow-2xl">
-                            <p class="text-xs uppercase font-bold text-purple-400">💳 Confirmación de Pago</p>
-                            <p class="text-3xl font-black text-amber-400 tracking-tight">${c.precio || '$0.00'}</p>
-                            <p class="text-[11px] text-slate-300">Verifica que el pasajero haya realizado el pago antes de confirmar.</p>
-                        </div>
-                        <button onclick='confirmarPagoYFinalizar("${c.id}", ${JSON.stringify(tiempos)})' class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                            ✅ Confirmar Pago y Finalizar Servicio
-                        </button>
+                        <p><strong>💳 Confirmación de Pago: ${c.precio || '$0.00'}</strong></p>
+                        <button type="button" onclick='confirmarPagoYFinalizar("${c.id}", ${JSON.stringify(tiempos)})'>✅ Confirmar Pago y Finalizar Servicio</button>
                     `;
                 }
 
                 contenedor.innerHTML += `
-                    <div class="bg-[#111111] border-2 border-emerald-500/50 p-4 rounded-2xl shadow-2xl space-y-3">
-                        <div class="flex justify-between items-start text-xs">
-                            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase">✅ Asignada a ti</span>
-                            <span class="text-emerald-400 font-bold text-sm">${c.precio || '$0.00'}</span>
-                        </div>
-                        
-                        <div class="space-y-1 text-xs">
-                            <p class="text-slate-300"><strong class="text-slate-400">👤 Cliente:</strong> ${c.cliente_nombre || 'N/A'}</p>
-                            <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
-                            <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
-                            <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
-                        </div>
-
+                    <div>
+                        <p><strong>✅ Asignada a ti — ${c.precio || '$0.00'}</strong></p>
+                        <p>👤 Cliente: ${c.cliente_nombre || 'N/A'}</p>
+                        <p>📍 Origen: ${c.origen}</p>
+                        <p>🏁 Destino: ${c.destino}</p>
+                        <p>Distancia: ${c.distancia || 'N/A'}</p>
                         ${contenidoAcciones}
                     </div>
                 `;
@@ -514,12 +435,7 @@
                 ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
                 llegada_conductor_at: ahora
             };
-
-            const { error } = await supabaseClient
-                .from('carreras')
-                .update({ tiempos: nuevosTiempos })
-                .eq('id', idCarrera);
-
+            const { error } = await supabaseClient.from('carreras').update({ tiempos: nuevosTiempos }).eq('id', idCarrera);
             if (error) alert('Error al actualizar: ' + error.message);
             else cargarDatosConductor();
         }
@@ -527,17 +443,11 @@
         async function iniciarCarrera(idCarrera, tiemposActuales) {
             const ahora = new Date().toISOString();
             if (timerInterval) clearInterval(timerInterval);
-
             const nuevosTiempos = {
                 ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
                 inicio_carrera_at: ahora
             };
-
-            const { error } = await supabaseClient
-                .from('carreras')
-                .update({ tiempos: nuevosTiempos })
-                .eq('id', idCarrera);
-
+            const { error } = await supabaseClient.from('carreras').update({ tiempos: nuevosTiempos }).eq('id', idCarrera);
             if (error) alert('Error al iniciar la carrera: ' + error.message);
             else cargarDatosConductor();
         }
@@ -549,12 +459,7 @@
                 ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
                 fin_recorrido_at: ahora
             };
-
-            const { error } = await supabaseClient
-                .from('carreras')
-                .update({ tiempos: nuevosTiempos })
-                .eq('id', idCarrera);
-
+            const { error } = await supabaseClient.from('carreras').update({ tiempos: nuevosTiempos }).eq('id', idCarrera);
             if (error) alert('Error al finalizar recorrido: ' + error.message);
             else cargarDatosConductor();
         }
@@ -562,17 +467,11 @@
         async function confirmarPagoYFinalizar(idCarrera, tiemposActuales) {
             if (!confirm('¿Confirmas que el pasajero pagó y deseas finalizar el servicio por completo?')) return;
             const ahora = new Date().toISOString();
-
             const nuevosTiempos = {
                 ...(typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}),
                 fin_carrera_at: ahora
             };
-
-            const { error } = await supabaseClient
-                .from('carreras')
-                .update({ estado: 'completada', tiempos: nuevosTiempos })
-                .eq('id', idCarrera);
-
+            const { error } = await supabaseClient.from('carreras').update({ estado: 'completada', tiempos: nuevosTiempos }).eq('id', idCarrera);
             if (error) {
                 alert('Error al finalizar: ' + error.message);
             } else {
@@ -584,11 +483,9 @@
         function iniciarCronometro(isoStringInicio, elementoId) {
             if (timerInterval) clearInterval(timerInterval);
             const tiempoInicio = new Date(isoStringInicio).getTime();
-
             timerInterval = setInterval(() => {
                 const ahora = new Date().getTime();
                 const diferenciaSecs = Math.floor((ahora - tiempoInicio) / 1000);
-
                 if (diferenciaSecs >= 0) {
                     const mins = Math.floor(diferenciaSecs / 60).toString().padStart(2, '0');
                     const secs = (diferenciaSecs % 60).toString().padStart(2, '0');
@@ -603,32 +500,19 @@
             contenedor.innerHTML = '';
 
             if (!carreras || carreras.length === 0) {
-                contenedor.innerHTML = `
-                    <div class="bg-[#111111] border border-[#222222] p-6 rounded-2xl text-center text-slate-500 italic text-xs">
-                        No hay carreras pendientes en este momento.
-                    </div>
-                `;
+                contenedor.innerHTML = `<div>No hay carreras pendientes en este momento.</div>`;
                 return;
             }
 
             carreras.forEach(c => {
                 contenedor.innerHTML += `
-                    <div class="bg-[#111111] border border-[#222222] hover:border-purple-500/40 p-4 rounded-2xl shadow-xl transition space-y-3">
-                        <div class="flex justify-between items-start text-xs">
-                            <span class="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">Pendiente</span>
-                            <span class="text-emerald-400 font-bold text-sm">${c.precio || '$0.00'}</span>
-                        </div>
-                        
-                        <div class="space-y-1 text-xs">
-                            <p class="text-slate-300"><strong class="text-slate-400">👤 Cliente:</strong> ${c.cliente_nombre || 'N/A'}</p>
-                            <p class="text-slate-300"><strong class="text-slate-400">📍 Origen:</strong> ${c.origen}</p>
-                            <p class="text-slate-300"><strong class="text-slate-400">🏁 Destino:</strong> ${c.destino}</p>
-                            <p class="text-slate-400"><strong class="text-slate-500">Distancia:</strong> ${c.distancia || 'N/A'}</p>
-                        </div>
-
-                        <button onclick="tomarCarrera('${c.id}')" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                            🙋‍♂️ Tomar esta Carrera
-                        </button>
+                    <div>
+                        <p><strong>Pendiente — ${c.precio || '$0.00'}</strong></p>
+                        <p>👤 Cliente: ${c.cliente_nombre || 'N/A'}</p>
+                        <p>📍 Origen: ${c.origen}</p>
+                        <p>🏁 Destino: ${c.destino}</p>
+                        <p>Distancia: ${c.distancia || 'N/A'}</p>
+                        <button type="button" onclick="tomarCarrera('${c.id}')" style="width:100%; background-color:#9333ea;">🙋‍♂️ Tomar esta Carrera</button>
                     </div>
                 `;
             });

@@ -40,6 +40,45 @@
         .btn-descartar-mini:active {
             background-color: #7f1d1d !important;
         }
+        .seccion-descartadas-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #1e293b !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #475569 !important;
+            border-radius: 8px !important;
+            padding: 10px 12px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            cursor: pointer;
+            margin-top: 14px;
+        }
+        .tarjeta-carrera-descartada {
+            border: 1px dashed #475569;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+            background-color: #111827;
+        }
+        .acciones-descartada {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-restaurar-mini {
+            background-color: #1e293b !important;
+            color: #cbd5e1 !important;
+            border: 1px solid #64748b !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+            width: auto !important;
+        }
     </style>
 </head>
 <body>
@@ -90,6 +129,16 @@
                 <div>Buscando carreras...</div>
             </div>
         </div>
+
+        <div id="seccion-descartadas-activas">
+            <button type="button" id="btn-toggle-descartadas" class="seccion-descartadas-toggle" onclick="alternarDescartadasActivas()">
+                <span>Carreras Descartadas Activas (<span id="contador-descartadas-activas">0</span>)</span>
+                <span id="icono-toggle-descartadas">▼</span>
+            </button>
+            <div id="lista-descartadas-activas" class="hidden">
+                <div style="margin-top:8px; color:#94a3b8; font-size:13px;">No hay carreras descartadas activas.</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -100,6 +149,7 @@
         var primeraCargaRealizada = false;
         var cantidadPendientesAnterior = 0;
         var carrerasDescartadasIds = [];
+        var descartadasExpandida = false;
         var audioCtx = null;
 
         var alarmaInterval = null;
@@ -342,6 +392,7 @@
             primeraCargaRealizada = false;
             cantidadPendientesAnterior = 0;
             carrerasDescartadasIds = [];
+            descartadasExpandida = false;
 
             if (window.EnviaAuth && typeof window.EnviaAuth.limpiarEstadoLocal === 'function') {
                 window.EnviaAuth.limpiarEstadoLocal();
@@ -359,6 +410,30 @@
             cargarDatosConductor();
         }
 
+        function restaurarCarreraDescartada(idCarrera) {
+            var idStr = String(idCarrera);
+            carrerasDescartadasIds = carrerasDescartadasIds.filter(function (item) {
+                return String(item) !== idStr;
+            });
+            cargarDatosConductor();
+        }
+
+        function alternarDescartadasActivas() {
+            descartadasExpandida = !descartadasExpandida;
+            var listaEl = document.getElementById('lista-descartadas-activas');
+            var iconoEl = document.getElementById('icono-toggle-descartadas');
+            if (listaEl) {
+                if (descartadasExpandida) {
+                    listaEl.classList.remove('hidden');
+                } else {
+                    listaEl.classList.add('hidden');
+                }
+            }
+            if (iconoEl) {
+                iconoEl.textContent = descartadasExpandida ? '▲' : '▼';
+            }
+        }
+
         function cargarDatosConductor() {
             var db = getDb();
             if (!db || !conductorActual) return;
@@ -371,6 +446,9 @@
                     var rawPendData = resPend.data || [];
                     var pendData = rawPendData.filter(function (c) {
                         return carrerasDescartadasIds.indexOf(String(c.id)) === -1;
+                    });
+                    var descartadasActivasData = rawPendData.filter(function (c) {
+                        return carrerasDescartadasIds.indexOf(String(c.id)) !== -1;
                     });
                     var cantidadActualPendientes = pendData.length;
 
@@ -388,6 +466,7 @@
                     }
 
                     renderizarPendientes(pendData);
+                    renderizarDescartadasActivas(descartadasActivasData);
                 });
 
             db.from('carreras')
@@ -401,6 +480,11 @@
 
         function tomarCarrera(idCarrera) {
             detenerAlarmaPersistente();
+            var idStr = String(idCarrera);
+            carrerasDescartadasIds = carrerasDescartadasIds.filter(function (item) {
+                return String(item) !== idStr;
+            });
+
             var db = getDb();
             if (!db) return;
 
@@ -568,6 +652,40 @@
                         '<button type="button" onclick="tomarCarrera(\'' + c.id + '\')" style="width:100%; background-color:#9333ea;">🙋‍♂️ Tomar esta Carrera</button>' +
                     '</div>';
             });
+        }
+
+        function renderizarDescartadasActivas(carrerasDescartadas) {
+            var contadorEl = document.getElementById('contador-descartadas-activas');
+            var contenedor = document.getElementById('lista-descartadas-activas');
+            var lista = carrerasDescartadas || [];
+
+            if (contadorEl) {
+                contadorEl.textContent = String(lista.length);
+            }
+            if (!contenedor) return;
+
+            if (lista.length === 0) {
+                contenedor.innerHTML = '<div style="margin-top:8px; color:#94a3b8; font-size:13px;">No hay carreras descartadas activas.</div>';
+                return;
+            }
+
+            var html = '<div style="margin-top:8px;">';
+            lista.forEach(function (c) {
+                html +=
+                    '<div class="tarjeta-carrera-descartada">' +
+                        '<p style="margin:0 0 4px 0;"><strong>Descartada Activa — ' + (c.precio || '$0.00') + '</strong></p>' +
+                        '<p>👤 Cliente: ' + (c.cliente_nombre || 'N/A') + '</p>' +
+                        '<p>📍 Origen: ' + c.origen + '</p>' +
+                        '<p>🏁 Destino: ' + c.destino + '</p>' +
+                        '<p>Distancia: ' + (c.distancia || 'N/A') + '</p>' +
+                        '<div class="acciones-descartada">' +
+                            '<button type="button" onclick="tomarCarrera(\'' + c.id + '\')" style="flex:1; background-color:#9333ea;">🙋‍♂️ Tomar esta Carrera</button>' +
+                            '<button type="button" class="btn-restaurar-mini" onclick="restaurarCarreraDescartada(\'' + c.id + '\')">Restaurar</button>' +
+                        '</div>' +
+                    '</div>';
+            });
+            html += '</div>';
+            contenedor.innerHTML = html;
         }
 
         function suscripcionRealtime() {

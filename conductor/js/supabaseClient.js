@@ -192,6 +192,17 @@
     window.supabaseClient = sdkClient || restClient;
 
     window.EnviaAuth = {
+        generarUsuarioDesdeNombre: function (nombreTexto) {
+            if (!nombreTexto) return '';
+            var limpio = String(nombreTexto).replace(/^\s+|\s+$/g, '').toLowerCase();
+            var partes = limpio.split(/\s+/);
+            if (partes.length >= 2) {
+                var inicial = partes[0].charAt(0);
+                var apellidoPegado = partes.slice(1).join('');
+                return inicial + apellidoPegado;
+            }
+            return partes[0] || '';
+        },
         limpiarEstadoLocal: function () {
             guardarSesionLocal(null);
             try {

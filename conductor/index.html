@@ -227,7 +227,8 @@
         var mostrarTodoHistorial = false;
         var audioCtx = null;
         var audioDesbloqueado = false;
-        var tonoNotificacionUnificado = "2869_preview.mp3";
+        var canalAlertaConductorId = "envia_conductor_sonido_v1";
+        var canalAlertaCreado = false;
         var intervaloSondeoMs = 1200;
 
         var alarmaInterval = null;
@@ -282,6 +283,27 @@
             } catch (e) {}
         }
 
+        async function asegurarCanalSonidoConductor() {
+            if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.LocalNotifications) return;
+            var LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
+            try {
+                if (typeof LocalNotifications.requestPermissions === 'function') {
+                    await LocalNotifications.requestPermissions();
+                }
+                if (!canalAlertaCreado && typeof LocalNotifications.createChannel === 'function') {
+                    await LocalNotifications.createChannel({
+                        id: canalAlertaConductorId,
+                        name: 'Alertas de Carreras EN-VIA',
+                        description: 'Sonido de alerta de alta prioridad para conductores',
+                        importance: 5,
+                        visibility: 1,
+                        vibration: false
+                    });
+                    canalAlertaCreado = true;
+                }
+            } catch (e) {}
+        }
+
         function notificarNativoNuevaCarrera(cantidadPendientes, carreraInfo) {
             var titulo = "EN-VIA: Nueva carrera disponible";
             var detalle = carreraInfo && carreraInfo.origen
@@ -289,15 +311,17 @@
                 : ("Hay " + cantidadPendientes + " carrera(s) pendiente(s) por tomar.");
             try {
                 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
-                    window.Capacitor.Plugins.LocalNotifications.schedule({
-                        notifications: [{
-                            id: Math.floor(Date.now() % 2147483647),
-                            title: titulo,
-                            body: detalle,
-                            sound: tonoNotificacionUnificado,
-                            schedule: { at: new Date(Date.now() + 10) }
-                        }]
-                    }).catch(function () {});
+                    asegurarCanalSonidoConductor().then(function () {
+                        window.Capacitor.Plugins.LocalNotifications.schedule({
+                            notifications: [{
+                                id: Math.floor(Date.now() % 2147483647),
+                                title: titulo,
+                                body: detalle,
+                                channelId: canalAlertaConductorId,
+                                schedule: { at: new Date(Date.now() + 10) }
+                            }]
+                        }).catch(function () {});
+                    });
                 }
             } catch (e) {}
 
@@ -312,28 +336,32 @@
             try {
                 desbloquearMotorAudio();
                 var audioElement = document.getElementById('alarma-audio');
-                if (audioElement && audioElement.readyState >= 2) {
-                    audioElement.currentTime = 0;
-                    var playPromise = audioElement.play();
-                    if (playPromise && typeof playPromise.catch === 'function') {
-                        playPromise.catch(function () {});
+                if (audioElement) {
+                    audioElement.muted = false;
+                    audioElement.volume = 1.0;
+                    if (audioElement.readyState >= 2) {
+                        audioElement.currentTime = 0;
+                        var playPromise = audioElement.play();
+                        if (playPromise && typeof playPromise.catch === 'function') {
+                            playPromise.catch(function () {});
+                        }
+                        return;
                     }
-                    return;
                 }
 
                 if (audioCtx) {
                     var ahora = audioCtx.currentTime;
                     var osc = audioCtx.createOscillator();
                     var gain = audioCtx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(920, ahora);
-                    osc.frequency.exponentialRampToValueAtTime(1380, ahora + 0.25);
-                    gain.gain.setValueAtTime(0.45, ahora);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.35);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(1050, ahora);
+                    osc.frequency.setValueAtTime(1520, ahora + 0.14);
+                    gain.gain.setValueAtTime(0.95, ahora);
+                    gain.gain.exponentialRampToValueAtTime(0.02, ahora + 0.36);
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     osc.start(ahora);
-                    osc.stop(ahora + 0.36);
+                    osc.stop(ahora + 0.38);
                 }
             } catch (e) {}
         }
@@ -341,10 +369,6 @@
         function dispararPulsoTimbre() {
             try {
                 reproducirTimbreRapido();
-
-                if ("vibrate" in navigator && typeof navigator.vibrate === 'function') {
-                    navigator.vibrate([650, 200, 650]);
-                }
             } catch (e) {
                 console.log("Error en timbre:", e);
             }
@@ -383,11 +407,6 @@
                     audioElement.currentTime = 0;
                 } catch (e) {}
             }
-            if ("vibrate" in navigator && typeof navigator.vibrate === 'function') {
-                try {
-                    navigator.vibrate(0);
-                } catch (e) {}
-            }
             try {
                 if (window.AndroidAlarma && typeof window.AndroidAlarma.detenerAlerta === 'function') {
                     window.AndroidAlarma.detenerAlerta();
@@ -419,6 +438,7 @@
 
         function reanudarCicloConductor() {
             if (!conductorActual) return;
+            asegurarCanalSonidoConductor();
             if (pollingInterval) clearInterval(pollingInterval);
             pollingInterval = setInterval(function () {
                 cargarDatosConductor();
@@ -448,6 +468,7 @@
         }
 
         window.addEventListener('load', function () {
+            asegurarCanalSonidoConductor();
             var sesionGuardada = sessionStorage.getItem('conductor_en_via');
             var sesionIdGuardada = sessionStorage.getItem('conductor_id_en_via');
 
@@ -470,6 +491,7 @@
         function ingresarAlPortal() {
             limpiarErrorLogin();
             desbloquearMotorAudio();
+            asegurarCanalSonidoConductor();
             var usuarioInput = normalizarUsuarioEntrada(document.getElementById('login-nombre').value || '');
             var claveInput = document.getElementById('login-clave').value || '';
             var db = getDb();
@@ -504,6 +526,8 @@
 
                 var audioElement = document.getElementById('alarma-audio');
                 if (audioElement) {
+                    audioElement.muted = false;
+                    audioElement.volume = 1.0;
                     audioElement.load();
                     var p = audioElement.play();
                     if (p && typeof p.then === 'function') {

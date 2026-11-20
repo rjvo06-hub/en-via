@@ -10,6 +10,45 @@
     <style>
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
+        .acciones-header-chofer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-historial-header {
+            background-color: #1e293b !important;
+            color: #38bdf8 !important;
+            border: 1px solid #0284c7 !important;
+            padding: 8px 14px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+            width: auto !important;
+        }
+        .panel-historial-carreras {
+            border: 1px solid #0284c7;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            margin-bottom: 14px;
+            background-color: #0b1324;
+        }
+        .cabecera-panel-historial {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .tarjeta-carrera-historial {
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 8px;
+            background-color: #0f172a;
+        }
         .tarjeta-carrera-pendiente {
             position: relative;
             border: 1px solid #334155;
@@ -115,8 +154,21 @@
         <header>
             <h1>EN-VIA - Panel de Chofer</h1>
             <p>Conectado como: <strong id="driver-name-display" style="color:#ffffff;"></strong></p>
-            <button type="button" id="btn-desconectar" onclick="cerrarSesion()" style="background-color:#262626; color:#f87171; margin-top:8px;">Desconectar</button>
+            <div class="acciones-header-chofer">
+                <button type="button" id="btn-ver-historial" class="btn-historial-header" onclick="alternarHistorialCarreras()">📋 Historial de Carreras</button>
+                <button type="button" id="btn-desconectar" onclick="cerrarSesion()" style="background-color:#262626; color:#f87171; width:auto;">Desconectar</button>
+            </div>
         </header>
+
+        <div id="panel-historial" class="panel-historial-carreras hidden">
+            <div class="cabecera-panel-historial">
+                <h2 style="color:#38bdf8; margin:0; font-size:15px;">Historial de Carreras Realizadas (<span id="contador-historial">0</span>)</h2>
+                <button type="button" class="btn-restaurar-mini" onclick="alternarHistorialCarreras()">Cerrar ✕</button>
+            </div>
+            <div id="lista-historial-carreras">
+                <div style="color:#94a3b8; font-size:13px;">Cargando historial...</div>
+            </div>
+        </div>
 
         <div id="seccion-asignada" class="hidden">
             <h2 style="color:#34d399; margin-bottom:8px;">Tu Carrera en Curso</h2>
@@ -150,6 +202,7 @@
         var cantidadPendientesAnterior = 0;
         var carrerasDescartadasIds = [];
         var descartadasExpandida = false;
+        var historialVisible = false;
         var audioCtx = null;
 
         var alarmaInterval = null;
@@ -181,16 +234,25 @@
         }
 
         function notificarNativoNuevaCarrera(cantidadPendientes) {
+            var titulo = "EN-VIA: Nueva carrera disponible";
+            var cuerpo = "Hay " + cantidadPendientes + " carrera(s) pendiente(s) por tomar.";
             try {
                 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
                     window.Capacitor.Plugins.LocalNotifications.schedule({
                         notifications: [{
                             id: Math.floor(Date.now() % 2147483647),
-                            title: "EN-VIA: Nueva carrera disponible",
-                            body: "Hay " + cantidadPendientes + " carrera(s) pendiente(s) por tomar.",
-                            sound: "default"
+                            title: titulo,
+                            body: cuerpo,
+                            sound: "default",
+                            schedule: { at: new Date(Date.now() + 200) }
                         }]
                     }).catch(function () {});
+                }
+            } catch (e) {}
+
+            try {
+                if (window.AndroidAlarma && typeof window.AndroidAlarma.dispararAlerta === 'function') {
+                    window.AndroidAlarma.dispararAlerta(titulo, cuerpo);
                 }
             } catch (e) {}
         }
@@ -264,6 +326,11 @@
             if ("vibrate" in navigator) {
                 navigator.vibrate(0);
             }
+            try {
+                if (window.AndroidAlarma && typeof window.AndroidAlarma.detenerAlerta === 'function') {
+                    window.AndroidAlarma.detenerAlerta();
+                }
+            } catch (e) {}
         }
 
         function manejarToqueEnPantalla() {
@@ -287,10 +354,26 @@
             }
         }
 
+        function reanudarCicloConductor() {
+            if (!conductorActual) return;
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(function () {
+                cargarDatosConductor();
+            }, 2000);
+            suscripcionRealtime();
+            cargarDatosConductor();
+        }
+
         document.addEventListener('visibilitychange', function () {
             if (!document.hidden && conductorActual) {
                 detenerAlarmaPersistente();
-                cargarDatosConductor();
+                reanudarCicloConductor();
+            }
+        });
+
+        window.addEventListener('focus', function () {
+            if (conductorActual) {
+                reanudarCicloConductor();
             }
         });
 
@@ -298,7 +381,7 @@
             window.Capacitor.Plugins.App.addListener('appStateChange', function (state) {
                 if (state && state.isActive && conductorActual) {
                     detenerAlarmaPersistente();
-                    cargarDatosConductor();
+                    reanudarCicloConductor();
                 }
             });
         }
@@ -393,12 +476,126 @@
             cantidadPendientesAnterior = 0;
             carrerasDescartadasIds = [];
             descartadasExpandida = false;
+            historialVisible = false;
 
             if (window.EnviaAuth && typeof window.EnviaAuth.limpiarEstadoLocal === 'function') {
                 window.EnviaAuth.limpiarEstadoLocal();
             }
 
             window.location.replace('./index.html');
+        }
+
+        function alternarHistorialCarreras() {
+            historialVisible = !historialVisible;
+            var panelEl = document.getElementById('panel-historial');
+            if (panelEl) {
+                if (historialVisible) {
+                    panelEl.classList.remove('hidden');
+                    cargarHistorialConductor();
+                } else {
+                    panelEl.classList.add('hidden');
+                }
+            }
+        }
+
+        function formatearDuracionCarrera(tiempos, createdAt) {
+            var t = (typeof tiempos === 'object' && tiempos !== null) ? tiempos : {};
+            var inicioIso = t.inicio_carrera_at || t.llegada_conductor_at || createdAt || null;
+            var finIso = t.fin_recorrido_at || t.fin_carrera_at || null;
+
+            if (!inicioIso || !finIso) {
+                return 'N/D';
+            }
+
+            var msInicio = new Date(inicioIso).getTime();
+            var msFin = new Date(finIso).getTime();
+            if (isNaN(msInicio) || isNaN(msFin) || msFin < msInicio) {
+                return 'N/D';
+            }
+
+            var totalSegs = Math.floor((msFin - msInicio) / 1000);
+            var horas = Math.floor(totalSegs / 3600);
+            var mins = Math.floor((totalSegs % 3600) / 60);
+            var segs = totalSegs % 60;
+
+            if (horas > 0) {
+                return horas + 'h ' + String(mins).padStart(2, '0') + 'm';
+            }
+            if (mins > 0) {
+                return mins + ' min ' + String(segs).padStart(2, '0') + ' s';
+            }
+            return segs + ' seg';
+        }
+
+        function formatearFechaCorta(isoStr) {
+            if (!isoStr) return 'Sin fecha';
+            var d = new Date(isoStr);
+            if (isNaN(d.getTime())) return 'Sin fecha';
+            var dia = String(d.getDate()).padStart(2, '0');
+            var mes = String(d.getMonth() + 1).padStart(2, '0');
+            var anio = d.getFullYear();
+            var hora = String(d.getHours()).padStart(2, '0');
+            var min = String(d.getMinutes()).padStart(2, '0');
+            return dia + '/' + mes + '/' + anio + ' ' + hora + ':' + min;
+        }
+
+        function cargarHistorialConductor() {
+            var db = getDb();
+            var contenedor = document.getElementById('lista-historial-carreras');
+            var contadorEl = document.getElementById('contador-historial');
+            if (!db || !conductorActual || !contenedor) return;
+
+            db.from('carreras')
+                .select('*')
+                .eq('estado', 'completada')
+                .eq('conductor_asignado', conductorActual)
+                .order('created_at', { ascending: false })
+                .limit(50)
+                .then(function (res) {
+                    if (res.error) {
+                        contenedor.innerHTML = '<div style="color:#f87171; font-size:13px;">No se pudo cargar el historial: ' + res.error.message + '</div>';
+                        return;
+                    }
+                    var lista = res.data || [];
+                    if (contadorEl) {
+                        contadorEl.textContent = String(lista.length);
+                    }
+                    renderizarHistorialCarreras(lista);
+                })
+                .catch(function () {
+                    contenedor.innerHTML = '<div style="color:#f87171; font-size:13px;">Error al consultar el historial.</div>';
+                });
+        }
+
+        function renderizarHistorialCarreras(carreras) {
+            var contenedor = document.getElementById('lista-historial-carreras');
+            if (!contenedor) return;
+
+            if (!carreras || carreras.length === 0) {
+                contenedor.innerHTML = '<div style="color:#94a3b8; font-size:13px;">Aún no tienes carreras completadas registradas.</div>';
+                return;
+            }
+
+            var html = '';
+            carreras.forEach(function (c) {
+                var tiempos = c.tiempos || {};
+                var duracion = formatearDuracionCarrera(tiempos, c.created_at);
+                var fechaRef = formatearFechaCorta(tiempos.fin_carrera_at || tiempos.fin_recorrido_at || c.created_at);
+                var costo = c.precio || '$0.00';
+
+                html +=
+                    '<div class="tarjeta-carrera-historial">' +
+                        '<div class="cabecera-pendiente">' +
+                            '<strong style="color:#34d399;">💰 ' + costo + '</strong>' +
+                            '<span style="font-size:11px; color:#94a3b8;">' + fechaRef + '</span>' +
+                        '</div>' +
+                        '<p style="margin:3px 0;">📍 <strong>De:</strong> ' + (c.origen || 'N/A') + '</p>' +
+                        '<p style="margin:3px 0;">🏁 <strong>A:</strong> ' + (c.destino || 'N/A') + '</p>' +
+                        '<p style="margin:3px 0;">⏱️ <strong>Tiempo:</strong> ' + duracion + ' &nbsp;|&nbsp; 📏 <strong>Dist.:</strong> ' + (c.distancia || 'N/A') + '</p>' +
+                        '<p style="margin:3px 0; font-size:12px; color:#94a3b8;">👤 Cliente: ' + (c.cliente_nombre || 'N/A') + '</p>' +
+                    '</div>';
+            });
+            contenedor.innerHTML = html;
         }
 
         function descartarCarreraPendiente(idCarrera) {
@@ -476,6 +673,10 @@
                 .then(function (resAsig) {
                     renderizarAsignada(resAsig.data || []);
                 });
+
+            if (historialVisible) {
+                cargarHistorialConductor();
+            }
         }
 
         function tomarCarrera(idCarrera) {

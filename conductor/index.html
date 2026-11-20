@@ -305,19 +305,6 @@
             return limpio.replace(/\s+/g, '');
         }
 
-        function validarClaveConductor(conductor, claveIngresada) {
-            if (!conductor) return false;
-            var claveGuardada = conductor.clave || conductor.clave_acceso || conductor.password || '';
-            if (claveGuardada) {
-                return String(claveGuardada) === String(claveIngresada);
-            }
-            var bancarios = conductor.datos_bancarios || {};
-            if (bancarios.clave) {
-                return String(bancarios.clave) === String(claveIngresada);
-            }
-            return false;
-        }
-
         function ingresarAlPortal() {
             limpiarErrorLogin();
             var usuarioInput = normalizarUsuarioEntrada(document.getElementById('login-nombre').value || '');
@@ -329,43 +316,41 @@
                 return;
             }
 
-            if (!db) {
+            if (!db || typeof db.rpc !== 'function') {
                 mostrarErrorLogin('No se pudo conectar con la base de datos.');
                 return;
             }
 
-            db.from('conductores')
-                .select('*')
-                .eq('activo', true)
-                .eq('usuario', usuarioInput)
-                .limit(1)
-                .maybeSingle()
-                .then(function (res) {
-                    var cond = res ? res.data : null;
-                    if (!cond || !validarClaveConductor(cond, claveInput)) {
-                        mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
-                        return;
-                    }
+            db.rpc('verificar_login_conductor', {
+                p_usuario: usuarioInput,
+                p_clave: claveInput
+            }).then(function (res) {
+                var rows = res ? res.data : null;
+                var cond = Array.isArray(rows) ? rows[0] : rows;
 
-                    conductorActual = cond.nombre;
-                    conductorIdActual = cond.id;
-
-                    sessionStorage.setItem('conductor_en_via', conductorActual);
-                    sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
-
-                    var audioElement = document.getElementById('alarma-audio');
-                    if (audioElement) {
-                        audioElement.play().then(function () {
-                            audioElement.pause();
-                            audioElement.currentTime = 0;
-                        }).catch(function () {});
-                    }
-
-                    mostrarPortal();
-                })
-                .catch(function () {
+                if (!cond || !cond.id || cond.activo !== true) {
                     mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
-                });
+                    return;
+                }
+
+                conductorActual = cond.nombre;
+                conductorIdActual = cond.id;
+
+                sessionStorage.setItem('conductor_en_via', conductorActual);
+                sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
+
+                var audioElement = document.getElementById('alarma-audio');
+                if (audioElement) {
+                    audioElement.play().then(function () {
+                        audioElement.pause();
+                        audioElement.currentTime = 0;
+                    }).catch(function () {});
+                }
+
+                mostrarPortal();
+            }).catch(function () {
+                mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
+            });
         }
 
         function mostrarPortal() {

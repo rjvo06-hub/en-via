@@ -98,6 +98,21 @@
             }
         }
 
+        function notificarNativoNuevaCarrera(cantidadPendientes) {
+            try {
+                if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                    window.Capacitor.Plugins.LocalNotifications.schedule({
+                        notifications: [{
+                            id: Math.floor(Date.now() % 2147483647),
+                            title: "EN-VIA: Nueva carrera disponible",
+                            body: "Hay " + cantidadPendientes + " carrera(s) pendiente(s) por tomar.",
+                            sound: "default"
+                        }]
+                    }).catch(function () {});
+                }
+            } catch (e) {}
+        }
+
         function dispararPulsoTimbre() {
             try {
                 var audioElement = document.getElementById('alarma-audio');
@@ -134,8 +149,9 @@
             }
         }
 
-        function iniciarAlarmaPersistente() {
+        function iniciarAlarmaPersistente(cantidadPendientes) {
             hayCarreraNuevaSinVer = true;
+            notificarNativoNuevaCarrera(cantidadPendientes || 1);
             if (alarmaActiva) return;
 
             alarmaActiva = true;
@@ -307,7 +323,7 @@
                         cantidadPendientesAnterior = cantidadActualPendientes;
                         primeraCargaRealizada = true;
                     } else if (cantidadActualPendientes > cantidadPendientesAnterior) {
-                        iniciarAlarmaPersistente();
+                        iniciarAlarmaPersistente(cantidadActualPendientes);
                         cantidadPendientesAnterior = cantidadActualPendientes;
                     } else {
                         cantidadPendientesAnterior = cantidadActualPendientes;

@@ -161,10 +161,38 @@
             return qb;
         }
 
+        function execRpc(fnName, params) {
+            return obtenerAccessTokenActual(sdkRef).then(function (token) {
+                var headers = {
+                    'apikey': key,
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                };
+                return window.fetch(baseUrl + 'rpc/' + encodeURIComponent(fnName), {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(params || {})
+                }).then(function (r) {
+                    return r.json().then(function (json) {
+                        if (!r.ok) {
+                            return {
+                                data: null,
+                                error: { message: (json && json.message) ? json.message : r.statusText }
+                            };
+                        }
+                        return { data: json, error: null };
+                    });
+                });
+            });
+        }
+
         return {
             _isRestFallback: true,
             from: function (table) {
                 return makeQuery(table, '*');
+            },
+            rpc: function (fnName, params) {
+                return execRpc(fnName, params);
             }
         };
     }

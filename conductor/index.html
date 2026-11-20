@@ -10,6 +10,32 @@
     <style>
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
+        .tarjeta-carrera-pendiente {
+            position: relative;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background-color: #0f172a;
+        }
+        .cabecera-pendiente {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .btn-descartar-mini {
+            background-color: #262626 !important;
+            color: #cbd5e1 !important;
+            border: 1px solid #475569 !important;
+            padding: 4px 10px !important;
+            font-size: 11px !important;
+            line-height: 1.2 !important;
+            width: auto !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -69,6 +95,7 @@
         var pollingInterval = null;
         var primeraCargaRealizada = false;
         var cantidadPendientesAnterior = 0;
+        var carrerasDescartadasIds = [];
         var audioCtx = null;
 
         var alarmaInterval = null;
@@ -299,12 +326,22 @@
             conductorIdActual = null;
             primeraCargaRealizada = false;
             cantidadPendientesAnterior = 0;
+            carrerasDescartadasIds = [];
 
             if (window.EnviaAuth && typeof window.EnviaAuth.limpiarEstadoLocal === 'function') {
                 window.EnviaAuth.limpiarEstadoLocal();
             }
 
             window.location.replace('./index.html');
+        }
+
+        function descartarCarreraPendiente(idCarrera) {
+            detenerAlarmaPersistente();
+            var idStr = String(idCarrera);
+            if (carrerasDescartadasIds.indexOf(idStr) === -1) {
+                carrerasDescartadasIds.push(idStr);
+            }
+            cargarDatosConductor();
         }
 
         function cargarDatosConductor() {
@@ -316,7 +353,10 @@
                 .eq('estado', 'pendiente')
                 .order('created_at', { ascending: false })
                 .then(function (resPend) {
-                    var pendData = resPend.data || [];
+                    var rawPendData = resPend.data || [];
+                    var pendData = rawPendData.filter(function (c) {
+                        return carrerasDescartadasIds.indexOf(String(c.id)) === -1;
+                    });
                     var cantidadActualPendientes = pendData.length;
 
                     if (!primeraCargaRealizada) {
@@ -501,8 +541,11 @@
 
             carreras.forEach(function (c) {
                 contenedor.innerHTML +=
-                    '<div>' +
-                        '<p><strong>Pendiente — ' + (c.precio || '$0.00') + '</strong></p>' +
+                    '<div class="tarjeta-carrera-pendiente">' +
+                        '<div class="cabecera-pendiente">' +
+                            '<p style="margin:0;"><strong>Pendiente — ' + (c.precio || '$0.00') + '</strong></p>' +
+                            '<button type="button" class="btn-descartar-mini" onclick="descartarCarreraPendiente(\'' + c.id + '\')">Descartar</button>' +
+                        '</div>' +
                         '<p>👤 Cliente: ' + (c.cliente_nombre || 'N/A') + '</p>' +
                         '<p>📍 Origen: ' + c.origen + '</p>' +
                         '<p>🏁 Destino: ' + c.destino + '</p>' +

@@ -228,6 +228,7 @@
         var audioCtx = null;
         var audioDesbloqueado = false;
         var tonoNotificacionUnificado = "2869_preview.mp3";
+        var intervaloSondeoMs = 1200;
 
         var alarmaInterval = null;
         var alarmaActiva = false;
@@ -294,7 +295,7 @@
                             title: titulo,
                             body: detalle,
                             sound: tonoNotificacionUnificado,
-                            schedule: { at: new Date(Date.now() + 100) }
+                            schedule: { at: new Date(Date.now() + 10) }
                         }]
                     }).catch(function () {});
                 }
@@ -307,43 +308,42 @@
             } catch (e) {}
         }
 
-        function reproducirRespaldoSintetico() {
+        function reproducirTimbreRapido() {
             try {
                 desbloquearMotorAudio();
-                if (!audioCtx) return;
+                var audioElement = document.getElementById('alarma-audio');
+                if (audioElement && audioElement.readyState >= 2) {
+                    audioElement.currentTime = 0;
+                    var playPromise = audioElement.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(function () {});
+                    }
+                    return;
+                }
 
-                var ahora = audioCtx.currentTime;
-                var osc = audioCtx.createOscillator();
-                var gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(920, ahora);
-                osc.frequency.exponentialRampToValueAtTime(1380, ahora + 0.25);
-                gain.gain.setValueAtTime(0.4, ahora);
-                gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.35);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(ahora);
-                osc.stop(ahora + 0.36);
+                if (audioCtx) {
+                    var ahora = audioCtx.currentTime;
+                    var osc = audioCtx.createOscillator();
+                    var gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(920, ahora);
+                    osc.frequency.exponentialRampToValueAtTime(1380, ahora + 0.25);
+                    gain.gain.setValueAtTime(0.45, ahora);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.35);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(ahora);
+                    osc.stop(ahora + 0.36);
+                }
             } catch (e) {}
         }
 
         function dispararPulsoTimbre() {
             try {
-                var audioElement = document.getElementById('alarma-audio');
-                if (audioElement) {
-                    audioElement.currentTime = 0;
-                    var playPromise = audioElement.play();
-                    if (playPromise && typeof playPromise.catch === 'function') {
-                        playPromise.catch(function () {
-                            reproducirRespaldoSintetico();
-                        });
-                    }
-                } else {
-                    reproducirRespaldoSintetico();
-                }
+                reproducirTimbreRapido();
 
                 if ("vibrate" in navigator && typeof navigator.vibrate === 'function') {
-                    navigator.vibrate([700, 250, 700]);
+                    navigator.vibrate([650, 200, 650]);
                 }
             } catch (e) {
                 console.log("Error en timbre:", e);
@@ -422,7 +422,7 @@
             if (pollingInterval) clearInterval(pollingInterval);
             pollingInterval = setInterval(function () {
                 cargarDatosConductor();
-            }, 2000);
+            }, intervaloSondeoMs);
             suscripcionRealtime();
             cargarDatosConductor();
         }
@@ -504,6 +504,7 @@
 
                 var audioElement = document.getElementById('alarma-audio');
                 if (audioElement) {
+                    audioElement.load();
                     var p = audioElement.play();
                     if (p && typeof p.then === 'function') {
                         p.then(function () {
@@ -530,7 +531,7 @@
             if (pollingInterval) clearInterval(pollingInterval);
             pollingInterval = setInterval(function () {
                 cargarDatosConductor();
-            }, 2000);
+            }, intervaloSondeoMs);
         }
 
         function cerrarSesion() {

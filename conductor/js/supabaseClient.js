@@ -135,3 +135,57 @@
                     state.singleMode = true;
                     state.limitNum = 1;
                     return qb;
+                },
+                insert: function (rows) {
+                    state.method = 'POST';
+                    state.bodyPayload = Array.isArray(rows) ? rows : [rows];
+                    return qb;
+                },
+                update: function (values) {
+                    state.method = 'PATCH';
+                    state.bodyPayload = values;
+                    return qb;
+                },
+                delete: function () {
+                    state.method = 'DELETE';
+                    return qb;
+                },
+                then: function (resolve, reject) {
+                    return execRequest().then(resolve, reject);
+                }
+            };
+            return qb;
+        }
+
+        return {
+            _isRestFallback: true,
+            from: function (table) {
+                return makeQuery(table, '*');
+            },
+            rpc: function (fnName, params) {
+                return obtenerAccessTokenActual(sdkRef).then(function (token) {
+                    return window.fetch(url.replace(/\/+$/, '') + '/rest/v1/rpc/' + encodeURIComponent(fnName), {
+                        method: 'POST',
+                        headers: {
+                            'apikey': key,
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(params || {})
+                    }).then(function (r) {
+                        return r.json().then(function (json) {
+                            if (!r.ok) {
+                                return {
+                                    data: null,
+                                    error: { message: (json && json.message) ? json.message : r.statusText }
+                                };
+                            }
+                            return { data: json, error: null };
+                        });
+                    });
+                });
+            }
+        };
+    }
+
+    var sdkClient =

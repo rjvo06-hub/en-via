@@ -137,7 +137,8 @@
 </head>
 <body>
     <audio id="alarma-audio" preload="auto" playsinline>
-        <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+        <source src="https://en-via.azubiform.de/alerta_envia_1.wav" type="audio/wav">
+        <source src="./alerta_envia_1.wav" type="audio/wav">
     </audio>
 
     <div id="login-container" class="max-w-xl">
@@ -227,7 +228,8 @@
         var mostrarTodoHistorial = false;
         var audioCtx = null;
         var audioDesbloqueado = false;
-        var canalAlertaConductorId = "envia_conductor_sonido_v1";
+        var canalAlertaConductorId = "envia_alerta_1_v1";
+        var sonidoAlertaNativo = "alerta_envia_1";
         var canalAlertaCreado = false;
         var intervaloSondeoMs = 1200;
 
@@ -293,10 +295,11 @@
                 if (!canalAlertaCreado && typeof LocalNotifications.createChannel === 'function') {
                     await LocalNotifications.createChannel({
                         id: canalAlertaConductorId,
-                        name: 'Alertas de Carreras EN-VIA',
+                        name: 'Alerta EN-VIA 1',
                         description: 'Sonido de alerta de alta prioridad para conductores',
                         importance: 5,
                         visibility: 1,
+                        sound: sonidoAlertaNativo,
                         vibration: false
                     });
                     canalAlertaCreado = true;
@@ -318,6 +321,7 @@
                                 title: titulo,
                                 body: detalle,
                                 channelId: canalAlertaConductorId,
+                                sound: sonidoAlertaNativo,
                                 schedule: { at: new Date(Date.now() + 10) }
                             }]
                         }).catch(function () {});
@@ -332,6 +336,45 @@
             } catch (e) {}
         }
 
+        function reproducirAlerta1Web() {
+            if (!audioCtx) return;
+            var notas = [
+                [1850, 0.14], [0, 0.07], [2200, 0.18], [0, 0.18],
+                [1850, 0.14], [0, 0.07], [2200, 0.22]
+            ];
+            var cursor = audioCtx.currentTime;
+
+            for (var i = 0; i < notas.length; i++) {
+                var freq = notas[i][0];
+                var dur = notas[i][1];
+                if (freq > 0) {
+                    var osc1 = audioCtx.createOscillator();
+                    var osc2 = audioCtx.createOscillator();
+                    var gain = audioCtx.createGain();
+
+                    osc1.type = 'sine';
+                    osc2.type = 'sine';
+                    osc1.frequency.setValueAtTime(freq, cursor);
+                    osc2.frequency.setValueAtTime(freq * 2, cursor);
+
+                    gain.gain.setValueAtTime(0.01, cursor);
+                    gain.gain.linearRampToValueAtTime(0.78, cursor + 0.005);
+                    gain.gain.setValueAtTime(0.78, cursor + Math.max(0.01, dur - 0.005));
+                    gain.gain.linearRampToValueAtTime(0.001, cursor + dur);
+
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc1.start(cursor);
+                    osc2.start(cursor);
+                    osc1.stop(cursor + dur + 0.01);
+                    osc2.stop(cursor + dur + 0.01);
+                }
+                cursor += dur;
+            }
+        }
+
         function reproducirTimbreRapido() {
             try {
                 desbloquearMotorAudio();
@@ -339,30 +382,18 @@
                 if (audioElement) {
                     audioElement.muted = false;
                     audioElement.volume = 1.0;
-                    if (audioElement.readyState >= 2) {
+                    if (audioElement.readyState >= 2 && !audioElement.error) {
                         audioElement.currentTime = 0;
                         var playPromise = audioElement.play();
                         if (playPromise && typeof playPromise.catch === 'function') {
-                            playPromise.catch(function () {});
+                            playPromise.catch(function () {
+                                reproducirAlerta1Web();
+                            });
                         }
                         return;
                     }
                 }
-
-                if (audioCtx) {
-                    var ahora = audioCtx.currentTime;
-                    var osc = audioCtx.createOscillator();
-                    var gain = audioCtx.createGain();
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(1050, ahora);
-                    osc.frequency.setValueAtTime(1520, ahora + 0.14);
-                    gain.gain.setValueAtTime(0.95, ahora);
-                    gain.gain.exponentialRampToValueAtTime(0.02, ahora + 0.36);
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    osc.start(ahora);
-                    osc.stop(ahora + 0.38);
-                }
+                reproducirAlerta1Web();
             } catch (e) {}
         }
 

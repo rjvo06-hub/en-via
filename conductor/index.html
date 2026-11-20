@@ -42,6 +42,21 @@
             gap: 8px;
             margin-bottom: 8px;
         }
+        .barra-filtro-historial {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .input-fecha-historial {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+            border: 1px solid #475569 !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+            width: auto !important;
+        }
         .tarjeta-carrera-historial {
             border: 1px solid #1e293b;
             border-radius: 8px;
@@ -162,11 +177,17 @@
 
         <div id="panel-historial" class="panel-historial-carreras hidden">
             <div class="cabecera-panel-historial">
-                <h2 style="color:#38bdf8; margin:0; font-size:15px;">Historial de Carreras Realizadas (<span id="contador-historial">0</span>)</h2>
+                <h2 style="color:#38bdf8; margin:0; font-size:15px;">Historial de Carreras (<span id="contador-historial">0</span>)</h2>
                 <button type="button" class="btn-restaurar-mini" onclick="alternarHistorialCarreras()">Cerrar ✕</button>
             </div>
+            <div class="barra-filtro-historial">
+                <label for="fecha-historial" style="font-size:12px; color:#cbd5e1; font-weight:600;">Fecha:</label>
+                <input type="date" id="fecha-historial" class="input-fecha-historial" onchange="alCambiarFechaHistorial()">
+                <button type="button" class="btn-restaurar-mini" onclick="seleccionarHoyHistorial()">Hoy</button>
+                <button type="button" class="btn-restaurar-mini" onclick="verTodoHistorial()">Ver todas</button>
+            </div>
             <div id="lista-historial-carreras">
-                <div style="color:#94a3b8; font-size:13px;">Cargando historial...</div>
+                <div style="color:#94a3b8; font-size:13px;">Selecciona una fecha para consultar carreras.</div>
             </div>
         </div>
 
@@ -203,6 +224,7 @@
         var carrerasDescartadasIds = [];
         var descartadasExpandida = false;
         var historialVisible = false;
+        var mostrarTodoHistorial = false;
         var audioCtx = null;
 
         var alarmaInterval = null;
@@ -477,6 +499,7 @@
             carrerasDescartadasIds = [];
             descartadasExpandida = false;
             historialVisible = false;
+            mostrarTodoHistorial = false;
 
             if (window.EnviaAuth && typeof window.EnviaAuth.limpiarEstadoLocal === 'function') {
                 window.EnviaAuth.limpiarEstadoLocal();
@@ -485,17 +508,58 @@
             window.location.replace('./index.html');
         }
 
+        function obtenerFechaLocalInput() {
+            var d = new Date();
+            var anio = d.getFullYear();
+            var mes = String(d.getMonth() + 1).padStart(2, '0');
+            var dia = String(d.getDate()).padStart(2, '0');
+            return anio + '-' + mes + '-' + dia;
+        }
+
         function alternarHistorialCarreras() {
             historialVisible = !historialVisible;
             var panelEl = document.getElementById('panel-historial');
+            var fechaInput = document.getElementById('fecha-historial');
             if (panelEl) {
                 if (historialVisible) {
+                    if (fechaInput && !fechaInput.value && !mostrarTodoHistorial) {
+                        fechaInput.value = obtenerFechaLocalInput();
+                    }
                     panelEl.classList.remove('hidden');
                     cargarHistorialConductor();
                 } else {
                     panelEl.classList.add('hidden');
                 }
             }
+        }
+
+        function alCambiarFechaHistorial() {
+            mostrarTodoHistorial = false;
+            cargarHistorialConductor();
+        }
+
+        function seleccionarHoyHistorial() {
+            mostrarTodoHistorial = false;
+            var fechaInput = document.getElementById('fecha-historial');
+            if (fechaInput) {
+                fechaInput.value = obtenerFechaLocalInput();
+            }
+            cargarHistorialConductor();
+        }
+
+        function verTodoHistorial() {
+            mostrarTodoHistorial = true;
+            cargarHistorialConductor();
+        }
+
+        function obtenerClaveFechaLocal(isoStr) {
+            if (!isoStr) return '';
+            var d = new Date(isoStr);
+            if (isNaN(d.getTime())) return '';
+            var anio = d.getFullYear();
+            var mes = String(d.getMonth() + 1).padStart(2, '0');
+            var dia = String(d.getDate()).padStart(2, '0');
+            return anio + '-' + mes + '-' + dia;
         }
 
         function formatearDuracionCarrera(tiempos, createdAt) {
@@ -543,36 +607,50 @@
             var db = getDb();
             var contenedor = document.getElementById('lista-historial-carreras');
             var contadorEl = document.getElementById('contador-historial');
+            var fechaInput = document.getElementById('fecha-historial');
             if (!db || !conductorActual || !contenedor) return;
+
+            var fechaSeleccionada = (!mostrarTodoHistorial && fechaInput) ? (fechaInput.value || '') : '';
+            var limiteConsulta = mostrarTodoHistorial ? 30 : 50;
 
             db.from('carreras')
                 .select('*')
                 .eq('estado', 'completada')
                 .eq('conductor_asignado', conductorActual)
                 .order('created_at', { ascending: false })
-                .limit(50)
+                .limit(limiteConsulta)
                 .then(function (res) {
                     if (res.error) {
                         contenedor.innerHTML = '<div style="color:#f87171; font-size:13px;">No se pudo cargar el historial: ' + res.error.message + '</div>';
                         return;
                     }
                     var lista = res.data || [];
+                    if (fechaSeleccionada) {
+                        lista = lista.filter(function (c) {
+                            var tiempos = c.tiempos || {};
+                            var refIso = tiempos.fin_carrera_at || tiempos.fin_recorrido_at || c.created_at;
+                            return obtenerClaveFechaLocal(refIso) === fechaSeleccionada;
+                        });
+                    }
                     if (contadorEl) {
                         contadorEl.textContent = String(lista.length);
                     }
-                    renderizarHistorialCarreras(lista);
+                    renderizarHistorialCarreras(lista, fechaSeleccionada);
                 })
                 .catch(function () {
                     contenedor.innerHTML = '<div style="color:#f87171; font-size:13px;">Error al consultar el historial.</div>';
                 });
         }
 
-        function renderizarHistorialCarreras(carreras) {
+        function renderizarHistorialCarreras(carreras, fechaSeleccionada) {
             var contenedor = document.getElementById('lista-historial-carreras');
             if (!contenedor) return;
 
             if (!carreras || carreras.length === 0) {
-                contenedor.innerHTML = '<div style="color:#94a3b8; font-size:13px;">Aún no tienes carreras completadas registradas.</div>';
+                var msgVacio = fechaSeleccionada
+                    ? 'No hay carreras completadas para la fecha ' + fechaSeleccionada + '.'
+                    : 'Aún no tienes carreras completadas registradas.';
+                contenedor.innerHTML = '<div style="color:#94a3b8; font-size:13px;">' + msgVacio + '</div>';
                 return;
             }
 

@@ -26,15 +26,19 @@
             margin-bottom: 6px;
         }
         .btn-descartar-mini {
-            background-color: #262626 !important;
-            color: #cbd5e1 !important;
-            border: 1px solid #475569 !important;
-            padding: 4px 10px !important;
+            background-color: #451a1a !important;
+            color: #fca5a5 !important;
+            border: 1px solid #ef4444 !important;
+            padding: 5px 11px !important;
             font-size: 11px !important;
+            font-weight: 700 !important;
             line-height: 1.2 !important;
             width: auto !important;
             border-radius: 6px !important;
             cursor: pointer;
+        }
+        .btn-descartar-mini:active {
+            background-color: #7f1d1d !important;
         }
     </style>
 </head>
@@ -101,6 +105,7 @@
         var alarmaInterval = null;
         var alarmaActiva = false;
         var hayCarreraNuevaSinVer = false;
+        var ultimaActivacionAlarmaMs = 0;
 
         var baseLat = "10.670389";
         var baseLng = "-71.658972";
@@ -182,6 +187,7 @@
             if (alarmaActiva) return;
 
             alarmaActiva = true;
+            ultimaActivacionAlarmaMs = Date.now();
             dispararPulsoTimbre();
 
             alarmaInterval = setInterval(function () {
@@ -209,6 +215,15 @@
                 navigator.vibrate(0);
             }
         }
+
+        function manejarToqueEnPantalla() {
+            if (!alarmaActiva) return;
+            if ((Date.now() - ultimaActivacionAlarmaMs) < 150) return;
+            detenerAlarmaPersistente();
+        }
+
+        document.addEventListener('touchstart', manejarToqueEnPantalla, { passive: true });
+        document.addEventListener('pointerdown', manejarToqueEnPantalla, { passive: true });
 
         function desconectarTemporizadoresYAlertas() {
             detenerAlarmaPersistente();

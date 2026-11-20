@@ -7,8 +7,6 @@
     <link rel="stylesheet" href="../css/styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="./js/supabaseClient.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
     <style>
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
@@ -51,16 +49,6 @@
             <button type="button" id="btn-desconectar" onclick="cerrarSesion()" style="background-color:#262626; color:#f87171; margin-top:8px;">Desconectar</button>
         </header>
 
-        <div>
-            <p><strong>🛡️ Activar Modo Segundo Plano</strong> — Mantén el proceso activo en el dispositivo.</p>
-            <button type="button" onclick="activarModoSegundoPlano()" style="background-color:#d97706;">Activar Persistencia</button>
-        </div>
-
-        <div id="banner-notificaciones">
-            <p><strong>🔔 Activar Alertas Push</strong> — Registra el dispositivo para recibir avisos.</p>
-            <button type="button" onclick="solicitarPermisosPushMovil()" style="background-color:#9333ea;">Activar Alertas</button>
-        </div>
-
         <div id="seccion-asignada" class="hidden">
             <h2 style="color:#34d399; margin-bottom:8px;">Tu Carrera en Curso</h2>
             <div id="carrera-asignada-container"></div>
@@ -75,20 +63,6 @@
     </div>
 
     <script>
-        var firebaseConfig = {
-            apiKey: "AIzaSyAzo57FlzJSzSDDjTW7w8ODlXtXcS1LvY4",
-            authDomain: "envia-notificaciones.firebaseapp.com",
-            projectId: "envia-notificaciones",
-            storageBucket: "envia-notificaciones.firebasestorage.app",
-            messagingSenderId: "887034908416",
-            appId: "1:887034908416:web:2981b1705ef93c42bd6de5"
-        };
-
-        if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length === 0) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        var messaging = (typeof firebase !== 'undefined' && firebase.messaging) ? firebase.messaging() : null;
-
         var conductorActual = "";
         var conductorIdActual = null;
         var timerInterval = null;
@@ -121,70 +95,6 @@
             if (errEl) {
                 errEl.textContent = '';
                 errEl.classList.add('hidden');
-            }
-        }
-
-        function activarModoSegundoPlano() {
-            try {
-                var AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContextClass();
-                if (audioCtx.resume) audioCtx.resume();
-
-                var buffer = audioCtx.createBuffer(1, 1, 22050);
-                var source = audioCtx.createBufferSource();
-                source.buffer = buffer;
-                source.loop = true;
-                source.connect(audioCtx.destination);
-                source.start(0);
-
-                alert("¡Modo segundo plano activado con éxito!");
-            } catch (err) {
-                alert("Error al activar: " + err.message);
-            }
-        }
-
-        function solicitarPermisosPushMovil() {
-            var db = getDb();
-            var targetId = conductorIdActual || sessionStorage.getItem('conductor_id_en_via');
-
-            if (!targetId) {
-                alert('No se pudo identificar el ID del conductor.');
-                return;
-            }
-
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function (registration) {
-                    var permPromise = (typeof window.Notification !== 'undefined' && 'requestPermission' in window.Notification)
-                        ? Notification.requestPermission()
-                        : Promise.resolve('granted');
-
-                    permPromise.then(function (permission) {
-                        if (permission !== 'granted') {
-                            alert('Permiso de notificaciones denegado.');
-                            return;
-                        }
-                        var tokenPromise = messaging
-                            ? messaging.getToken({
-                                serviceWorkerRegistration: registration,
-                                vapidKey: 'BJwlGuUhPu701MkMv877zN9cxLyK2IcgbVtLehEu8xllFXCISU28E7lV8Q6w-QbRuzine5GWNUxHA_rrgWKSJLo'
-                            }).catch(function () { return null; })
-                            : Promise.resolve(null);
-
-                        tokenPromise.then(function (token) {
-                            var payload = token ? { fcm_token: token } : {};
-                            db.from('conductores').update(payload).eq('id', targetId).then(function (resUpd) {
-                                if (resUpd.error) {
-                                    alert('Error al actualizar base de datos: ' + resUpd.error.message);
-                                } else {
-                                    document.getElementById('banner-notificaciones').classList.add('hidden');
-                                    alert('¡Alertas activadas con éxito!');
-                                }
-                            });
-                        });
-                    });
-                }).catch(function () {
-                    alert('Configuración aplicada.');
-                });
             }
         }
 

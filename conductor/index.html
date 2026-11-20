@@ -25,21 +25,20 @@
             <p>Ingresa con tu nombre de conductor y clave</p>
         </header>
 
-        <div id="auth-form-box">
+        <div id="login-form-box">
             <div style="margin-bottom:8px;">
-                <label for="conductor-identificador" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Nombre del Conductor</label>
-                <input type="text" id="conductor-identificador" placeholder="Ej. Ramiro" autocomplete="username" style="width:100%;">
+                <label for="login-nombre" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Nombre del Conductor</label>
+                <input type="text" id="login-nombre" placeholder="Ej. Robert Diaz" autocomplete="username" style="width:100%;">
             </div>
 
             <div style="margin-bottom:8px;">
-                <label for="conductor-clave" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Clave de Acceso</label>
-                <input type="password" id="conductor-clave" placeholder="Tu clave" autocomplete="current-password" style="width:100%;">
+                <label for="login-clave" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Clave de Acceso</label>
+                <input type="password" id="login-clave" placeholder="Tu clave de acceso" autocomplete="current-password" style="width:100%;">
             </div>
 
             <div id="login-error" style="color:#f87171; font-size:12px; margin-bottom:8px;" class="hidden"></div>
-            <div id="login-info" style="color:#34d399; font-size:12px; margin-bottom:8px;" class="hidden"></div>
 
-            <button type="button" id="btn-login-clave" onclick="ingresarConClaveConductor()" style="width:100%; background-color:#9333ea; margin-bottom:10px;">Entrar al Portal</button>
+            <button type="button" id="btn-entrar-portal" onclick="ingresarAlPortal()" style="width:100%; background-color:#9333ea; margin-bottom:10px;">Entrar al Portal</button>
 
             <a href="../index.html" style="display:block; text-align:center;">← Volver al Menú Principal</a>
         </div>
@@ -49,7 +48,7 @@
         <header>
             <h1>EN-VIA - Panel de Chofer</h1>
             <p>Conectado como: <strong id="driver-name-display" style="color:#ffffff;"></strong></p>
-            <button type="button" id="btn-desconectar" onclick="cerrarSesion()" style="background-color:#262626; color:#f87171; margin-top:8px;">Desconectar / Cerrar Sesión</button>
+            <button type="button" id="btn-desconectar" onclick="cerrarSesion()" style="background-color:#262626; color:#f87171; margin-top:8px;">Desconectar</button>
         </header>
 
         <div>
@@ -106,35 +105,23 @@
         var baseLng = "-71.658972";
 
         function getDb() {
-            if (window.supabaseClient) return window.supabaseClient;
-            return null;
+            return window.supabaseClient || null;
         }
 
         function mostrarErrorLogin(msg) {
             var errEl = document.getElementById('login-error');
-            var infoEl = document.getElementById('login-info');
-            if (infoEl) infoEl.classList.add('hidden');
             if (errEl) {
                 errEl.textContent = msg;
                 errEl.classList.remove('hidden');
             }
         }
 
-        function mostrarInfoLogin(msg) {
+        function limpiarErrorLogin() {
             var errEl = document.getElementById('login-error');
-            var infoEl = document.getElementById('login-info');
-            if (errEl) errEl.classList.add('hidden');
-            if (infoEl) {
-                infoEl.textContent = msg;
-                infoEl.classList.remove('hidden');
+            if (errEl) {
+                errEl.textContent = '';
+                errEl.classList.add('hidden');
             }
-        }
-
-        function limpiarMensajesLogin() {
-            var errEl = document.getElementById('login-error');
-            var infoEl = document.getElementById('login-info');
-            if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
-            if (infoEl) { infoEl.textContent = ''; infoEl.classList.add('hidden'); }
         }
 
         function activarModoSegundoPlano() {
@@ -161,7 +148,7 @@
             var targetId = conductorIdActual || sessionStorage.getItem('conductor_id_en_via');
 
             if (!targetId) {
-                alert('No se pudo identificar el registro del conductor.');
+                alert('No se pudo identificar el ID del conductor.');
                 return;
             }
 
@@ -299,59 +286,83 @@
         }
 
         window.addEventListener('load', function () {
-            if (!window.EnviaAuth || typeof window.EnviaAuth.loginConductorClave !== 'function') {
-                mostrarErrorLogin('No se pudo inicializar el módulo del conductor.');
-                return;
-            }
-            var guardadoNombre = sessionStorage.getItem('conductor_en_via');
-            var guardadoId = sessionStorage.getItem('conductor_id_en_via');
-            if (guardadoNombre && guardadoId) {
-                conductorActual = guardadoNombre;
-                conductorIdActual = guardadoId;
+            var sesionGuardada = sessionStorage.getItem('conductor_en_via');
+            var sesionIdGuardada = sessionStorage.getItem('conductor_id_en_via');
+
+            if (sesionGuardada) {
+                conductorActual = sesionGuardada;
+                conductorIdActual = sesionIdGuardada || null;
                 mostrarPortal();
             }
         });
 
-        function ingresarConClaveConductor() {
-            limpiarMensajesLogin();
-            var identificador = (document.getElementById('conductor-identificador').value || '').trim();
-            var clave = document.getElementById('conductor-clave').value || '';
+        function validarClaveConductor(conductor, claveIngresada) {
+            if (!conductor) return false;
+            var claveGuardada = conductor.clave || conductor.clave_acceso || conductor.password || '';
+            if (claveGuardada) {
+                return String(claveGuardada) === String(claveIngresada);
+            }
+            var bancarios = conductor.datos_bancarios || {};
+            if (bancarios.clave) {
+                return String(bancarios.clave) === String(claveIngresada);
+            }
+            return false;
+        }
 
-            if (!identificador || !clave) {
-                mostrarErrorLogin('Ingresa tu nombre y tu clave.');
+        function ingresarAlPortal() {
+            limpiarErrorLogin();
+            var nombreInput = (document.getElementById('login-nombre').value || '').trim();
+            var claveInput = document.getElementById('login-clave').value || '';
+            var db = getDb();
+
+            if (!nombreInput || !claveInput) {
+                mostrarErrorLogin('Nombre o clave incorrectos, o conductor inactivo.');
                 return;
             }
 
-            if (!window.EnviaAuth || typeof window.EnviaAuth.loginConductorClave !== 'function') {
-                mostrarErrorLogin('Módulo de acceso no disponible.');
+            if (!db) {
+                mostrarErrorLogin('No se pudo conectar con la base de datos.');
                 return;
             }
 
-            window.EnviaAuth.loginConductorClave(identificador, clave).then(function (res) {
-                if (res.error || !res.conductor) {
-                    mostrarErrorLogin((res.error && res.error.message) || 'No se pudo iniciar sesión.');
-                    return;
-                }
-                conductorActual = res.conductor.nombre;
-                conductorIdActual = res.conductor.id;
-                sessionStorage.setItem('conductor_en_via', conductorActual);
-                sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
-                mostrarPortal();
-            });
+            db.from('conductores')
+                .select('*')
+                .eq('activo', true)
+                .ilike('nombre', nombreInput)
+                .limit(1)
+                .maybeSingle()
+                .then(function (res) {
+                    var cond = res ? res.data : null;
+                    if (!cond || !validarClaveConductor(cond, claveInput)) {
+                        mostrarErrorLogin('Nombre o clave incorrectos, o conductor inactivo.');
+                        return;
+                    }
+
+                    conductorActual = cond.nombre;
+                    conductorIdActual = cond.id;
+
+                    sessionStorage.setItem('conductor_en_via', conductorActual);
+                    sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
+
+                    var audioElement = document.getElementById('alarma-audio');
+                    if (audioElement) {
+                        audioElement.play().then(function () {
+                            audioElement.pause();
+                            audioElement.currentTime = 0;
+                        }).catch(function () {});
+                    }
+
+                    mostrarPortal();
+                })
+                .catch(function () {
+                    mostrarErrorLogin('Nombre o clave incorrectos, o conductor inactivo.');
+                });
         }
 
         function mostrarPortal() {
             document.getElementById('login-container').classList.add('hidden');
             document.getElementById('portal-container').classList.remove('hidden');
             document.getElementById('driver-name-display').textContent = conductorActual;
-
-            var audioElement = document.getElementById('alarma-audio');
-            if (audioElement) {
-                audioElement.play().then(function () {
-                    audioElement.pause();
-                    audioElement.currentTime = 0;
-                }).catch(function () {});
-            }
 
             cargarDatosConductor();
             suscripcionRealtime();
@@ -369,15 +380,11 @@
             primeraCargaRealizada = false;
             cantidadPendientesAnterior = 0;
 
-            var promesaLogout = (window.EnviaAuth && typeof window.EnviaAuth.logout === 'function')
-                ? window.EnviaAuth.logout()
-                : Promise.resolve();
+            if (window.EnviaAuth && typeof window.EnviaAuth.limpiarEstadoLocal === 'function') {
+                window.EnviaAuth.limpiarEstadoLocal();
+            }
 
-            promesaLogout.then(function () {
-                window.location.replace('./index.html');
-            }).catch(function () {
-                window.location.replace('./index.html');
-            });
+            window.location.replace('./index.html');
         }
 
         function cargarDatosConductor() {

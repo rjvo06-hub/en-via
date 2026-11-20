@@ -227,6 +227,7 @@
         var mostrarTodoHistorial = false;
         var audioCtx = null;
         var audioDesbloqueado = false;
+        var tonoNotificacionUnificado = "2869_preview.mp3";
 
         var alarmaInterval = null;
         var alarmaActiva = false;
@@ -292,7 +293,7 @@
                             id: Math.floor(Date.now() % 2147483647),
                             title: titulo,
                             body: detalle,
-                            sound: "default",
+                            sound: tonoNotificacionUnificado,
                             schedule: { at: new Date(Date.now() + 100) }
                         }]
                     }).catch(function () {});
@@ -306,42 +307,39 @@
             } catch (e) {}
         }
 
-        function reproducirTonoSintetico() {
+        function reproducirRespaldoSintetico() {
             try {
                 desbloquearMotorAudio();
-                if (!audioCtx) return false;
+                if (!audioCtx) return;
 
                 var ahora = audioCtx.currentTime;
-                var osc1 = audioCtx.createOscillator();
-                var gain1 = audioCtx.createGain();
-                osc1.type = 'sawtooth';
-                osc1.frequency.setValueAtTime(920, ahora);
-                osc1.frequency.setValueAtTime(1380, ahora + 0.14);
-                osc1.frequency.setValueAtTime(920, ahora + 0.28);
-                gain1.gain.setValueAtTime(0.45, ahora);
-                gain1.gain.exponentialRampToValueAtTime(0.01, ahora + 0.45);
-                osc1.connect(gain1);
-                gain1.connect(audioCtx.destination);
-                osc1.start(ahora);
-                osc1.stop(ahora + 0.46);
-                return true;
-            } catch (e) {
-                return false;
-            }
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(920, ahora);
+                osc.frequency.exponentialRampToValueAtTime(1380, ahora + 0.25);
+                gain.gain.setValueAtTime(0.4, ahora);
+                gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.35);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(ahora);
+                osc.stop(ahora + 0.36);
+            } catch (e) {}
         }
 
         function dispararPulsoTimbre() {
             try {
-                var sonandoSintetico = reproducirTonoSintetico();
                 var audioElement = document.getElementById('alarma-audio');
-                if (audioElement && (!sonandoSintetico || audioElement.readyState >= 2)) {
+                if (audioElement) {
                     audioElement.currentTime = 0;
                     var playPromise = audioElement.play();
                     if (playPromise && typeof playPromise.catch === 'function') {
                         playPromise.catch(function () {
-                            reproducirTonoSintetico();
+                            reproducirRespaldoSintetico();
                         });
                     }
+                } else {
+                    reproducirRespaldoSintetico();
                 }
 
                 if ("vibrate" in navigator && typeof navigator.vibrate === 'function') {

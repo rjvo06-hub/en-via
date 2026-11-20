@@ -6,7 +6,7 @@
     <title>EN-VIA - Portal de Conductores</title>
     <link rel="stylesheet" href="../css/styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="../js/supabaseClient.js"></script>
+    <script src="./js/supabaseClient.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
     <style>
@@ -22,36 +22,24 @@
     <div id="login-container" class="max-w-xl">
         <header>
             <h1>EN-VIA - Portal de Chofer</h1>
-            <p>Inicia sesión con tu cuenta de conductor</p>
+            <p>Ingresa con tu nombre de conductor y clave</p>
         </header>
 
         <div id="auth-form-box">
             <div style="margin-bottom:8px;">
-                <label for="auth-nombre" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Nombre (solo para registro)</label>
-                <input type="text" id="auth-nombre" placeholder="Ej. Carlos Pérez" autocomplete="name" style="width:100%;">
+                <label for="conductor-identificador" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Nombre del Conductor</label>
+                <input type="text" id="conductor-identificador" placeholder="Ej. Ramiro" autocomplete="username" style="width:100%;">
             </div>
 
             <div style="margin-bottom:8px;">
-                <label for="auth-telefono" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Teléfono (solo para registro)</label>
-                <input type="text" id="auth-telefono" placeholder="Ej. 0414-1234567" autocomplete="tel" style="width:100%;">
-            </div>
-
-            <div style="margin-bottom:8px;">
-                <label for="auth-email" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Correo electrónico</label>
-                <input type="email" id="auth-email" placeholder="chofer@ejemplo.com" autocomplete="email" style="width:100%;">
-            </div>
-
-            <div style="margin-bottom:8px;">
-                <label for="auth-password" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Contraseña</label>
-                <input type="password" id="auth-password" placeholder="Tu contraseña" autocomplete="current-password" style="width:100%;">
+                <label for="conductor-clave" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Clave de Acceso</label>
+                <input type="password" id="conductor-clave" placeholder="Tu clave" autocomplete="current-password" style="width:100%;">
             </div>
 
             <div id="login-error" style="color:#f87171; font-size:12px; margin-bottom:8px;" class="hidden"></div>
             <div id="login-info" style="color:#34d399; font-size:12px; margin-bottom:8px;" class="hidden"></div>
 
-            <button type="button" id="btn-login-email" onclick="ingresarConCorreo()" style="width:100%; background-color:#9333ea; margin-bottom:8px;">Entrar al Portal</button>
-            <button type="button" id="btn-registro-email" onclick="registrarConductorCorreo()" style="width:100%; background-color:#1e293b; margin-bottom:8px;">Registrar Cuenta de Conductor</button>
-            <button type="button" id="btn-login-google" onclick="ingresarConGoogleConductor()" style="width:100%; background-color:#2563eb; margin-bottom:10px;">Continuar con Google (Gmail)</button>
+            <button type="button" id="btn-login-clave" onclick="ingresarConClaveConductor()" style="width:100%; background-color:#9333ea; margin-bottom:10px;">Entrar al Portal</button>
 
             <a href="../index.html" style="display:block; text-align:center;">← Volver al Menú Principal</a>
         </div>
@@ -104,7 +92,6 @@
 
         var conductorActual = "";
         var conductorIdActual = null;
-        var usuarioAuthIdActual = null;
         var timerInterval = null;
         var pollingInterval = null;
         var primeraCargaRealizada = false;
@@ -312,146 +299,45 @@
         }
 
         window.addEventListener('load', function () {
-            verificarSesionConductor();
+            if (!window.EnviaAuth || typeof window.EnviaAuth.loginConductorClave !== 'function') {
+                mostrarErrorLogin('No se pudo inicializar el módulo del conductor.');
+                return;
+            }
+            var guardadoNombre = sessionStorage.getItem('conductor_en_via');
+            var guardadoId = sessionStorage.getItem('conductor_id_en_via');
+            if (guardadoNombre && guardadoId) {
+                conductorActual = guardadoNombre;
+                conductorIdActual = guardadoId;
+                mostrarPortal();
+            }
         });
 
-        function verificarSesionConductor() {
-            if (!window.EnviaAuth || typeof window.EnviaAuth.getSessionYPerfil !== 'function') {
-                mostrarErrorLogin('No se pudo inicializar el módulo de autenticación.');
+        function ingresarConClaveConductor() {
+            limpiarMensajesLogin();
+            var identificador = (document.getElementById('conductor-identificador').value || '').trim();
+            var clave = document.getElementById('conductor-clave').value || '';
+
+            if (!identificador || !clave) {
+                mostrarErrorLogin('Ingresa tu nombre y tu clave.');
                 return;
             }
 
-            window.EnviaAuth.getSessionYPerfil('conductor').then(function (res) {
-                if (res.error) {
-                    mostrarErrorLogin('Error al verificar perfil: ' + res.error.message);
-                    return;
-                }
-                if (!res.user || !res.perfil) {
-                    document.getElementById('portal-container').classList.add('hidden');
-                    document.getElementById('login-container').classList.remove('hidden');
-                    return;
-                }
-
-                if (res.perfil.activo === false) {
-                    mostrarErrorLogin('Tu cuenta está desactivada.');
-                    return;
-                }
-
-                if (res.perfil.rol !== 'conductor') {
-                    mostrarErrorLogin('Esta cuenta tiene rol "' + res.perfil.rol + '" y no tiene permiso para el Portal de Conductor.');
-                    return;
-                }
-
-                usuarioAuthIdActual = res.user.id;
-                resolverFichaConductor(res.user, res.perfil);
-            });
-        }
-
-        function resolverFichaConductor(user, perfil) {
-            var db = getDb();
-            var nombreFallback = (user.user_metadata && (user.user_metadata.nombre || user.user_metadata.full_name)) ||
-                (user.email ? user.email.split('@')[0] : 'Conductor');
-
-            if (perfil.conductor_id) {
-                db.from('conductores')
-                    .select('*')
-                    .eq('id', perfil.conductor_id)
-                    .maybeSingle()
-                    .then(function (cRes) {
-                        if (cRes.data) {
-                            conductorIdActual = cRes.data.id;
-                            conductorActual = cRes.data.nombre || nombreFallback;
-                            sessionStorage.setItem('conductor_en_via', conductorActual);
-                            sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
-                            mostrarPortal();
-                        } else {
-                            crearYVincularConductor(user, perfil, nombreFallback);
-                        }
-                    });
-            } else {
-                crearYVincularConductor(user, perfil, nombreFallback);
-            }
-        }
-
-        function crearYVincularConductor(user, perfil, nombreFallback) {
-            var db = getDb();
-            var telefonoMeta = (user.user_metadata && user.user_metadata.telefono) ? user.user_metadata.telefono : null;
-
-            db.from('conductores')
-                .insert([{
-                    nombre: nombreFallback,
-                    telefono: telefonoMeta,
-                    activo: true,
-                    datos_bancarios: {}
-                }])
-                .select()
-                .single()
-                .then(function (insRes) {
-                    if (insRes.error || !insRes.data) {
-                        mostrarErrorLogin('No se pudo crear la ficha del conductor.');
-                        return;
-                    }
-                    conductorIdActual = insRes.data.id;
-                    conductorActual = insRes.data.nombre || nombreFallback;
-                    sessionStorage.setItem('conductor_en_via', conductorActual);
-                    sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
-
-                    db.from('perfiles')
-                        .update({ conductor_id: conductorIdActual })
-                        .eq('id', perfil.id)
-                        .then(function () {
-                            mostrarPortal();
-                        });
-                });
-        }
-
-        function ingresarConCorreo() {
-            limpiarMensajesLogin();
-            var email = (document.getElementById('auth-email').value || '').trim();
-            var password = document.getElementById('auth-password').value || '';
-
-            if (!email || !password) {
-                mostrarErrorLogin('Ingresa tu correo y contraseña.');
+            if (!window.EnviaAuth || typeof window.EnviaAuth.loginConductorClave !== 'function') {
+                mostrarErrorLogin('Módulo de acceso no disponible.');
                 return;
             }
 
-            window.EnviaAuth.loginEmail(email, password).then(function (res) {
-                if (res.error) {
-                    mostrarErrorLogin(res.error.message || 'No se pudo iniciar sesión.');
+            window.EnviaAuth.loginConductorClave(identificador, clave).then(function (res) {
+                if (res.error || !res.conductor) {
+                    mostrarErrorLogin((res.error && res.error.message) || 'No se pudo iniciar sesión.');
                     return;
                 }
-                verificarSesionConductor();
+                conductorActual = res.conductor.nombre;
+                conductorIdActual = res.conductor.id;
+                sessionStorage.setItem('conductor_en_via', conductorActual);
+                sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
+                mostrarPortal();
             });
-        }
-
-        function registrarConductorCorreo() {
-            limpiarMensajesLogin();
-            var nombre = (document.getElementById('auth-nombre').value || '').trim();
-            var telefono = (document.getElementById('auth-telefono').value || '').trim();
-            var email = (document.getElementById('auth-email').value || '').trim();
-            var password = document.getElementById('auth-password').value || '';
-
-            if (!email || !password) {
-                mostrarErrorLogin('Ingresa correo y contraseña para registrarte.');
-                return;
-            }
-
-            window.EnviaAuth.registroEmail(email, password, 'conductor', nombre, telefono).then(function (res) {
-                if (res.error) {
-                    mostrarErrorLogin(res.error.message || 'No se pudo completar el registro.');
-                    return;
-                }
-                if (res.data && res.data.session) {
-                    verificarSesionConductor();
-                } else {
-                    mostrarInfoLogin('Registro enviado. Revisa tu correo si requiere confirmación y luego inicia sesión.');
-                }
-            });
-        }
-
-        function ingresarConGoogleConductor() {
-            limpiarMensajesLogin();
-            window.EnviaAuth.loginGoogle('conductor', window.location.href);
         }
 
         function mostrarPortal() {
@@ -480,7 +366,6 @@
             desconectarTemporizadoresYAlertas();
             conductorActual = "";
             conductorIdActual = null;
-            usuarioAuthIdActual = null;
             primeraCargaRealizada = false;
             cantidadPendientesAnterior = 0;
 

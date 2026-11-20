@@ -136,7 +136,7 @@
     </style>
 </head>
 <body>
-    <audio id="alarma-audio" preload="auto">
+    <audio id="alarma-audio" preload="auto" playsinline>
         <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
     </audio>
 
@@ -220,12 +220,13 @@
         var timerInterval = null;
         var pollingInterval = null;
         var primeraCargaRealizada = false;
-        var cantidadPendientesAnterior = 0;
+        var idsPendientesConocidos = {};
         var carrerasDescartadasIds = [];
         var descartadasExpandida = false;
         var historialVisible = false;
         var mostrarTodoHistorial = false;
         var audioCtx = null;
+        var audioDesbloqueado = false;
 
         var alarmaInterval = null;
         var alarmaActiva = false;
@@ -255,18 +256,44 @@
             }
         }
 
-        function notificarNativoNuevaCarrera(cantidadPendientes) {
+        function desbloquearMotorAudio() {
+            try {
+                if (!audioCtx) {
+                    var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        audioCtx = new AudioContextClass();
+                    }
+                }
+                if (audioCtx && audioCtx.state === 'suspended' && typeof audioCtx.resume === 'function') {
+                    audioCtx.resume().catch(function () {});
+                }
+                if (audioCtx && !audioDesbloqueado) {
+                    var osc = audioCtx.createOscillator();
+                    var gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.02);
+                    audioDesbloqueado = true;
+                }
+            } catch (e) {}
+        }
+
+        function notificarNativoNuevaCarrera(cantidadPendientes, carreraInfo) {
             var titulo = "EN-VIA: Nueva carrera disponible";
-            var cuerpo = "Hay " + cantidadPendientes + " carrera(s) pendiente(s) por tomar.";
+            var detalle = carreraInfo && carreraInfo.origen
+                ? (carreraInfo.origen + " → " + (carreraInfo.destino || "Destino") + (carreraInfo.precio ? " (" + carreraInfo.precio + ")" : ""))
+                : ("Hay " + cantidadPendientes + " carrera(s) pendiente(s) por tomar.");
             try {
                 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
                     window.Capacitor.Plugins.LocalNotifications.schedule({
                         notifications: [{
                             id: Math.floor(Date.now() % 2147483647),
                             title: titulo,
-                            body: cuerpo,
+                            body: detalle,
                             sound: "default",
-                            schedule: { at: new Date(Date.now() + 200) }
+                            schedule: { at: new Date(Date.now() + 100) }
                         }]
                     }).catch(function () {});
                 }
@@ -274,55 +301,66 @@
 
             try {
                 if (window.AndroidAlarma && typeof window.AndroidAlarma.dispararAlerta === 'function') {
-                    window.AndroidAlarma.dispararAlerta(titulo, cuerpo);
+                    window.AndroidAlarma.dispararAlerta(titulo, detalle);
                 }
             } catch (e) {}
         }
 
+        function reproducirTonoSintetico() {
+            try {
+                desbloquearMotorAudio();
+                if (!audioCtx) return false;
+
+                var ahora = audioCtx.currentTime;
+                var osc1 = audioCtx.createOscillator();
+                var gain1 = audioCtx.createGain();
+                osc1.type = 'sawtooth';
+                osc1.frequency.setValueAtTime(920, ahora);
+                osc1.frequency.setValueAtTime(1380, ahora + 0.14);
+                osc1.frequency.setValueAtTime(920, ahora + 0.28);
+                gain1.gain.setValueAtTime(0.45, ahora);
+                gain1.gain.exponentialRampToValueAtTime(0.01, ahora + 0.45);
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start(ahora);
+                osc1.stop(ahora + 0.46);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
         function dispararPulsoTimbre() {
             try {
+                var sonandoSintetico = reproducirTonoSintetico();
                 var audioElement = document.getElementById('alarma-audio');
-                if (audioElement) {
+                if (audioElement && (!sonandoSintetico || audioElement.readyState >= 2)) {
                     audioElement.currentTime = 0;
-                    audioElement.play().catch(function () {});
+                    var playPromise = audioElement.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(function () {
+                            reproducirTonoSintetico();
+                        });
+                    }
                 }
 
-                if (!audioCtx) {
-                    var AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContextClass();
-                }
-                if (audioCtx.state === 'suspended' && audioCtx.resume) {
-                    audioCtx.resume();
-                }
-
-                var osc = audioCtx.createOscillator();
-                var gain = audioCtx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.25);
-                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.35);
-
-                if ("vibrate" in navigator) {
-                    navigator.vibrate([600, 300, 600]);
+                if ("vibrate" in navigator && typeof navigator.vibrate === 'function') {
+                    navigator.vibrate([700, 250, 700]);
                 }
             } catch (e) {
                 console.log("Error en timbre:", e);
             }
         }
 
-        function iniciarAlarmaPersistente(cantidadPendientes) {
+        function iniciarAlarmaPersistente(cantidadPendientes, carreraNueva) {
             hayCarreraNuevaSinVer = true;
-            notificarNativoNuevaCarrera(cantidadPendientes || 1);
-            if (alarmaActiva) return;
-
-            alarmaActiva = true;
+            notificarNativoNuevaCarrera(cantidadPendientes || 1, carreraNueva || null);
             ultimaActivacionAlarmaMs = Date.now();
+
             dispararPulsoTimbre();
+
+            if (alarmaActiva) return;
+            alarmaActiva = true;
 
             alarmaInterval = setInterval(function () {
                 if (!alarmaActiva || !hayCarreraNuevaSinVer) {
@@ -342,11 +380,15 @@
             }
             var audioElement = document.getElementById('alarma-audio');
             if (audioElement) {
-                audioElement.pause();
-                audioElement.currentTime = 0;
+                try {
+                    audioElement.pause();
+                    audioElement.currentTime = 0;
+                } catch (e) {}
             }
-            if ("vibrate" in navigator) {
-                navigator.vibrate(0);
+            if ("vibrate" in navigator && typeof navigator.vibrate === 'function') {
+                try {
+                    navigator.vibrate(0);
+                } catch (e) {}
             }
             try {
                 if (window.AndroidAlarma && typeof window.AndroidAlarma.detenerAlerta === 'function') {
@@ -356,8 +398,9 @@
         }
 
         function manejarToqueEnPantalla() {
+            desbloquearMotorAudio();
             if (!alarmaActiva) return;
-            if ((Date.now() - ultimaActivacionAlarmaMs) < 150) return;
+            if ((Date.now() - ultimaActivacionAlarmaMs) < 200) return;
             detenerAlarmaPersistente();
         }
 
@@ -388,7 +431,6 @@
 
         document.addEventListener('visibilitychange', function () {
             if (!document.hidden && conductorActual) {
-                detenerAlarmaPersistente();
                 reanudarCicloConductor();
             }
         });
@@ -402,7 +444,6 @@
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
             window.Capacitor.Plugins.App.addListener('appStateChange', function (state) {
                 if (state && state.isActive && conductorActual) {
-                    detenerAlarmaPersistente();
                     reanudarCicloConductor();
                 }
             });
@@ -430,6 +471,7 @@
 
         function ingresarAlPortal() {
             limpiarErrorLogin();
+            desbloquearMotorAudio();
             var usuarioInput = normalizarUsuarioEntrada(document.getElementById('login-nombre').value || '');
             var claveInput = document.getElementById('login-clave').value || '';
             var db = getDb();
@@ -464,10 +506,13 @@
 
                 var audioElement = document.getElementById('alarma-audio');
                 if (audioElement) {
-                    audioElement.play().then(function () {
-                        audioElement.pause();
-                        audioElement.currentTime = 0;
-                    }).catch(function () {});
+                    var p = audioElement.play();
+                    if (p && typeof p.then === 'function') {
+                        p.then(function () {
+                            audioElement.pause();
+                            audioElement.currentTime = 0;
+                        }).catch(function () {});
+                    }
                 }
 
                 mostrarPortal();
@@ -495,7 +540,7 @@
             conductorActual = "";
             conductorIdActual = null;
             primeraCargaRealizada = false;
-            cantidadPendientesAnterior = 0;
+            idsPendientesConocidos = {};
             carrerasDescartadasIds = [];
             descartadasExpandida = false;
             historialVisible = false;
@@ -718,6 +763,7 @@
                 .eq('estado', 'pendiente')
                 .order('created_at', { ascending: false })
                 .then(function (resPend) {
+                    if (resPend.error) return;
                     var rawPendData = resPend.data || [];
                     var pendData = rawPendData.filter(function (c) {
                         return carrerasDescartadasIds.indexOf(String(c.id)) === -1;
@@ -725,32 +771,41 @@
                     var descartadasActivasData = rawPendData.filter(function (c) {
                         return carrerasDescartadasIds.indexOf(String(c.id)) !== -1;
                     });
-                    var cantidadActualPendientes = pendData.length;
 
-                    if (!primeraCargaRealizada) {
-                        cantidadPendientesAnterior = cantidadActualPendientes;
-                        primeraCargaRealizada = true;
-                    } else if (cantidadActualPendientes > cantidadPendientesAnterior) {
-                        iniciarAlarmaPersistente(cantidadActualPendientes);
-                        cantidadPendientesAnterior = cantidadActualPendientes;
-                    } else {
-                        cantidadPendientesAnterior = cantidadActualPendientes;
-                        if (cantidadActualPendientes === 0) {
-                            detenerAlarmaPersistente();
+                    var mapaActual = {};
+                    var nuevasCarreras = [];
+                    for (var i = 0; i < pendData.length; i++) {
+                        var item = pendData[i];
+                        var idKey = String(item.id);
+                        mapaActual[idKey] = true;
+                        if (primeraCargaRealizada && !idsPendientesConocidos[idKey]) {
+                            nuevasCarreras.push(item);
                         }
+                    }
+
+                    idsPendientesConocidos = mapaActual;
+                    if (!primeraCargaRealizada) {
+                        primeraCargaRealizada = true;
+                    } else if (nuevasCarreras.length > 0) {
+                        iniciarAlarmaPersistente(pendData.length, nuevasCarreras[0]);
+                    } else if (pendData.length === 0) {
+                        detenerAlarmaPersistente();
                     }
 
                     renderizarPendientes(pendData);
                     renderizarDescartadasActivas(descartadasActivasData);
-                });
+                })
+                .catch(function () {});
 
             db.from('carreras')
                 .select('*')
                 .eq('estado', 'asignada')
                 .eq('conductor_asignado', conductorActual)
                 .then(function (resAsig) {
+                    if (resAsig.error) return;
                     renderizarAsignada(resAsig.data || []);
-                });
+                })
+                .catch(function () {});
 
             if (historialVisible) {
                 cargarHistorialConductor();

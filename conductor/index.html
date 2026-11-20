@@ -22,13 +22,13 @@
     <div id="login-container" class="max-w-xl">
         <header>
             <h1>EN-VIA - Portal de Chofer</h1>
-            <p>Ingresa con tu nombre de conductor y clave</p>
+            <p>Ingresa con tu usuario de conductor (ej. rdiaz) y clave</p>
         </header>
 
         <div id="login-form-box">
             <div style="margin-bottom:8px;">
-                <label for="login-nombre" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Nombre del Conductor</label>
-                <input type="text" id="login-nombre" placeholder="Ej. Robert Diaz" autocomplete="username" style="width:100%;">
+                <label for="login-nombre" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Usuario del Conductor</label>
+                <input type="text" id="login-nombre" placeholder="Ej. rdiaz" autocomplete="username" autocapitalize="none" style="width:100%;">
             </div>
 
             <div style="margin-bottom:8px;">
@@ -296,6 +296,15 @@
             }
         });
 
+        function normalizarUsuarioEntrada(valor) {
+            if (!valor) return '';
+            var limpio = String(valor).replace(/^\s+|\s+$/g, '').toLowerCase();
+            if (limpio.indexOf(' ') !== -1 && window.EnviaAuth && typeof window.EnviaAuth.generarUsuarioDesdeNombre === 'function') {
+                return window.EnviaAuth.generarUsuarioDesdeNombre(limpio);
+            }
+            return limpio.replace(/\s+/g, '');
+        }
+
         function validarClaveConductor(conductor, claveIngresada) {
             if (!conductor) return false;
             var claveGuardada = conductor.clave || conductor.clave_acceso || conductor.password || '';
@@ -311,12 +320,12 @@
 
         function ingresarAlPortal() {
             limpiarErrorLogin();
-            var nombreInput = (document.getElementById('login-nombre').value || '').trim();
+            var usuarioInput = normalizarUsuarioEntrada(document.getElementById('login-nombre').value || '');
             var claveInput = document.getElementById('login-clave').value || '';
             var db = getDb();
 
-            if (!nombreInput || !claveInput) {
-                mostrarErrorLogin('Nombre o clave incorrectos, o conductor inactivo.');
+            if (!usuarioInput || !claveInput) {
+                mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
                 return;
             }
 
@@ -328,13 +337,13 @@
             db.from('conductores')
                 .select('*')
                 .eq('activo', true)
-                .ilike('nombre', nombreInput)
+                .eq('usuario', usuarioInput)
                 .limit(1)
                 .maybeSingle()
                 .then(function (res) {
                     var cond = res ? res.data : null;
                     if (!cond || !validarClaveConductor(cond, claveInput)) {
-                        mostrarErrorLogin('Nombre o clave incorrectos, o conductor inactivo.');
+                        mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
                         return;
                     }
 
@@ -355,7 +364,7 @@
                     mostrarPortal();
                 })
                 .catch(function () {
-                    mostrarErrorLogin('Nombre o clave incorrectos, o conductor inactivo.');
+                    mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
                 });
         }
 

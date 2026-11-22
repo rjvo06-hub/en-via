@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EN-VIA - Registro de Usuario</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+        var SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
+        var SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+
+        function getDb() {
+            if (window.supabaseClient) return window.supabaseClient;
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+                return supabaseClient;
+            }
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
+    </script>
+    <style>
+        body {
+            background-color: #07090f;
+            color: #e2e8f0;
+        }
+        input, select, textarea { font-size: 16px !important; }
+        @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
+
+        .encabezado-registro {
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .subtitulo-registro {
+            display: block;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .tarjeta-registro {
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px;
+            background-color: #0f172a;
+        }
+        .input-oscuro {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #475569 !important;
+            border-radius: 6px !important;
+            padding: 8px 10px !important;
+        }
+        .btn-morado-principal {
+            width: 100%;
+            background-color: #9333ea !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            padding: 10px 14px !important;
+            cursor: pointer;
+        }
+        .btn-volver-login {
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            background-color: #1e293b;
+            color: #34d399;
+            border: 1px solid #10b981;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-xl">
+        <header class="encabezado-registro">
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-registro">Registro de Usuario</span>
+            </h1>
+            <p style="color:#94a3b8; font-size:12px; margin:6px 0 0 0;">Crea tu cuenta para solicitar carreras</p>
+        </header>
+
+        <div class="tarjeta-registro">
+            <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Datos del Usuario</h2>
+
+            <div style="margin-bottom:8px;">
+                <label for="reg-nombre" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Nombre Completo</label>
+                <input type="text" id="reg-nombre" class="input-oscuro" placeholder="Ej. María Pérez" oninput="actualizarVistaUsuario()">
+            </div>
+
+            <div style="margin-bottom:8px;">
+                <label for="reg-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Usuario Asignado</label>
+                <input type="text" id="reg-usuario" class="input-oscuro" placeholder="Se genera automáticamente (Ej. mperez)" autocapitalize="none">
+            </div>
+
+            <div style="margin-bottom:8px;">
+                <label for="reg-telefono" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Teléfono</label>
+                <input type="text" id="reg-telefono" class="input-oscuro" placeholder="Ej. 04141234567">
+            </div>
+
+            <div style="margin-bottom:8px;">
+                <label for="reg-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
+                <input type="password" id="reg-clave" class="input-oscuro" placeholder="Mínimo 4 caracteres">
+            </div>
+
+            <div id="reg-msg" style="font-size:12px; margin-bottom:8px;" class="hidden"></div>
+
+            <button type="button" id="btn-registrar-usuario" onclick="registrarUsuario()" class="btn-morado-principal">Registrarme</button>
+
+            <a href="./index.html" class="btn-volver-login">← Volver a Iniciar Sesión</a>
+        </div>
+    </div>
+
+    <script>
+        function generarUsuarioBase(nombre) {
+            var limpio = String(nombre || '').trim().toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            var partes = limpio.split(/\s+/).filter(Boolean);
+            if (partes.length === 0) return '';
+            if (partes.length === 1) return partes[0].replace(/[^a-z0-9]/g, '');
+            return (partes[0].charAt(0) + partes[partes.length - 1]).replace(/[^a-z0-9]/g, '');
+        }
+
+        function actualizarVistaUsuario() {
+            var nombre = document.getElementById('reg-nombre').value;
+            var userInput = document.getElementById('reg-usuario');
+            if (!userInput.dataset.manual) {
+                userInput.value = generarUsuarioBase(nombre);
+            }
+        }
+
+        document.getElementById('reg-usuario').addEventListener('input', function () {
+            this.dataset.manual = this.value.trim() ? '1' : '';
+        });
+
+        function hashFallbackSimple(texto) {
+            var h1 = 0xdeadbeef ^ texto.length;
+            var h2 = 0x41c6ce57 ^ texto.length;
+            for (var i = 0; i < texto.length; i++) {
+                var ch = texto.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+        }
+
+        async function generarHashClave(clave) {
+            try {
+                if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+                    var encoder = new TextEncoder();
+                    var data = encoder.encode(clave);
+                    var hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+                    var hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+                }
+            } catch (e) {}
+            return hashFallbackSimple(clave);
+        }
+
+        function mostrarMensajeReg(texto, esError) {
+            var el = document.getElementById('reg-msg');
+            el.textContent = texto;
+            el.style.color = esError ? '#f87171' : '#34d399';
+            el.classList.remove('hidden');
+        }
+
+        async function registrarUsuario() {
+            var btn = document.getElementById('btn-registrar-usuario');
+            var nombre = document.getElementById('reg-nombre').value.trim();
+            var usuario = (document.getElementById('reg-usuario').value.trim() || generarUsuarioBase(nombre)).toLowerCase();
+            var telefono = document.getElementById('reg-telefono').value.trim();
+            var clave = document.getElementById('reg-clave').value || '';
+            var db = getDb();
+
+            if (!nombre || !usuario || !clave) {
+                mostrarMensajeReg('Completa nombre, usuario y clave de acceso.', true);
+                return;
+            }
+            if (clave.length < 4) {
+                mostrarMensajeReg('La clave debe tener al menos 4 caracteres.', true);
+                return;
+            }
+            if (!db) {
+                mostrarMensajeReg('No hay conexión disponible con Supabase.', true);
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Registrando...';
+
+            try {
+                var existente = await db.from('clientes').select('id').ilike('usuario', usuario).limit(1);
+                if (!existente.error && existente.data && existente.data.length > 0) {
+                    usuario = usuario + Math.floor(10 + Math.random() * 89);
+                }
+
+                var claveHash = await generarHashClave(clave);
+                var payload = {
+                    nombre: nombre,
+                    usuario: usuario,
+                    telefono: telefono,
+                    clave_hash: claveHash,
+                    activo: true
+                };
+
+                var res = await db.from('clientes').insert([payload]).select().maybeSingle();
+                if (res.error) {
+                    mostrarMensajeReg('Error al registrar: ' + res.error.message, true);
+                    return;
+                }
+
+                mostrarMensajeReg('¡Registro completado! Tu usuario es: ' + usuario + '. Redirigiendo...', false);
+                setTimeout(function () {
+                    window.location.replace('./index.html');
+                }, 1200);
+            } catch (e) {
+                mostrarMensajeReg('No se pudo completar el registro.', true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Registrarme';
+            }
+        }
+    </script>
+</body>
+</html>

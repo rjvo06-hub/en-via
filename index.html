@@ -6,42 +6,122 @@
     <title>EN-VIA - Panel Principal</title>
     <link rel="stylesheet" href="css/styles.css">
     <style>
+        body {
+            background-color: #07090f;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 16px;
+        }
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
+
+        .contenedor-panel-principal {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+        .encabezado-principal {
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 14px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.75rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .subtitulo-panel-principal {
+            display: block;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        .lista-modulos-envia {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .tarjeta-modulo-envia {
+            display: block;
+            text-decoration: none;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px;
+            transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+        }
+        .tarjeta-modulo-envia:hover {
+            background-color: #131c31;
+            border-color: #9333ea;
+            transform: translateY(-1px);
+        }
+        .titulo-modulo-morado {
+            color: #c084fc;
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+        }
+        .tarjeta-modulo-envia.acento-verde:hover {
+            border-color: #10b981;
+        }
+        .titulo-modulo-verde {
+            color: #34d399;
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+        }
+        .descripcion-modulo {
+            color: #94a3b8;
+            font-size: 13px;
+            margin: 0;
+        }
+        .pie-panel-principal {
+            text-align: center;
+            color: #64748b;
+            font-size: 11px;
+            padding: 20px 0 8px 0;
+        }
     </style>
 </head>
 <body>
-    <div class="max-w-xl">
-        <header>
-            <h1>EN-VIA</h1>
-            <p>Sistema central de gestión de rutas y servicios</p>
+    <div class="contenedor-panel-principal">
+        <header class="encabezado-principal">
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-panel-principal">Panel Principal</span>
+            </h1>
+            <p style="color:#94a3b8; font-size:12px; margin:6px 0 0 0;">Sistema central de gestión de rutas y servicios</p>
         </header>
 
-        <div>
-            <a href="usuario/index.html">
-                <h2>👤 Portal de Usuario</h2>
-                <p>Calcular ruta, costo y solicitar servicio</p>
+        <div class="lista-modulos-envia">
+            <a href="usuario/index.html" class="tarjeta-modulo-envia">
+                <h2 class="titulo-modulo-morado">👤 Portal de Usuario</h2>
+                <p class="descripcion-modulo">Calcular ruta, costo y solicitar servicio</p>
             </a>
 
-            <a href="conductor/index.html">
-                <h2>🚗 Portal de Conductor (En Vivo)</h2>
-                <p>Ver carreras activas y tomarlas en tiempo real</p>
+            <a href="conductor/index.html" class="tarjeta-modulo-envia">
+                <h2 class="titulo-modulo-morado">🚗 Portal de Conductor (En Vivo)</h2>
+                <p class="descripcion-modulo">Ver carreras activas y tomarlas en tiempo real</p>
             </a>
 
-            <a href="admin/clientes.html">
-                <h2>👥 Admin: Clientes</h2>
-                <p>Crear, modificar y eliminar registros de clientes</p>
+            <a href="admin/clientes.html" class="tarjeta-modulo-envia acento-verde">
+                <h2 class="titulo-modulo-verde">👥 Admin: Clientes</h2>
+                <p class="descripcion-modulo">Crear, modificar y eliminar registros de clientes</p>
             </a>
 
-            <a href="admin/conductores.html">
-                <h2>📋 Admin: Conductores</h2>
-                <p>Crear, modificar y eliminar registros de choferes</p>
+            <a href="admin/conductores.html" class="tarjeta-modulo-envia acento-verde">
+                <h2 class="titulo-modulo-verde">📋 Admin: Conductores</h2>
+                <p class="descripcion-modulo">Crear, modificar y eliminar registros de choferes</p>
             </a>
         </div>
-    </div>
 
-    <footer style="text-align:center; color:#64748b; font-size:11px; padding:16px 0;">
-        EN-VIA &copy; 2026 - Todos los derechos reservados
-    </footer>
+        <footer class="pie-panel-principal">
+            EN-VIA &copy; 2026 - Todos los derechos reservados
+        </footer>
+    </div>
 </body>
 </html>

@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Registro de Conductor</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="./js/supabaseClient.js"></script>
+    <script src="/conductor/js/supabaseClient.js"></script>
     <style>
         input, select, textarea { font-size: 16px !important; }
         @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
@@ -99,7 +99,7 @@
             </h1>
             <p style="color:#94a3b8; margin-top:4px; margin-bottom:4px;">Completa tus datos de acceso, contacto y cobro</p>
             <div class="barra-volver-acceso">
-                <a href="./index.html" class="enlace-acceso-volver">← Ir al Acceso</a>
+                <a href="/conductor/index.html" class="enlace-acceso-volver">← Ir al Acceso</a>
             </div>
         </header>
 
@@ -343,7 +343,7 @@
 
                 document.getElementById('form-registro-conductor').reset();
                 alert('¡Usuario creado con éxito!\n\nNombre: ' + nombre + '\nUsuario asignado: ' + usuario);
-                window.location.replace('./index.html');
+                window.location.replace('/conductor/index.html');
             } catch (err) {
                 mostrarMensaje(err.message || 'Ocurrió un error al registrar.', 'error');
                 btn.disabled = false;

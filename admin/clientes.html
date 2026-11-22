@@ -4,109 +4,376 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Gestión de Clientes</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/supabaseClient.js"></script>
     <style>
+        body {
+            background-color: #07090f;
+            color: #e2e8f0;
+        }
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
+
+        .contenedor-gestion-clientes {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 12px;
+        }
+        .encabezado-gestion {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .subtitulo-gestion {
+            display: block;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .btn-volver-inicio {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .tarjeta-panel-oscuro {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .titulo-seccion-morado {
+            color: #c084fc;
+            font-size: 13px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+        }
+        .grid-campos-clientes {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        @media (min-width: 640px) {
+            .grid-campos-clientes {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (min-width: 900px) {
+            .grid-campos-clientes {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        .etiqueta-campo {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .campo-input-oscuro {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #475569 !important;
+            border-radius: 6px !important;
+            padding: 8px 10px !important;
+        }
+        .fila-botones-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .btn-guardar-morado {
+            flex: 1;
+            min-width: 180px;
+            background-color: #9333ea !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            padding: 10px 14px !important;
+            cursor: pointer;
+        }
+        .btn-cancelar-oscuro {
+            background-color: #1e293b !important;
+            color: #cbd5e1 !important;
+            border: 1px solid #475569 !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            padding: 10px 14px !important;
+            width: auto !important;
+            cursor: pointer;
+        }
+        .tabla-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table.tabla-clientes {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        table.tabla-clientes th {
+            text-align: left;
+            color: #94a3b8;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #334155;
+            padding: 8px;
+        }
+        table.tabla-clientes td {
+            border-bottom: 1px solid #1e293b;
+            padding: 8px;
+            color: #e2e8f0;
+        }
+        .badge-activo {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            background-color: #064e3b;
+            color: #34d399;
+            border: 1px solid #10b981;
+        }
+        .badge-inactivo {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            background-color: #451a1a;
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+        }
+        .btn-editar-mini {
+            background-color: #1e293b !important;
+            color: #34d399 !important;
+            border: 1px solid #10b981 !important;
+            padding: 5px 10px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            width: auto !important;
+            cursor: pointer;
+        }
+        .btn-eliminar-mini {
+            background-color: #451a1a !important;
+            color: #fca5a5 !important;
+            border: 1px solid #ef4444 !important;
+            padding: 5px 10px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            width: auto !important;
+            cursor: pointer;
+        }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6">
-
-    <div class="max-w-4xl mx-auto space-y-6">
-        <header class="flex justify-between items-center border-b border-[#222222] pb-4">
+<body>
+    <div class="contenedor-gestion-clientes">
+        <header class="encabezado-gestion">
             <div>
-                <h1 class="text-xl font-extrabold text-emerald-500 tracking-tight">EN-VIA - Clientes</h1>
-                <p class="text-slate-400 text-xs">Administración de pasajeros y usuarios</p>
+                <h1 style="margin:0;">
+                    <span class="titulo-marca-envia">EN-VIA</span>
+                    <span class="subtitulo-gestion">Gestión de Clientes</span>
+                </h1>
+                <p style="color:#94a3b8; font-size:12px; margin:4px 0 0 0;">Administración de pasajeros, accesos y usuarios</p>
             </div>
-            <a href="../index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
-                ← Volver al Inicio
-            </a>
+            <a href="../index.html" class="btn-volver-inicio">← Volver al Inicio</a>
         </header>
 
-        <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
-            <h2 id="form-title" class="text-xs font-bold uppercase tracking-wider text-emerald-400">Registrar Nuevo Cliente</h2>
+        <div class="tarjeta-panel-oscuro">
+            <h2 id="form-title" class="titulo-seccion-morado">Registrar Nuevo Cliente</h2>
             <input type="hidden" id="cliente-id">
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <input type="hidden" id="clave-hash-actual">
+
+            <div class="grid-campos-clientes">
                 <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Nombre</label>
-                    <input type="text" id="nombre" placeholder="Ej. María Gómez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                    <label for="nombre" class="etiqueta-campo">Nombre</label>
+                    <input type="text" id="nombre" placeholder="Ej. María Gómez" class="campo-input-oscuro" oninput="autocompletarUsuarioCliente()">
                 </div>
                 <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono</label>
-                    <input type="text" id="telefono" placeholder="Ej. 0424-9876543" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                    <label for="usuario" class="etiqueta-campo">Usuario</label>
+                    <input type="text" id="usuario" placeholder="Ej. mgomez" autocapitalize="none" class="campo-input-oscuro">
                 </div>
                 <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Dirección Frecuente</label>
-                    <input type="text" id="direccion_frecuente" placeholder="Ej. Av. 4 Bella Vista" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                    <label for="telefono" class="etiqueta-campo">Teléfono</label>
+                    <input type="text" id="telefono" placeholder="Ej. 0424-9876543" class="campo-input-oscuro">
                 </div>
                 <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Estado</label>
-                    <select id="activo" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+                    <label for="direccion_frecuente" class="etiqueta-campo">Dirección Frecuente</label>
+                    <input type="text" id="direccion_frecuente" placeholder="Ej. Av. 4 Bella Vista" class="campo-input-oscuro">
+                </div>
+                <div>
+                    <label for="clave_acceso" class="etiqueta-campo">Clave de Acceso (Opcional al editar)</label>
+                    <input type="password" id="clave_acceso" placeholder="Nueva clave o dejar igual" class="campo-input-oscuro">
+                </div>
+                <div>
+                    <label for="activo" class="etiqueta-campo">Estado</label>
+                    <select id="activo" class="campo-input-oscuro">
                         <option value="true">Activo</option>
                         <option value="false">Inactivo</option>
                     </select>
                 </div>
             </div>
 
-            <div class="flex gap-2 pt-2">
-                <button onclick="guardarCliente()" id="btn-guardar" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+            <div class="fila-botones-form">
+                <button type="button" onclick="guardarCliente()" id="btn-guardar" class="btn-guardar-morado">
                     Guardar Cliente
                 </button>
-                <button onclick="limpiarFormulario()" id="btn-cancelar" class="hidden px-4 py-2.5 bg-[#1a1a1a] hover:bg-[#262626] border border-[#2e2e2e] text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer">
+                <button type="button" onclick="limpiarFormulario()" id="btn-cancelar" class="btn-cancelar-oscuro hidden">
                     Cancelar
                 </button>
             </div>
         </div>
 
-        <div class="bg-[#111111] border border-[#222222] p-4 rounded-2xl shadow-xl space-y-3">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Lista de Clientes Registrados</h2>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs">
+        <div class="tarjeta-panel-oscuro">
+            <h2 class="titulo-seccion-morado">Lista de Clientes Registrados</h2>
+            <div class="tabla-wrapper">
+                <table class="tabla-clientes">
                     <thead>
-                        <tr class="border-b border-[#222222] text-slate-400">
-                            <th class="p-2.5">Nombre</th>
-                            <th class="p-2.5">Teléfono</th>
-                            <th class="p-2.5">Dirección Frecuente</th>
-                            <th class="p-2.5">Estado</th>
-                            <th class="p-2.5 text-right">Acciones</th>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Usuario</th>
+                            <th>Teléfono</th>
+                            <th>Dirección Frecuente</th>
+                            <th>Estado</th>
+                            <th style="text-align:right;">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-clientes" class="divide-y divide-[#1a1a1a]"></tbody>
+                    <tbody id="tabla-clientes"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
+        const FALLBACK_SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
+        const FALLBACK_SUPABASE_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+
+        function obtenerClienteDb() {
+            if (window.supabaseClient) return window.supabaseClient;
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+                return supabaseClient;
+            }
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                window.supabaseClient = window.supabase.createClient(FALLBACK_SUPABASE_URL, FALLBACK_SUPABASE_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
+
+        function generarUsuarioDesdeNombre(nombre) {
+            const limpio = String(nombre || '').trim().toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const partes = limpio.split(/\s+/).filter(Boolean);
+            if (partes.length === 0) return '';
+            if (partes.length === 1) return partes[0].replace(/[^a-z0-9]/g, '');
+            return (partes[0].charAt(0) + partes[partes.length - 1]).replace(/[^a-z0-9]/g, '');
+        }
+
+        function autocompletarUsuarioCliente() {
+            const nombre = document.getElementById('nombre').value;
+            const userInput = document.getElementById('usuario');
+            if (!userInput.dataset.manual) {
+                userInput.value = generarUsuarioDesdeNombre(nombre);
+            }
+        }
+
+        document.getElementById('usuario').addEventListener('input', function () {
+            this.dataset.manual = this.value.trim() ? '1' : '';
+        });
+
+        function hashFallbackSimple(texto) {
+            let h1 = 0xdeadbeef ^ texto.length;
+            let h2 = 0x41c6ce57 ^ texto.length;
+            for (let i = 0; i < texto.length; i++) {
+                const ch = texto.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+        }
+
+        async function generarHashClave(clave) {
+            try {
+                if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(clave);
+                    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+            } catch (e) {}
+            return hashFallbackSimple(clave);
+        }
+
+        let clientesGlobal = [];
+
         document.addEventListener('DOMContentLoaded', cargarClientes);
 
         async function cargarClientes() {
-            const { data, error } = await supabaseClient.from('clientes').select('*').order('created_at', { ascending: false });
+            const db = obtenerClienteDb();
             const tbody = document.getElementById('tabla-clientes');
             tbody.innerHTML = '';
 
-            if (error || !data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500 italic">No hay clientes registrados.</td></tr>`;
+            if (!db) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#f87171;">No se pudo conectar con Supabase.</td></tr>`;
                 return;
             }
 
-            data.forEach(c => {
+            const { data, error } = await db.from('clientes').select('*').order('created_at', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No hay clientes registrados.</td></tr>`;
+                return;
+            }
+
+            clientesGlobal = data;
+
+            data.forEach((c, index) => {
+                const badgeEstado = c.activo
+                    ? `<span class="badge-activo">Activo</span>`
+                    : `<span class="badge-inactivo">Inactivo</span>`;
+
                 tbody.innerHTML += `
-                    <tr class="hover:bg-[#161616] transition">
-                        <td class="p-2.5 font-medium text-slate-200">${c.nombre}</td>
-                        <td class="p-2.5 text-slate-400">${c.telefono || 'N/A'}</td>
-                        <td class="p-2.5 text-slate-400">${c.direccion_frecuente || 'N/A'}</td>
-                        <td class="p-2.5">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.activo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}">
-                                ${c.activo ? 'Activo' : 'Inactivo'}
-                            </span>
-                        </td>
-                        <td class="p-2.5 text-right space-x-2">
-                            <button onclick="editarCliente('${c.id}', '${c.nombre}', '${c.telefono || ''}', '${c.direccion_frecuente || ''}', ${c.activo})" class="text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer">Editar</button>
-                            <button onclick="eliminarCliente('${c.id}')" class="text-red-400 hover:text-red-300 font-semibold cursor-pointer">Eliminar</button>
+                    <tr>
+                        <td style="font-weight:700;">${c.nombre}</td>
+                        <td style="color:#c084fc;">${c.usuario || generarUsuarioDesdeNombre(c.nombre) || 'N/A'}</td>
+                        <td style="color:#94a3b8;">${c.telefono || 'N/A'}</td>
+                        <td style="color:#94a3b8;">${c.direccion_frecuente || 'N/A'}</td>
+                        <td>${badgeEstado}</td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <button type="button" onclick="editarCliente(${index})" class="btn-editar-mini">Editar</button>
+                            <button type="button" onclick="eliminarCliente('${c.id}')" class="btn-eliminar-mini">Eliminar</button>
                         </td>
                     </tr>
                 `;
@@ -114,51 +381,90 @@
         }
 
         async function guardarCliente() {
+            const db = obtenerClienteDb();
+            if (!db) {
+                alert('No hay conexión disponible con Supabase.');
+                return;
+            }
+
             const id = document.getElementById('cliente-id').value;
             const nombre = document.getElementById('nombre').value.trim();
+            const usuarioInput = document.getElementById('usuario').value.trim().toLowerCase();
+            const usuario = usuarioInput || generarUsuarioDesdeNombre(nombre);
             const telefono = document.getElementById('telefono').value.trim();
             const direccion_frecuente = document.getElementById('direccion_frecuente').value.trim();
+            const claveInput = document.getElementById('clave_acceso').value;
             const activo = document.getElementById('activo').value === 'true';
+            let clave_hash = document.getElementById('clave-hash-actual').value || '';
 
             if (!nombre) { alert('El nombre es obligatorio.'); return; }
 
+            if (claveInput) {
+                clave_hash = await generarHashClave(claveInput);
+            }
+
+            const payload = { nombre, telefono, direccion_frecuente, activo };
+            if (usuario) payload.usuario = usuario;
+            if (clave_hash) payload.clave_hash = clave_hash;
+
             if (id) {
-                const { error } = await supabaseClient.from('clientes').update({ nombre, telefono, direccion_frecuente, activo }).eq('id', id);
+                const { error } = await db.from('clientes').update(payload).eq('id', id);
                 if (error) alert('Error al actualizar: ' + error.message);
+                else alert('¡Cliente actualizado con éxito!');
             } else {
-                const { error } = await supabaseClient.from('clientes').insert([{ nombre, telefono, direccion_frecuente, activo }]);
+                const { error } = await db.from('clientes').insert([payload]);
                 if (error) alert('Error al crear: ' + error.message);
+                else alert('¡Cliente registrado con éxito!');
             }
 
             limpiarFormulario();
             cargarClientes();
         }
 
-        function editarCliente(id, nombre, telefono, direccion, activo) {
-            document.getElementById('cliente-id').value = id;
-            document.getElementById('nombre').value = nombre;
-            document.getElementById('telefono').value = telefono;
-            document.getElementById('direccion_frecuente').value = direccion;
-            document.getElementById('activo').value = activo.toString();
+        function editarCliente(index) {
+            const c = clientesGlobal[index];
+            if (!c) return;
+
+            const userInput = document.getElementById('usuario');
+            document.getElementById('cliente-id').value = c.id;
+            document.getElementById('nombre').value = c.nombre || '';
+            userInput.value = c.usuario || generarUsuarioDesdeNombre(c.nombre) || '';
+            userInput.dataset.manual = userInput.value ? '1' : '';
+            document.getElementById('telefono').value = c.telefono || '';
+            document.getElementById('direccion_frecuente').value = c.direccion_frecuente || '';
+            document.getElementById('clave_acceso').value = '';
+            document.getElementById('clave-hash-actual').value = c.clave_hash || '';
+            document.getElementById('activo').value = c.activo ? 'true' : 'false';
+
             document.getElementById('form-title').textContent = "Modificar Cliente";
             document.getElementById('btn-guardar').textContent = "Actualizar Cliente";
             document.getElementById('btn-cancelar').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         async function eliminarCliente(id) {
+            const db = obtenerClienteDb();
+            if (!db) return;
+
             if (confirm('¿Estás seguro de eliminar este cliente?')) {
-                const { error } = await supabaseClient.from('clientes').delete().eq('id', id);
+                const { error } = await db.from('clientes').delete().eq('id', id);
                 if (error) alert('Error al eliminar: ' + error.message);
                 cargarClientes();
             }
         }
 
         function limpiarFormulario() {
+            const userInput = document.getElementById('usuario');
             document.getElementById('cliente-id').value = '';
             document.getElementById('nombre').value = '';
+            userInput.value = '';
+            userInput.dataset.manual = '';
             document.getElementById('telefono').value = '';
             document.getElementById('direccion_frecuente').value = '';
+            document.getElementById('clave_acceso').value = '';
+            document.getElementById('clave-hash-actual').value = '';
             document.getElementById('activo').value = 'true';
+
             document.getElementById('form-title').textContent = "Registrar Nuevo Cliente";
             document.getElementById('btn-guardar').textContent = "Guardar Cliente";
             document.getElementById('btn-cancelar').classList.add('hidden');

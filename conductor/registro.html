@@ -342,11 +342,8 @@
                 }
 
                 document.getElementById('form-registro-conductor').reset();
-                mostrarMensaje('¡Registro enviado con éxito! Tu usuario asignado es "' + usuario + '". Redirigiendo a iniciar sesión...', 'exito');
-
-                setTimeout(function () {
-                    window.location.replace('./index.html');
-                }, 1500);
+                alert('¡Usuario creado con éxito!\n\nNombre: ' + nombre + '\nUsuario asignado: ' + usuario);
+                window.location.replace('./index.html');
             } catch (err) {
                 mostrarMensaje(err.message || 'Ocurrió un error al registrar.', 'error');
                 btn.disabled = false;

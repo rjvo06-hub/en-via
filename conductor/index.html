@@ -3,1088 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EN-VIA - Portal de Conductores</title>
-    <link rel="stylesheet" href="../css/styles.css">
-    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="./js/supabaseClient.js"></script>
+    <title>EN-VIA - Portal de Chofer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabaseClient.js"></script>
     <style>
-        input, select { font-size: 16px !important; }
-        @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
-        .acciones-header-chofer {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 8px;
-        }
-        .btn-historial-header {
-            background-color: #1e293b !important;
-            color: #38bdf8 !important;
-            border: 1px solid #0284c7 !important;
-            padding: 8px 14px !important;
-            font-size: 13px !important;
-            font-weight: 700 !important;
-            border-radius: 6px !important;
-            cursor: pointer;
-            width: auto !important;
-        }
-        .panel-historial-carreras {
-            border: 1px solid #0284c7;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 12px;
-            margin-bottom: 14px;
-            background-color: #0b1324;
-        }
-        .cabecera-panel-historial {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-        .barra-filtro-historial {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-        .input-fecha-historial {
-            background-color: #0f172a !important;
-            color: #f8fafc !important;
-            border: 1px solid #475569 !important;
-            border-radius: 6px !important;
-            padding: 6px 10px !important;
-            width: auto !important;
-        }
-        .tarjeta-carrera-historial {
-            border: 1px solid #1e293b;
-            border-radius: 8px;
-            padding: 10px 12px;
-            margin-top: 8px;
-            background-color: #0f172a;
-        }
-        .tarjeta-carrera-pendiente {
-            position: relative;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            background-color: #0f172a;
-        }
-        .cabecera-pendiente {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-        .btn-descartar-mini {
-            background-color: #451a1a !important;
-            color: #fca5a5 !important;
-            border: 1px solid #ef4444 !important;
-            padding: 5px 11px !important;
-            font-size: 11px !important;
-            font-weight: 700 !important;
-            line-height: 1.2 !important;
-            width: auto !important;
-            border-radius: 6px !important;
-            cursor: pointer;
-        }
-        .btn-descartar-mini:active {
-            background-color: #7f1d1d !important;
-        }
-        .seccion-descartadas-toggle {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background-color: #1e293b !important;
-            color: #e2e8f0 !important;
-            border: 1px solid #475569 !important;
-            border-radius: 8px !important;
-            padding: 10px 12px !important;
-            font-size: 13px !important;
-            font-weight: 700 !important;
-            cursor: pointer;
-            margin-top: 14px;
-        }
-        .tarjeta-carrera-descartada {
-            border: 1px dashed #475569;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 8px;
-            margin-bottom: 10px;
-            background-color: #111827;
-        }
-        .acciones-descartada {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-        }
-        .btn-restaurar-mini {
-            background-color: #1e293b !important;
-            color: #cbd5e1 !important;
-            border: 1px solid #64748b !important;
-            padding: 8px 12px !important;
-            font-size: 12px !important;
-            font-weight: 600 !important;
-            border-radius: 6px !important;
-            cursor: pointer;
-            width: auto !important;
-        }
+        input, select, textarea { font-size: 16px !important; }
+        @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
     </style>
 </head>
-<body>
-    <audio id="alarma-audio" preload="auto" playsinline>
-        <source src="https://en-via.azubiform.de/alerta_envia_1.wav" type="audio/wav">
-        <source src="./alerta_envia_1.wav" type="audio/wav">
-    </audio>
+<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6 flex items-center justify-center">
 
-    <div id="login-container" class="max-w-xl">
-        <header>
-            <h1>EN-VIA - Portal de Chofer</h1>
-            <p>Ingresa con tu usuario de conductor (ej. rdiaz) y clave</p>
+    <div class="w-full max-w-md space-y-6">
+        <header class="text-center space-y-1">
+            <h1 class="text-2xl font-extrabold text-emerald-500 tracking-tight">EN-VIA - Portal de Chofer</h1>
+            <p class="text-slate-400 text-xs">Inicia sesión con tu usuario o regístrate para comenzar</p>
         </header>
 
-        <div id="login-form-box">
-            <div style="margin-bottom:8px;">
-                <label for="login-nombre" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Usuario del Conductor</label>
-                <input type="text" id="login-nombre" placeholder="Ej. rdiaz" autocomplete="username" autocapitalize="none" style="width:100%;">
-            </div>
+        <!-- Selector inicial: Iniciar sesión o Registrarse -->
+        <div class="bg-[#111111] border border-[#222222] p-5 sm:p-6 rounded-2xl shadow-xl space-y-5">
+            <form id="form-login-conductor" onsubmit="iniciarSesionConductor(event)" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Usuario del Conductor</label>
+                    <input type="text" id="login-usuario" required placeholder="Ej. cperez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2.5 text-white outline-none">
+                </div>
 
-            <div style="margin-bottom:8px;">
-                <label for="login-clave" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Clave de Acceso</label>
-                <input type="password" id="login-clave" placeholder="Tu clave de acceso" autocomplete="current-password" style="width:100%;">
-            </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Clave de Acceso</label>
+                    <input type="password" id="login-clave" required placeholder="Tu clave de acceso" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2.5 text-white outline-none">
+                </div>
 
-            <div id="login-error" style="color:#f87171; font-size:12px; margin-bottom:8px;" class="hidden"></div>
+                <div id="mensaje-login" class="hidden text-xs rounded-xl p-3 border"></div>
 
-            <button type="button" id="btn-entrar-portal" onclick="ingresarAlPortal()" style="width:100%; background-color:#9333ea; margin-bottom:10px;">Entrar al Portal</button>
+                <button type="submit" id="btn-login" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                    Iniciar Sesión
+                </button>
+            </form>
 
-            <a href="../index.html" style="display:block; text-align:center;">← Volver al Menú Principal</a>
-        </div>
-    </div>
-
-    <div id="portal-container" class="max-w-3xl hidden">
-        <header>
-            <h1>EN-VIA - Panel de Chofer</h1>
-            <p>Conectado como: <strong id="driver-name-display" style="color:#ffffff;"></strong></p>
-            <div class="acciones-header-chofer">
-                <button type="button" id="btn-ver-historial" class="btn-historial-header" onclick="alternarHistorialCarreras()">📋 Historial de Carreras</button>
-                <button type="button" id="btn-desconectar" onclick="cerrarSesion()" style="background-color:#262626; color:#f87171; width:auto;">Desconectar</button>
-            </div>
-        </header>
-
-        <div id="panel-historial" class="panel-historial-carreras hidden">
-            <div class="cabecera-panel-historial">
-                <h2 style="color:#38bdf8; margin:0; font-size:15px;">Historial de Carreras (<span id="contador-historial">0</span>)</h2>
-                <button type="button" class="btn-restaurar-mini" onclick="alternarHistorialCarreras()">Cerrar ✕</button>
-            </div>
-            <div class="barra-filtro-historial">
-                <label for="fecha-historial" style="font-size:12px; color:#cbd5e1; font-weight:600;">Fecha:</label>
-                <input type="date" id="fecha-historial" class="input-fecha-historial" onchange="alCambiarFechaHistorial()">
-                <button type="button" class="btn-restaurar-mini" onclick="seleccionarHoyHistorial()">Hoy</button>
-                <button type="button" class="btn-restaurar-mini" onclick="verTodoHistorial()">Ver todas</button>
-            </div>
-            <div id="lista-historial-carreras">
-                <div style="color:#94a3b8; font-size:13px;">Selecciona una fecha para consultar carreras.</div>
+            <div class="pt-4 border-t border-[#222222] space-y-3 text-center">
+                <p class="text-xs text-slate-400">¿Aún no tienes cuenta de conductor?</p>
+                <a href="./registro.html" class="block w-full py-2.5 bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 font-bold text-xs rounded-xl transition">
+                    Registrarse como Conductor
+                </a>
             </div>
         </div>
 
-        <div id="seccion-asignada" class="hidden">
-            <h2 style="color:#34d399; margin-bottom:8px;">Tu Carrera en Curso</h2>
-            <div id="carrera-asignada-container"></div>
+        <!-- Panel del conductor una vez autenticado (mantén aquí tu lógica actual de carreras) -->
+        <div id="panel-conductor" class="hidden bg-[#111111] border border-[#222222] p-5 rounded-2xl shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-[#222222] pb-3">
+                <div>
+                    <p class="text-xs text-slate-400">Conductor conectado</p>
+                    <h2 id="conductor-nombre-activo" class="text-base font-bold text-emerald-400"></h2>
+                </div>
+                <button onclick="cerrarSesionConductor()" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs rounded-xl cursor-pointer">
+                    Salir
+                </button>
+            </div>
+            <p class="text-xs text-slate-400">Sesión iniciada correctamente. Aquí puedes conectar la vista de carreras activas del conductor.</p>
         </div>
 
-        <div style="margin-top:16px;">
-            <h2 style="color:#94a3b8; margin-bottom:8px;">Carreras Pendientes para Tomar</h2>
-            <div id="lista-carreras">
-                <div>Buscando carreras...</div>
-            </div>
-        </div>
-
-        <div id="seccion-descartadas-activas">
-            <button type="button" id="btn-toggle-descartadas" class="seccion-descartadas-toggle" onclick="alternarDescartadasActivas()">
-                <span>Carreras Descartadas Activas (<span id="contador-descartadas-activas">0</span>)</span>
-                <span id="icono-toggle-descartadas">▼</span>
-            </button>
-            <div id="lista-descartadas-activas" class="hidden">
-                <div style="margin-top:8px; color:#94a3b8; font-size:13px;">No hay carreras descartadas activas.</div>
-            </div>
+        <div class="text-center">
+            <a href="../index.html" class="inline-block px-4 py-2 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition text-slate-300">
+                ← Volver al Menú Principal
+            </a>
         </div>
     </div>
 
     <script>
-        var conductorActual = "";
-        var conductorIdActual = null;
-        var timerInterval = null;
-        var pollingInterval = null;
-        var primeraCargaRealizada = false;
-        var idsPendientesConocidos = {};
-        var carrerasDescartadasIds = [];
-        var descartadasExpandida = false;
-        var historialVisible = false;
-        var mostrarTodoHistorial = false;
-        var audioCtx = null;
-        var audioDesbloqueado = false;
-        var canalAlertaConductorId = "envia_alerta_1_v1";
-        var sonidoAlertaNativo = "alerta_envia_1";
-        var canalAlertaCreado = false;
-        var intervaloSondeoMs = 1200;
-
-        var alarmaInterval = null;
-        var alarmaActiva = false;
-        var hayCarreraNuevaSinVer = false;
-        var ultimaActivacionAlarmaMs = 0;
-
-        var baseLat = "10.670389";
-        var baseLng = "-71.658972";
-
-        function getDb() {
-            return window.supabaseClient || null;
-        }
-
-        function mostrarErrorLogin(msg) {
-            var errEl = document.getElementById('login-error');
-            if (errEl) {
-                errEl.textContent = msg;
-                errEl.classList.remove('hidden');
+        function mostrarMensajeLogin(texto, tipo = 'error') {
+            const box = document.getElementById('mensaje-login');
+            box.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30', 'bg-red-500/10', 'text-red-300', 'border-red-500/30');
+            if (tipo === 'exito') {
+                box.classList.add('bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30');
+            } else {
+                box.classList.add('bg-red-500/10', 'text-red-300', 'border-red-500/30');
             }
+            box.textContent = texto;
         }
 
-        function limpiarErrorLogin() {
-            var errEl = document.getElementById('login-error');
-            if (errEl) {
-                errEl.textContent = '';
-                errEl.classList.add('hidden');
-            }
+        async function generarHashClave(clave) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(clave);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        function desbloquearMotorAudio() {
-            try {
-                if (!audioCtx) {
-                    var AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                    if (AudioContextClass) {
-                        audioCtx = new AudioContextClass();
-                    }
-                }
-                if (audioCtx && audioCtx.state === 'suspended' && typeof audioCtx.resume === 'function') {
-                    audioCtx.resume().catch(function () {});
-                }
-                if (audioCtx && !audioDesbloqueado) {
-                    var osc = audioCtx.createOscillator();
-                    var gain = audioCtx.createGain();
-                    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    osc.start();
-                    osc.stop(audioCtx.currentTime + 0.02);
-                    audioDesbloqueado = true;
-                }
-            } catch (e) {}
-        }
+        async function iniciarSesionConductor(event) {
+            event.preventDefault();
 
-        async function asegurarCanalSonidoConductor() {
-            if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.LocalNotifications) return;
-            var LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
-            try {
-                if (typeof LocalNotifications.requestPermissions === 'function') {
-                    await LocalNotifications.requestPermissions();
-                }
-                if (!canalAlertaCreado && typeof LocalNotifications.createChannel === 'function') {
-                    await LocalNotifications.createChannel({
-                        id: canalAlertaConductorId,
-                        name: 'Alerta EN-VIA 1',
-                        description: 'Sonido de alerta de alta prioridad para conductores',
-                        importance: 5,
-                        visibility: 1,
-                        sound: sonidoAlertaNativo,
-                        vibration: false
-                    });
-                    canalAlertaCreado = true;
-                }
-            } catch (e) {}
-        }
+            const btn = document.getElementById('btn-login');
+            const usuario = document.getElementById('login-usuario').value.trim().toLowerCase();
+            const clave = document.getElementById('login-clave').value;
 
-        function notificarNativoNuevaCarrera(cantidadPendientes, carreraInfo) {
-            var titulo = "EN-VIA: Nueva carrera disponible";
-            var detalle = carreraInfo && carreraInfo.origen
-                ? (carreraInfo.origen + " → " + (carreraInfo.destino || "Destino") + (carreraInfo.precio ? " (" + carreraInfo.precio + ")" : ""))
-                : ("Hay " + cantidadPendientes + " carrera(s) pendiente(s) por tomar.");
-            try {
-                if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
-                    asegurarCanalSonidoConductor().then(function () {
-                        window.Capacitor.Plugins.LocalNotifications.schedule({
-                            notifications: [{
-                                id: Math.floor(Date.now() % 2147483647),
-                                title: titulo,
-                                body: detalle,
-                                channelId: canalAlertaConductorId,
-                                sound: sonidoAlertaNativo,
-                                schedule: { at: new Date(Date.now() + 10) }
-                            }]
-                        }).catch(function () {});
-                    });
-                }
-            } catch (e) {}
-
-            try {
-                if (window.AndroidAlarma && typeof window.AndroidAlarma.dispararAlerta === 'function') {
-                    window.AndroidAlarma.dispararAlerta(titulo, detalle);
-                }
-            } catch (e) {}
-        }
-
-        function reproducirAlerta1Web() {
-            if (!audioCtx) return;
-            var notas = [
-                [1850, 0.14], [0, 0.07], [2200, 0.18], [0, 0.18],
-                [1850, 0.14], [0, 0.07], [2200, 0.22]
-            ];
-            var cursor = audioCtx.currentTime;
-
-            for (var i = 0; i < notas.length; i++) {
-                var freq = notas[i][0];
-                var dur = notas[i][1];
-                if (freq > 0) {
-                    var osc1 = audioCtx.createOscillator();
-                    var osc2 = audioCtx.createOscillator();
-                    var gain = audioCtx.createGain();
-
-                    osc1.type = 'sine';
-                    osc2.type = 'sine';
-                    osc1.frequency.setValueAtTime(freq, cursor);
-                    osc2.frequency.setValueAtTime(freq * 2, cursor);
-
-                    gain.gain.setValueAtTime(0.01, cursor);
-                    gain.gain.linearRampToValueAtTime(0.78, cursor + 0.005);
-                    gain.gain.setValueAtTime(0.78, cursor + Math.max(0.01, dur - 0.005));
-                    gain.gain.linearRampToValueAtTime(0.001, cursor + dur);
-
-                    osc1.connect(gain);
-                    osc2.connect(gain);
-                    gain.connect(audioCtx.destination);
-
-                    osc1.start(cursor);
-                    osc2.start(cursor);
-                    osc1.stop(cursor + dur + 0.01);
-                    osc2.stop(cursor + dur + 0.01);
-                }
-                cursor += dur;
-            }
-        }
-
-        function reproducirTimbreRapido() {
-            try {
-                desbloquearMotorAudio();
-                var audioElement = document.getElementById('alarma-audio');
-                if (audioElement) {
-                    audioElement.muted = false;
-                    audioElement.volume = 1.0;
-                    if (audioElement.readyState >= 2 && !audioElement.error) {
-                        audioElement.currentTime = 0;
-                        var playPromise = audioElement.play();
-                        if (playPromise && typeof playPromise.catch === 'function') {
-                            playPromise.catch(function () {
-                                reproducirAlerta1Web();
-                            });
-                        }
-                        return;
-                    }
-                }
-                reproducirAlerta1Web();
-            } catch (e) {}
-        }
-
-        function dispararPulsoTimbre() {
-            try {
-                reproducirTimbreRapido();
-            } catch (e) {
-                console.log("Error en timbre:", e);
-            }
-        }
-
-        function iniciarAlarmaPersistente(cantidadPendientes, carreraNueva) {
-            hayCarreraNuevaSinVer = true;
-            notificarNativoNuevaCarrera(cantidadPendientes || 1, carreraNueva || null);
-            ultimaActivacionAlarmaMs = Date.now();
-
-            dispararPulsoTimbre();
-
-            if (alarmaActiva) return;
-            alarmaActiva = true;
-
-            alarmaInterval = setInterval(function () {
-                if (!alarmaActiva || !hayCarreraNuevaSinVer) {
-                    detenerAlarmaPersistente();
-                    return;
-                }
-                dispararPulsoTimbre();
-            }, 2000);
-        }
-
-        function detenerAlarmaPersistente() {
-            alarmaActiva = false;
-            hayCarreraNuevaSinVer = false;
-            if (alarmaInterval) {
-                clearInterval(alarmaInterval);
-                alarmaInterval = null;
-            }
-            var audioElement = document.getElementById('alarma-audio');
-            if (audioElement) {
-                try {
-                    audioElement.pause();
-                    audioElement.currentTime = 0;
-                } catch (e) {}
-            }
-            try {
-                if (window.AndroidAlarma && typeof window.AndroidAlarma.detenerAlerta === 'function') {
-                    window.AndroidAlarma.detenerAlerta();
-                }
-            } catch (e) {}
-        }
-
-        function manejarToqueEnPantalla() {
-            desbloquearMotorAudio();
-            if (!alarmaActiva) return;
-            if ((Date.now() - ultimaActivacionAlarmaMs) < 200) return;
-            detenerAlarmaPersistente();
-        }
-
-        document.addEventListener('touchstart', manejarToqueEnPantalla, { passive: true });
-        document.addEventListener('pointerdown', manejarToqueEnPantalla, { passive: true });
-
-        function desconectarTemporizadoresYAlertas() {
-            detenerAlarmaPersistente();
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
-            if (pollingInterval) {
-                clearInterval(pollingInterval);
-                pollingInterval = null;
-            }
-        }
-
-        function reanudarCicloConductor() {
-            if (!conductorActual) return;
-            asegurarCanalSonidoConductor();
-            if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(function () {
-                cargarDatosConductor();
-            }, intervaloSondeoMs);
-            suscripcionRealtime();
-            cargarDatosConductor();
-        }
-
-        document.addEventListener('visibilitychange', function () {
-            if (!document.hidden && conductorActual) {
-                reanudarCicloConductor();
-            }
-        });
-
-        window.addEventListener('focus', function () {
-            if (conductorActual) {
-                reanudarCicloConductor();
-            }
-        });
-
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
-            window.Capacitor.Plugins.App.addListener('appStateChange', function (state) {
-                if (state && state.isActive && conductorActual) {
-                    reanudarCicloConductor();
-                }
-            });
-        }
-
-        window.addEventListener('load', function () {
-            asegurarCanalSonidoConductor();
-            var sesionGuardada = sessionStorage.getItem('conductor_en_via');
-            var sesionIdGuardada = sessionStorage.getItem('conductor_id_en_via');
-
-            if (sesionGuardada) {
-                conductorActual = sesionGuardada;
-                conductorIdActual = sesionIdGuardada || null;
-                mostrarPortal();
-            }
-        });
-
-        function normalizarUsuarioEntrada(valor) {
-            if (!valor) return '';
-            var limpio = String(valor).replace(/^\s+|\s+$/g, '').toLowerCase();
-            if (limpio.indexOf(' ') !== -1 && window.EnviaAuth && typeof window.EnviaAuth.generarUsuarioDesdeNombre === 'function') {
-                return window.EnviaAuth.generarUsuarioDesdeNombre(limpio);
-            }
-            return limpio.replace(/\s+/g, '');
-        }
-
-        function ingresarAlPortal() {
-            limpiarErrorLogin();
-            desbloquearMotorAudio();
-            asegurarCanalSonidoConductor();
-            var usuarioInput = normalizarUsuarioEntrada(document.getElementById('login-nombre').value || '');
-            var claveInput = document.getElementById('login-clave').value || '';
-            var db = getDb();
-
-            if (!usuarioInput || !claveInput) {
-                mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
+            if (!usuario || !clave) {
+                mostrarMensajeLogin('Ingresa tu usuario y clave de acceso.', 'error');
                 return;
             }
 
-            if (!db || typeof db.rpc !== 'function') {
-                mostrarErrorLogin('No se pudo conectar con la base de datos.');
-                return;
-            }
+            btn.disabled = true;
+            btn.textContent = 'Verificando...';
 
-            db.rpc('verificar_login_conductor', {
-                p_usuario: usuarioInput,
-                p_clave: claveInput
-            }).then(function (res) {
-                var rows = res ? res.data : null;
-                var cond = Array.isArray(rows) ? rows[0] : rows;
+            try {
+                const claveHash = await generarHashClave(clave);
 
-                if (!cond || !cond.id || cond.activo !== true) {
-                    mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
+                const { data, error } = await supabaseClient
+                    .from('conductores')
+                    .select('id, nombre, usuario, clave_hash, activo')
+                    .eq('usuario', usuario)
+                    .maybeSingle();
+
+                if (error) {
+                    throw new Error('Error al consultar el conductor: ' + error.message);
+                }
+
+                if (!data || data.clave_hash !== claveHash) {
+                    mostrarMensajeLogin('Usuario o clave incorrectos.', 'error');
                     return;
                 }
 
-                conductorActual = cond.nombre;
-                conductorIdActual = cond.id;
-
-                sessionStorage.setItem('conductor_en_via', conductorActual);
-                sessionStorage.setItem('conductor_id_en_via', conductorIdActual);
-
-                var audioElement = document.getElementById('alarma-audio');
-                if (audioElement) {
-                    audioElement.muted = false;
-                    audioElement.volume = 1.0;
-                    audioElement.load();
-                    var p = audioElement.play();
-                    if (p && typeof p.then === 'function') {
-                        p.then(function () {
-                            audioElement.pause();
-                            audioElement.currentTime = 0;
-                        }).catch(function () {});
-                    }
+                if (data.activo === false) {
+                    mostrarMensajeLogin('Tu cuenta está registrada pero pendiente de activación.', 'error');
+                    return;
                 }
 
-                mostrarPortal();
-            }).catch(function () {
-                mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
-            });
-        }
+                sessionStorage.setItem('conductor_activo', JSON.stringify({
+                    id: data.id,
+                    nombre: data.nombre,
+                    usuario: data.usuario
+                }));
 
-        function mostrarPortal() {
-            document.getElementById('login-container').classList.add('hidden');
-            document.getElementById('portal-container').classList.remove('hidden');
-            document.getElementById('driver-name-display').textContent = conductorActual;
-
-            cargarDatosConductor();
-            suscripcionRealtime();
-
-            if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(function () {
-                cargarDatosConductor();
-            }, intervaloSondeoMs);
-        }
-
-        function cerrarSesion() {
-            desconectarTemporizadoresYAlertas();
-            conductorActual = "";
-            conductorIdActual = null;
-            primeraCargaRealizada = false;
-            idsPendientesConocidos = {};
-            carrerasDescartadasIds = [];
-            descartadasExpandida = false;
-            historialVisible = false;
-            mostrarTodoHistorial = false;
-
-            if (window.EnviaAuth && typeof window.EnviaAuth.limpiarEstadoLocal === 'function') {
-                window.EnviaAuth.limpiarEstadoLocal();
-            }
-
-            window.location.replace('./index.html');
-        }
-
-        function obtenerFechaLocalInput() {
-            var d = new Date();
-            var anio = d.getFullYear();
-            var mes = String(d.getMonth() + 1).padStart(2, '0');
-            var dia = String(d.getDate()).padStart(2, '0');
-            return anio + '-' + mes + '-' + dia;
-        }
-
-        function alternarHistorialCarreras() {
-            historialVisible = !historialVisible;
-            var panelEl = document.getElementById('panel-historial');
-            var fechaInput = document.getElementById('fecha-historial');
-            if (panelEl) {
-                if (historialVisible) {
-                    if (fechaInput && !fechaInput.value && !mostrarTodoHistorial) {
-                        fechaInput.value = obtenerFechaLocalInput();
-                    }
-                    panelEl.classList.remove('hidden');
-                    cargarHistorialConductor();
-                } else {
-                    panelEl.classList.add('hidden');
-                }
+                document.getElementById('form-login-conductor').parentElement.classList.add('hidden');
+                document.getElementById('conductor-nombre-activo').textContent = data.nombre;
+                document.getElementById('panel-conductor').classList.remove('hidden');
+            } catch (err) {
+                mostrarMensajeLogin(err.message || 'No se pudo iniciar sesión.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Iniciar Sesión';
             }
         }
 
-        function alCambiarFechaHistorial() {
-            mostrarTodoHistorial = false;
-            cargarHistorialConductor();
-        }
-
-        function seleccionarHoyHistorial() {
-            mostrarTodoHistorial = false;
-            var fechaInput = document.getElementById('fecha-historial');
-            if (fechaInput) {
-                fechaInput.value = obtenerFechaLocalInput();
-            }
-            cargarHistorialConductor();
-        }
-
-        function verTodoHistorial() {
-            mostrarTodoHistorial = true;
-            cargarHistorialConductor();
-        }
-
-        function obtenerClaveFechaLocal(isoStr) {
-            if (!isoStr) return '';
-            var d = new Date(isoStr);
-            if (isNaN(d.getTime())) return '';
-            var anio = d.getFullYear();
-            var mes = String(d.getMonth() + 1).padStart(2, '0');
-            var dia = String(d.getDate()).padStart(2, '0');
-            return anio + '-' + mes + '-' + dia;
-        }
-
-        function formatearDuracionCarrera(tiempos, createdAt) {
-            var t = (typeof tiempos === 'object' && tiempos !== null) ? tiempos : {};
-            var inicioIso = t.inicio_carrera_at || t.llegada_conductor_at || createdAt || null;
-            var finIso = t.fin_recorrido_at || t.fin_carrera_at || null;
-
-            if (!inicioIso || !finIso) {
-                return 'N/D';
-            }
-
-            var msInicio = new Date(inicioIso).getTime();
-            var msFin = new Date(finIso).getTime();
-            if (isNaN(msInicio) || isNaN(msFin) || msFin < msInicio) {
-                return 'N/D';
-            }
-
-            var totalSegs = Math.floor((msFin - msInicio) / 1000);
-            var horas = Math.floor(totalSegs / 3600);
-            var mins = Math.floor((totalSegs % 3600) / 60);
-            var segs = totalSegs % 60;
-
-            if (horas > 0) {
-                return horas + 'h ' + String(mins).padStart(2, '0') + 'm';
-            }
-            if (mins > 0) {
-                return mins + ' min ' + String(segs).padStart(2, '0') + ' s';
-            }
-            return segs + ' seg';
-        }
-
-        function formatearFechaCorta(isoStr) {
-            if (!isoStr) return 'Sin fecha';
-            var d = new Date(isoStr);
-            if (isNaN(d.getTime())) return 'Sin fecha';
-            var dia = String(d.getDate()).padStart(2, '0');
-            var mes = String(d.getMonth() + 1).padStart(2, '0');
-            var anio = d.getFullYear();
-            var hora = String(d.getHours()).padStart(2, '0');
-            var min = String(d.getMinutes()).padStart(2, '0');
-            return dia + '/' + mes + '/' + anio + ' ' + hora + ':' + min;
-        }
-
-        function cargarHistorialConductor() {
-            var db = getDb();
-            var contenedor = document.getElementById('lista-historial-carreras');
-            var contadorEl = document.getElementById('contador-historial');
-            var fechaInput = document.getElementById('fecha-historial');
-            if (!db || !conductorActual || !contenedor) return;
-
-            var fechaSeleccionada = (!mostrarTodoHistorial && fechaInput) ? (fechaInput.value || '') : '';
-            var limiteConsulta = mostrarTodoHistorial ? 30 : 50;
-
-            db.from('carreras')
-                .select('*')
-                .eq('estado', 'completada')
-                .eq('conductor_asignado', conductorActual)
-                .order('created_at', { ascending: false })
-                .limit(limiteConsulta)
-                .then(function (res) {
-                    if (res.error) {
-                        contenedor.innerHTML = '<div style="color:#f87171; font-size:13px;">No se pudo cargar el historial: ' + res.error.message + '</div>';
-                        return;
-                    }
-                    var lista = res.data || [];
-                    if (fechaSeleccionada) {
-                        lista = lista.filter(function (c) {
-                            var tiempos = c.tiempos || {};
-                            var refIso = tiempos.fin_carrera_at || tiempos.fin_recorrido_at || c.created_at;
-                            return obtenerClaveFechaLocal(refIso) === fechaSeleccionada;
-                        });
-                    }
-                    if (contadorEl) {
-                        contadorEl.textContent = String(lista.length);
-                    }
-                    renderizarHistorialCarreras(lista, fechaSeleccionada);
-                })
-                .catch(function () {
-                    contenedor.innerHTML = '<div style="color:#f87171; font-size:13px;">Error al consultar el historial.</div>';
-                });
-        }
-
-        function renderizarHistorialCarreras(carreras, fechaSeleccionada) {
-            var contenedor = document.getElementById('lista-historial-carreras');
-            if (!contenedor) return;
-
-            if (!carreras || carreras.length === 0) {
-                var msgVacio = fechaSeleccionada
-                    ? 'No hay carreras completadas para la fecha ' + fechaSeleccionada + '.'
-                    : 'Aún no tienes carreras completadas registradas.';
-                contenedor.innerHTML = '<div style="color:#94a3b8; font-size:13px;">' + msgVacio + '</div>';
-                return;
-            }
-
-            var html = '';
-            carreras.forEach(function (c) {
-                var tiempos = c.tiempos || {};
-                var duracion = formatearDuracionCarrera(tiempos, c.created_at);
-                var fechaRef = formatearFechaCorta(tiempos.fin_carrera_at || tiempos.fin_recorrido_at || c.created_at);
-                var costo = c.precio || '$0.00';
-
-                html +=
-                    '<div class="tarjeta-carrera-historial">' +
-                        '<div class="cabecera-pendiente">' +
-                            '<strong style="color:#34d399;">💰 ' + costo + '</strong>' +
-                            '<span style="font-size:11px; color:#94a3b8;">' + fechaRef + '</span>' +
-                        '</div>' +
-                        '<p style="margin:3px 0;">📍 <strong>De:</strong> ' + (c.origen || 'N/A') + '</p>' +
-                        '<p style="margin:3px 0;">🏁 <strong>A:</strong> ' + (c.destino || 'N/A') + '</p>' +
-                        '<p style="margin:3px 0;">⏱️ <strong>Tiempo:</strong> ' + duracion + ' &nbsp;|&nbsp; 📏 <strong>Dist.:</strong> ' + (c.distancia || 'N/A') + '</p>' +
-                        '<p style="margin:3px 0; font-size:12px; color:#94a3b8;">👤 Cliente: ' + (c.cliente_nombre || 'N/A') + '</p>' +
-                    '</div>';
-            });
-            contenedor.innerHTML = html;
-        }
-
-        function descartarCarreraPendiente(idCarrera) {
-            detenerAlarmaPersistente();
-            var idStr = String(idCarrera);
-            if (carrerasDescartadasIds.indexOf(idStr) === -1) {
-                carrerasDescartadasIds.push(idStr);
-            }
-            cargarDatosConductor();
-        }
-
-        function restaurarCarreraDescartada(idCarrera) {
-            var idStr = String(idCarrera);
-            carrerasDescartadasIds = carrerasDescartadasIds.filter(function (item) {
-                return String(item) !== idStr;
-            });
-            cargarDatosConductor();
-        }
-
-        function alternarDescartadasActivas() {
-            descartadasExpandida = !descartadasExpandida;
-            var listaEl = document.getElementById('lista-descartadas-activas');
-            var iconoEl = document.getElementById('icono-toggle-descartadas');
-            if (listaEl) {
-                if (descartadasExpandida) {
-                    listaEl.classList.remove('hidden');
-                } else {
-                    listaEl.classList.add('hidden');
-                }
-            }
-            if (iconoEl) {
-                iconoEl.textContent = descartadasExpandida ? '▲' : '▼';
-            }
-        }
-
-        function cargarDatosConductor() {
-            var db = getDb();
-            if (!db || !conductorActual) return;
-
-            db.from('carreras')
-                .select('*')
-                .eq('estado', 'pendiente')
-                .order('created_at', { ascending: false })
-                .then(function (resPend) {
-                    if (resPend.error) return;
-                    var rawPendData = resPend.data || [];
-                    var pendData = rawPendData.filter(function (c) {
-                        return carrerasDescartadasIds.indexOf(String(c.id)) === -1;
-                    });
-                    var descartadasActivasData = rawPendData.filter(function (c) {
-                        return carrerasDescartadasIds.indexOf(String(c.id)) !== -1;
-                    });
-
-                    var mapaActual = {};
-                    var nuevasCarreras = [];
-                    for (var i = 0; i < pendData.length; i++) {
-                        var item = pendData[i];
-                        var idKey = String(item.id);
-                        mapaActual[idKey] = true;
-                        if (primeraCargaRealizada && !idsPendientesConocidos[idKey]) {
-                            nuevasCarreras.push(item);
-                        }
-                    }
-
-                    idsPendientesConocidos = mapaActual;
-                    if (!primeraCargaRealizada) {
-                        primeraCargaRealizada = true;
-                    } else if (nuevasCarreras.length > 0) {
-                        iniciarAlarmaPersistente(pendData.length, nuevasCarreras[0]);
-                    } else if (pendData.length === 0) {
-                        detenerAlarmaPersistente();
-                    }
-
-                    renderizarPendientes(pendData);
-                    renderizarDescartadasActivas(descartadasActivasData);
-                })
-                .catch(function () {});
-
-            db.from('carreras')
-                .select('*')
-                .eq('estado', 'asignada')
-                .eq('conductor_asignado', conductorActual)
-                .then(function (resAsig) {
-                    if (resAsig.error) return;
-                    renderizarAsignada(resAsig.data || []);
-                })
-                .catch(function () {});
-
-            if (historialVisible) {
-                cargarHistorialConductor();
-            }
-        }
-
-        function tomarCarrera(idCarrera) {
-            detenerAlarmaPersistente();
-            var idStr = String(idCarrera);
-            carrerasDescartadasIds = carrerasDescartadasIds.filter(function (item) {
-                return String(item) !== idStr;
-            });
-
-            var db = getDb();
-            if (!db) return;
-
-            var payload = {
-                estado: 'asignada',
-                conductor_asignado: conductorActual
-            };
-            if (conductorIdActual) {
-                payload.conductor_id = conductorIdActual;
-            }
-
-            db.from('carreras')
-                .update(payload)
-                .eq('id', idCarrera)
-                .then(function (res) {
-                    if (res.error) {
-                        alert('Error al tomar la carrera: ' + res.error.message);
-                    } else {
-                        cargarDatosConductor();
-                    }
-                });
-        }
-
-        function renderizarAsignada(asignadas) {
-            var seccionAsignada = document.getElementById('seccion-asignada');
-            var contenedor = document.getElementById('carrera-asignada-container');
-
-            if (!asignadas || asignadas.length === 0) {
-                seccionAsignada.classList.add('hidden');
-                contenedor.innerHTML = '';
-                if (timerInterval) clearInterval(timerInterval);
-                return;
-            }
-
-            seccionAsignada.classList.remove('hidden');
-            contenedor.innerHTML = '';
-
-            asignadas.forEach(function (c) {
-                var urlNavegacionBase = 'https://www.google.com/maps/dir/?api=1&origin=' + baseLat + ',' + baseLng + '&destination=' + encodeURIComponent(c.origen) + '&travelmode=driving';
-                var urlNavegacionDestino = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(c.origen) + '&destination=' + encodeURIComponent(c.destino) + '&travelmode=driving';
-
-                var tiempos = c.tiempos || {};
-                var yaLlego = tiempos.llegada_conductor_at != null;
-                var carreraIniciada = tiempos.inicio_carrera_at != null;
-                var recorridoFinalizado = tiempos.fin_recorrido_at != null;
-
-                var contenidoAcciones = '';
-
-                if (!yaLlego) {
-                    contenidoAcciones =
-                        '<a href="' + urlNavegacionBase + '" target="_blank">🧭 Navegar desde Base al Origen</a>' +
-                        '<button type="button" onclick=\'conductorLlego("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>📍 Ya estoy en el lugar</button>';
-                } else if (!carreraIniciada) {
-                    contenidoAcciones =
-                        '<p>⏱️ Tiempo de espera: <strong id="cronometro-conductor">00:00</strong></p>' +
-                        '<button type="button" onclick=\'iniciarCarrera("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>🚀 Iniciar Carrera</button>';
-                } else if (!recorridoFinalizado) {
-                    contenidoAcciones =
-                        '<p>⏱️ Tiempo de viaje: <strong id="cronometro-viaje">00:00</strong></p>' +
-                        '<a href="' + urlNavegacionDestino + '" target="_blank">🗺️ Navegar al destino</a>' +
-                        '<button type="button" onclick=\'finalizarRecorrido("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>📍 Finalizar Recorrido (Llegamos al Destino)</button>';
-                } else {
-                    contenidoAcciones =
-                        '<p><strong>💳 Confirmación de Pago: ' + (c.precio || '$0.00') + '</strong></p>' +
-                        '<button type="button" onclick=\'confirmarPagoYFinalizar("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>✅ Confirmar Pago y Finalizar Servicio</button>';
-                }
-
-                contenedor.innerHTML +=
-                    '<div>' +
-                        '<p><strong>✅ Asignada a ti — ' + (c.precio || '$0.00') + '</strong></p>' +
-                        '<p>👤 Cliente: ' + (c.cliente_nombre || 'N/A') + '</p>' +
-                        '<p>📍 Origen: ' + c.origen + '</p>' +
-                        '<p>🏁 Destino: ' + c.destino + '</p>' +
-                        '<p>Distancia: ' + (c.distancia || 'N/A') + '</p>' +
-                        contenidoAcciones +
-                    '</div>';
-
-                if (yaLlego && !carreraIniciada) {
-                    iniciarCronometro(tiempos.llegada_conductor_at, 'cronometro-conductor');
-                } else if (carreraIniciada && !recorridoFinalizado) {
-                    iniciarCronometro(tiempos.inicio_carrera_at, 'cronometro-viaje');
-                }
-            });
-        }
-
-        function actualizarTiemposCarrera(idCarrera, tiemposActuales, campoNuevo, finalizarCompleta) {
-            var db = getDb();
-            if (!db) return;
-
-            var ahora = new Date().toISOString();
-            var nuevosTiempos = Object.assign({}, (typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}));
-            nuevosTiempos[campoNuevo] = ahora;
-
-            var updateData = { tiempos: nuevosTiempos };
-            if (finalizarCompleta) {
-                updateData.estado = 'completada';
-            }
-
-            db.from('carreras').update(updateData).eq('id', idCarrera).then(function (res) {
-                if (res.error) {
-                    alert('Error al actualizar: ' + res.error.message);
-                } else if (finalizarCompleta) {
-                    alert('¡Servicio finalizado y cobro confirmado con éxito!');
-                    window.location.replace('./index.html');
-                } else {
-                    cargarDatosConductor();
-                }
-            });
-        }
-
-        function conductorLlego(idCarrera, tiemposActuales) {
-            actualizarTiemposCarrera(idCarrera, tiemposActuales, 'llegada_conductor_at', false);
-        }
-
-        function iniciarCarrera(idCarrera, tiemposActuales) {
-            if (timerInterval) clearInterval(timerInterval);
-            actualizarTiemposCarrera(idCarrera, tiemposActuales, 'inicio_carrera_at', false);
-        }
-
-        function finalizarRecorrido(idCarrera, tiemposActuales) {
-            if (timerInterval) clearInterval(timerInterval);
-            actualizarTiemposCarrera(idCarrera, tiemposActuales, 'fin_recorrido_at', false);
-        }
-
-        function confirmarPagoYFinalizar(idCarrera, tiemposActuales) {
-            if (!confirm('¿Confirmas que el pasajero pagó y deseas finalizar el servicio por completo?')) return;
-            actualizarTiemposCarrera(idCarrera, tiemposActuales, 'fin_carrera_at', true);
-        }
-
-        function iniciarCronometro(isoStringInicio, elementoId) {
-            if (timerInterval) clearInterval(timerInterval);
-            var tiempoInicio = new Date(isoStringInicio).getTime();
-            timerInterval = setInterval(function () {
-                var ahora = new Date().getTime();
-                var diferenciaSecs = Math.floor((ahora - tiempoInicio) / 1000);
-                if (diferenciaSecs >= 0) {
-                    var mins = Math.floor(diferenciaSecs / 60).toString().padStart(2, '0');
-                    var secs = (diferenciaSecs % 60).toString().padStart(2, '0');
-                    var el = document.getElementById(elementoId);
-                    if (el) el.textContent = mins + ':' + secs;
-                }
-            }, 1000);
-        }
-
-        function renderizarPendientes(carreras) {
-            var contenedor = document.getElementById('lista-carreras');
-            contenedor.innerHTML = '';
-
-            if (!carreras || carreras.length === 0) {
-                contenedor.innerHTML = '<div>No hay carreras pendientes en este momento.</div>';
-                return;
-            }
-
-            carreras.forEach(function (c) {
-                contenedor.innerHTML +=
-                    '<div class="tarjeta-carrera-pendiente">' +
-                        '<div class="cabecera-pendiente">' +
-                            '<p style="margin:0;"><strong>Pendiente — ' + (c.precio || '$0.00') + '</strong></p>' +
-                            '<button type="button" class="btn-descartar-mini" onclick="descartarCarreraPendiente(\'' + c.id + '\')">Descartar</button>' +
-                        '</div>' +
-                        '<p>👤 Cliente: ' + (c.cliente_nombre || 'N/A') + '</p>' +
-                        '<p>📍 Origen: ' + c.origen + '</p>' +
-                        '<p>🏁 Destino: ' + c.destino + '</p>' +
-                        '<p>Distancia: ' + (c.distancia || 'N/A') + '</p>' +
-                        '<button type="button" onclick="tomarCarrera(\'' + c.id + '\')" style="width:100%; background-color:#9333ea;">🙋‍♂️ Tomar esta Carrera</button>' +
-                    '</div>';
-            });
-        }
-
-        function renderizarDescartadasActivas(carrerasDescartadas) {
-            var contadorEl = document.getElementById('contador-descartadas-activas');
-            var contenedor = document.getElementById('lista-descartadas-activas');
-            var lista = carrerasDescartadas || [];
-
-            if (contadorEl) {
-                contadorEl.textContent = String(lista.length);
-            }
-            if (!contenedor) return;
-
-            if (lista.length === 0) {
-                contenedor.innerHTML = '<div style="margin-top:8px; color:#94a3b8; font-size:13px;">No hay carreras descartadas activas.</div>';
-                return;
-            }
-
-            var html = '<div style="margin-top:8px;">';
-            lista.forEach(function (c) {
-                html +=
-                    '<div class="tarjeta-carrera-descartada">' +
-                        '<p style="margin:0 0 4px 0;"><strong>Descartada Activa — ' + (c.precio || '$0.00') + '</strong></p>' +
-                        '<p>👤 Cliente: ' + (c.cliente_nombre || 'N/A') + '</p>' +
-                        '<p>📍 Origen: ' + c.origen + '</p>' +
-                        '<p>🏁 Destino: ' + c.destino + '</p>' +
-                        '<p>Distancia: ' + (c.distancia || 'N/A') + '</p>' +
-                        '<div class="acciones-descartada">' +
-                            '<button type="button" onclick="tomarCarrera(\'' + c.id + '\')" style="flex:1; background-color:#9333ea;">🙋‍♂️ Tomar esta Carrera</button>' +
-                            '<button type="button" class="btn-restaurar-mini" onclick="restaurarCarreraDescartada(\'' + c.id + '\')">Restaurar</button>' +
-                        '</div>' +
-                    '</div>';
-            });
-            html += '</div>';
-            contenedor.innerHTML = html;
-        }
-
-        function suscripcionRealtime() {
-            var db = getDb();
-            if (db && window.supabaseIsRealtime && typeof db.channel === 'function') {
-                db.channel('cambios-carreras-conductor-actualizado')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'carreras' }, function () {
-                        cargarDatosConductor();
-                    })
-                    .subscribe();
-            }
+        function cerrarSesionConductor() {
+            sessionStorage.removeItem('conductor_activo');
+            document.getElementById('panel-conductor').classList.add('hidden');
+            document.getElementById('form-login-conductor').reset();
+            document.getElementById('form-login-conductor').parentElement.classList.remove('hidden');
         }
     </script>
 </body>

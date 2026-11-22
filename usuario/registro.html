@@ -112,12 +112,12 @@
 
             <div style="margin-bottom:8px;">
                 <label for="reg-nombre" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Nombre Completo</label>
-                <input type="text" id="reg-nombre" name="nombre_completo_cliente" class="input-oscuro" placeholder="Ej. Ramiro Vidales" autocomplete="off" oninput="actualizarVistaUsuario()" onchange="actualizarVistaUsuario()">
+                <input type="text" id="reg-nombre" name="nombre_completo_cliente" class="input-oscuro" placeholder="Ej. Laura Mendoza" autocomplete="off" oninput="actualizarVistaUsuario()" onchange="actualizarVistaUsuario()">
             </div>
 
             <div style="margin-bottom:8px;">
                 <label for="reg-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#34d399; margin-bottom:4px;">Usuario Asignado</label>
-                <input type="text" id="reg-usuario" name="nuevo_usuario_envia" class="input-oscuro campo-usuario-auto" placeholder="Se asigna automáticamente al escribir el nombre" autocomplete="off" autocapitalize="none">
+                <input type="text" id="reg-usuario" name="nuevo_usuario_envia" class="input-oscuro campo-usuario-auto" placeholder="Ej. lmendoza (automático)" autocomplete="off" autocapitalize="none">
                 <p id="reg-usuario-aviso" style="font-size:11px; color:#94a3b8; margin:4px 0 0 0;">Generado automáticamente a partir de tu nombre completo.</p>
             </div>
 
@@ -128,7 +128,7 @@
 
             <div style="margin-bottom:8px;">
                 <label for="reg-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
-                <input type="password" id="reg-clave" name="nueva_clave_cliente" class="input-oscuro" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
+                <input type="password" id="reg-clave" name="nueva_clave_cliente" class="input-oscuro" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
             </div>
 
             <div id="reg-msg" style="font-size:12px; margin-bottom:8px;" class="hidden"></div>
@@ -276,8 +276,8 @@
                 mostrarMensajeReg('Completa nombre, usuario, teléfono y clave de acceso.', true);
                 return;
             }
-            if (clave.length < 4) {
-                mostrarMensajeReg('La clave debe tener al menos 4 caracteres.', true);
+            if (clave.length < 6) {
+                mostrarMensajeReg('La clave debe tener al menos 6 caracteres.', true);
                 return;
             }
             if (!db) {

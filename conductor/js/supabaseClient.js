@@ -216,8 +216,11 @@
     }
 
     var restClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY, sdkClient);
+    var resolvedClient = sdkClient || restClient;
 
-    window.supabaseClient = sdkClient || restClient;
+    window.supabaseClient = resolvedClient;
+    window.SUPABASE_URL = SUPABASE_URL;
+    window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 
     window.EnviaAuth = {
         generarUsuarioDesdeNombre: function (nombreTexto) {
@@ -251,3 +254,5 @@
         }
     };
 })(window);
+
+var supabaseClient = window.supabaseClient;

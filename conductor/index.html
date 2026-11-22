@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Acceso y Registro de Conductor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="./js/supabaseClient.js"></script>
     <script>
@@ -23,57 +23,75 @@
     <style>
         input, select, textarea { font-size: 16px !important; }
         @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
+        .barra-opciones-acceso {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .btn-opcion-acceso {
+            flex: 1;
+            text-align: center;
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            display: inline-block;
+        }
+        .btn-opcion-activa {
+            background-color: #9333ea;
+            color: #ffffff;
+        }
+        .btn-opcion-secundaria {
+            background-color: #1e293b;
+            color: #34d399;
+            border: 1px solid #10b981;
+        }
+        .caja-acceso-chofer {
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px;
+            background-color: #0f172a;
+        }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6 flex items-center justify-center">
-    <div class="w-full max-w-md space-y-5">
-        <header class="flex justify-between items-center border-b border-[#222222] pb-4">
-            <div>
-                <h1 class="text-xl font-extrabold text-emerald-500 tracking-tight">EN-VIA - Conductores</h1>
-                <p class="text-slate-400 text-xs">Inicia sesión o regístrate como nuevo conductor</p>
+<body>
+    <div id="login-container" class="max-w-xl">
+        <header>
+            <h1>EN-VIA - Portal de Chofer</h1>
+            <p>Inicia sesión con tu usuario y clave o registra un nuevo conductor</p>
+            <div style="margin-top: 8px;">
+                <a href="../index.html">← Volver al Menú Principal</a>
             </div>
-            <a href="../index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
-                ← Menú
-            </a>
         </header>
 
-        <!-- Selector visible de Inicio de Sesión / Registro -->
-        <div class="grid grid-cols-2 gap-2 bg-[#111111] border border-[#222222] p-1.5 rounded-2xl">
-            <button type="button" id="tab-login" onclick="enfocarLogin()" class="py-2 bg-purple-600 text-white font-bold text-xs rounded-xl transition cursor-pointer">
-                Iniciar Sesión
-            </button>
-            <a href="./registro.html" id="tab-registro" class="py-2 bg-[#161616] hover:bg-[#222222] text-emerald-400 font-bold text-xs rounded-xl transition text-center flex items-center justify-center">
-                Registrarse
-            </a>
+        <div class="barra-opciones-acceso">
+            <button type="button" class="btn-opcion-acceso btn-opcion-activa" onclick="enfocarLogin()">Iniciar Sesión</button>
+            <a href="./registro.html" class="btn-opcion-acceso btn-opcion-secundaria">Registrarse</a>
         </div>
 
-        <!-- Formulario de Inicio de Sesión -->
-        <form id="form-login-conductor" onsubmit="ingresarAlPortal(event)" class="bg-[#111111] border border-[#222222] p-4 sm:p-6 rounded-2xl shadow-xl space-y-4">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-purple-400">Iniciar Sesión</h2>
+        <div id="login-form-box" class="caja-acceso-chofer">
+            <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Iniciar Sesión</h2>
 
-            <div>
-                <label for="login-nombre" class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Usuario del Conductor *</label>
-                <input type="text" id="login-nombre" required placeholder="Ej. rdiaz" autocomplete="username" autocapitalize="none" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-purple-500 rounded-xl px-3 py-2 text-white outline-none">
+            <div style="margin-bottom:8px;">
+                <label for="login-nombre" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Usuario del Conductor</label>
+                <input type="text" id="login-nombre" placeholder="Ej. rdiaz" autocomplete="username" autocapitalize="none" style="width:100%;">
             </div>
 
-            <div>
-                <label for="login-clave" class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Clave de Acceso *</label>
-                <input type="password" id="login-clave" required placeholder="Tu clave de acceso" autocomplete="current-password" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-purple-500 rounded-xl px-3 py-2 text-white outline-none">
+            <div style="margin-bottom:8px;">
+                <label for="login-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
+                <input type="password" id="login-clave" placeholder="Tu clave de acceso" autocomplete="current-password" style="width:100%;">
             </div>
 
-            <div id="login-error" class="hidden text-xs rounded-xl p-3 border bg-red-500/10 text-red-300 border-red-500/30"></div>
+            <div id="login-error" style="color:#f87171; font-size:12px; margin-bottom:8px;" class="hidden"></div>
 
-            <button type="submit" id="btn-entrar-portal" class="w-full py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                Entrar al Portal
-            </button>
+            <button type="button" id="btn-entrar-portal" onclick="ingresarAlPortal()" style="width:100%; background-color:#9333ea; margin-bottom:10px;">Entrar al Portal</button>
 
-            <div class="pt-3 border-t border-[#222222] text-center space-y-2">
-                <p class="text-xs text-slate-400">¿No tienes cuenta todavía?</p>
-                <a href="./registro.html" class="inline-block w-full py-2.5 bg-[#161616] hover:bg-[#222222] border border-emerald-500/40 text-emerald-400 font-bold text-xs rounded-xl transition">
-                    Ir a Registro de Conductor
-                </a>
+            <div style="border-top:1px solid #1e293b; padding-top:10px; text-align:center;">
+                <p style="font-size:12px; color:#94a3b8; margin:0 0 8px 0;">¿No tienes cuenta todavía?</p>
+                <a href="./registro.html" class="btn-opcion-acceso btn-opcion-secundaria" style="width:100%; box-sizing:border-box;">Ir a Registro de Conductor</a>
             </div>
-        </form>
+        </div>
     </div>
 
     <script>
@@ -217,8 +235,7 @@
             window.location.replace('./app.html');
         }
 
-        async function ingresarAlPortal(event) {
-            if (event) event.preventDefault();
+        async function ingresarAlPortal() {
             limpiarErrorLogin();
 
             var btn = document.getElementById('btn-entrar-portal');
@@ -271,6 +288,16 @@
                 }
             }
         }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                var loginBox = document.getElementById('login-container');
+                if (loginBox && !loginBox.classList.contains('hidden')) {
+                    e.preventDefault();
+                    ingresarAlPortal();
+                }
+            }
+        });
     </script>
 </body>
 </html>

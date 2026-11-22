@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EN-VIA - Acceso y Registro de Conductor</title>
+    <title>EN-VIA - Portal de Chofer</title>
     <link rel="stylesheet" href="../css/styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="./js/supabaseClient.js"></script>
@@ -23,6 +23,21 @@
     <style>
         input, select, textarea { font-size: 16px !important; }
         @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .subtitulo-portal-chofer {
+            display: block;
+            color: #e2e8f0;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
         .btn-opcion-registro {
             display: inline-block;
             width: 100%;
@@ -48,11 +63,11 @@
 <body>
     <div id="login-container" class="max-w-xl">
         <header>
-            <h1>EN-VIA - Portal de Chofer</h1>
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-portal-chofer">Portal de Chofer</span>
+            </h1>
             <p>Inicia sesión con tu usuario y clave o registra un nuevo conductor</p>
-            <div style="margin-top: 8px;">
-                <a href="../index.html">← Volver al Menú Principal</a>
-            </div>
         </header>
 
         <div id="login-form-box" class="caja-acceso-chofer">

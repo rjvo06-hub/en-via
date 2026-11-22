@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EN-VIA - Portal de Usuario</title>
+    <title>EN-VIA - Registro de Usuario</title>
     <link rel="stylesheet" href="../css/styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script>
@@ -31,7 +31,7 @@
         input, select, textarea { font-size: 16px !important; }
         @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
 
-        .encabezado-cliente {
+        .encabezado-registro {
             border-bottom: 1px solid #1e293b;
             padding-bottom: 12px;
             margin-bottom: 14px;
@@ -45,14 +45,14 @@
             line-height: 1.1;
             margin: 0;
         }
-        .subtitulo-portal-cliente {
+        .subtitulo-registro {
             display: block;
             color: #f8fafc;
             font-size: 1rem;
             font-weight: 700;
             margin-top: 2px;
         }
-        .caja-acceso-cliente {
+        .tarjeta-registro {
             border: 1px solid #334155;
             border-radius: 8px;
             padding: 14px;
@@ -67,6 +67,10 @@
             border-radius: 6px !important;
             padding: 8px 10px !important;
         }
+        .campo-usuario-auto {
+            color: #34d399 !important;
+            font-weight: 700 !important;
+        }
         .btn-morado-principal {
             width: 100%;
             background-color: #9333ea !important;
@@ -76,7 +80,7 @@
             padding: 10px 14px !important;
             cursor: pointer;
         }
-        .btn-opcion-registro {
+        .btn-volver-login {
             display: inline-block;
             width: 100%;
             box-sizing: border-box;
@@ -89,67 +93,142 @@
             background-color: #1e293b;
             color: #34d399;
             border: 1px solid #10b981;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div id="login-container" class="max-w-xl">
-        <header class="encabezado-cliente">
+    <div class="max-w-xl">
+        <header class="encabezado-registro">
             <h1 style="margin:0;">
                 <span class="titulo-marca-envia">EN-VIA</span>
-                <span class="subtitulo-portal-cliente">Portal de Usuario</span>
+                <span class="subtitulo-registro">Registro de Usuario</span>
             </h1>
-            <p style="color:#94a3b8; font-size:12px; margin:6px 0 0 0;">Inicia sesión con tu usuario y clave o regístrate para solicitar carrera</p>
+            <p style="color:#94a3b8; font-size:12px; margin:6px 0 0 0;">Crea tu cuenta para solicitar carreras</p>
         </header>
 
-        <div id="login-form-box" class="caja-acceso-cliente">
-            <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Iniciar Sesión</h2>
+        <div class="tarjeta-registro">
+            <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Datos del Usuario</h2>
 
             <div style="margin-bottom:8px;">
-                <label for="login-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Usuario o Nombre</label>
-                <input type="text" id="login-usuario" name="usuario_acceso_envia" class="input-oscuro" placeholder="Ej. lmendoza o Laura Mendoza" autocomplete="off" autocapitalize="none">
+                <label for="reg-nombre" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Nombre Completo</label>
+                <input type="text" id="reg-nombre" name="nombre_completo_cliente" class="input-oscuro" placeholder="Ej. Laura Mendoza" autocomplete="off" oninput="actualizarVistaUsuario()" onchange="actualizarVistaUsuario()">
             </div>
 
             <div style="margin-bottom:8px;">
-                <label for="login-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
-                <input type="password" id="login-clave" name="clave_acceso_envia" class="input-oscuro" placeholder="Tu clave de acceso" autocomplete="new-password">
+                <label for="reg-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#34d399; margin-bottom:4px;">Usuario Asignado</label>
+                <input type="text" id="reg-usuario" name="nuevo_usuario_envia" class="input-oscuro campo-usuario-auto" placeholder="Ej. lmendoza (automático)" autocomplete="off" autocapitalize="none">
+                <p id="reg-usuario-aviso" style="font-size:11px; color:#94a3b8; margin:4px 0 0 0;">Generado automáticamente a partir de tu nombre completo.</p>
             </div>
 
-            <div id="login-error" style="color:#f87171; font-size:12px; margin-bottom:8px;" class="hidden"></div>
-
-            <button type="button" id="btn-entrar-portal" onclick="ingresarUsuario()" class="btn-morado-principal" style="margin-bottom:10px;">Entrar al Portal</button>
-
-            <div style="border-top:1px solid #1e293b; padding-top:10px; text-align:center;">
-                <p style="font-size:12px; color:#94a3b8; margin:0 0 8px 0;">¿No tienes cuenta todavía?</p>
-                <a href="./registro.html" class="btn-opcion-registro">Ir a Registro de Usuario</a>
+            <div style="margin-bottom:8px;">
+                <label for="reg-telefono" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Teléfono</label>
+                <input type="text" id="reg-telefono" name="telefono_cliente" class="input-oscuro" placeholder="Ej. 04141234567" autocomplete="off">
             </div>
+
+            <div style="margin-bottom:8px;">
+                <label for="reg-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
+                <input type="password" id="reg-clave" name="nueva_clave_cliente" class="input-oscuro" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+            </div>
+
+            <div id="reg-msg" style="font-size:12px; margin-bottom:8px;" class="hidden"></div>
+
+            <button type="button" id="btn-registrar-usuario" onclick="registrarUsuario()" class="btn-morado-principal">Registrarme</button>
+
+            <a href="./index.html" class="btn-volver-login">← Volver a Iniciar Sesión</a>
         </div>
     </div>
 
     <script>
-        function reiniciarCamposLoginVacios() {
-            var userEl = document.getElementById('login-usuario');
-            var passEl = document.getElementById('login-clave');
-            var usuarioInicial = '';
-            var claveInicial = '';
+        var timerDisponibilidadUsuario = null;
 
-            if (userEl) {
-                userEl.value = usuarioInicial;
-                if (userEl.value !== '') userEl.value = '';
-            }
-            if (passEl) {
-                passEl.value = claveInicial;
-                if (passEl.value !== '') passEl.value = '';
-            }
-            limpiarErrorLogin();
+        function generarUsuarioBase(nombre) {
+            var limpio = String(nombre || '').trim().toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            var partes = limpio.split(/\s+/).filter(Boolean);
+            if (partes.length === 0) return '';
+            if (partes.length === 1) return partes[0].replace(/[^a-z0-9]/g, '');
+            return (partes[0].charAt(0) + partes[partes.length - 1]).replace(/[^a-z0-9]/g, '');
         }
 
-        document.addEventListener('DOMContentLoaded', reiniciarCamposLoginVacios);
-        window.addEventListener('load', function () {
-            reiniciarCamposLoginVacios();
-            setTimeout(reiniciarCamposLoginVacios, 120);
+        async function resolverUsuarioDisponible(baseUsuario) {
+            if (!baseUsuario) return '';
+            var db = getDb();
+            if (!db) return baseUsuario;
+
+            try {
+                var existente = await db.from('clientes').select('id').ilike('usuario', baseUsuario).limit(1);
+                if (!existente.error && existente.data && existente.data.length > 0) {
+                    var candidato = '';
+                    for (var i = 0; i < 5; i++) {
+                        candidato = baseUsuario + Math.floor(10 + Math.random() * 89);
+                        var check = await db.from('clientes').select('id').ilike('usuario', candidato).limit(1);
+                        if (!check.error && (!check.data || check.data.length === 0)) {
+                            return candidato;
+                        }
+                    }
+                }
+            } catch (e) {}
+            return baseUsuario;
+        }
+
+        function actualizarVistaUsuario() {
+            var nombre = document.getElementById('reg-nombre').value;
+            var userInput = document.getElementById('reg-usuario');
+            var aviso = document.getElementById('reg-usuario-aviso');
+
+            if (userInput.dataset.manual === '1') return;
+
+            var base = generarUsuarioBase(nombre);
+            userInput.value = base;
+            aviso.textContent = base
+                ? 'Usuario asignado: ' + base
+                : 'Generado automáticamente a partir de tu nombre completo.';
+
+            clearTimeout(timerDisponibilidadUsuario);
+            if (!base) return;
+
+            timerDisponibilidadUsuario = setTimeout(async function () {
+                if (userInput.dataset.manual === '1') return;
+                var disponible = await resolverUsuarioDisponible(base);
+                if (userInput.dataset.manual === '1') return;
+                userInput.value = disponible;
+                aviso.textContent = disponible !== base
+                    ? 'El usuario "' + base + '" ya existía; se asignó: ' + disponible
+                    : 'Usuario asignado: ' + disponible;
+            }, 250);
+        }
+
+        var campoUsuarioEl = document.getElementById('reg-usuario');
+        campoUsuarioEl.addEventListener('keydown', function () {
+            this.dataset.manual = '1';
         });
-        window.addEventListener('pageshow', reiniciarCamposLoginVacios);
+        campoUsuarioEl.addEventListener('input', function () {
+            var limpio = this.value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+            this.value = limpio;
+            var aviso = document.getElementById('reg-usuario-aviso');
+            if (!limpio) {
+                this.dataset.manual = '';
+                actualizarVistaUsuario();
+                return;
+            }
+            if (this.dataset.manual === '1') {
+                aviso.textContent = 'Usuario personalizado: ' + limpio;
+            }
+        });
+
+        window.addEventListener('load', function () {
+            var userInput = document.getElementById('reg-usuario');
+            var nombreVal = document.getElementById('reg-nombre').value.trim();
+            if (!nombreVal) {
+                userInput.value = '';
+                userInput.dataset.manual = '';
+                document.getElementById('reg-usuario-aviso').textContent = 'Generado automáticamente a partir de tu nombre completo.';
+            } else {
+                userInput.dataset.manual = '';
+                actualizarVistaUsuario();
+            }
+        });
 
         function hashFallbackSimple(texto) {
             var h1 = 0xdeadbeef ^ texto.length;
@@ -177,156 +256,70 @@
             return hashFallbackSimple(clave);
         }
 
-        function normalizarUsuario(valor) {
-            if (!valor) return '';
-            var limpio = String(valor).replace(/^\s+|\s+$/g, '').toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            if (limpio.indexOf(' ') !== -1) {
-                var partes = limpio.split(/\s+/).filter(Boolean);
-                if (partes.length >= 2) {
-                    return (partes[0].charAt(0) + partes[partes.length - 1]).replace(/[^a-z0-9]/g, '');
-                }
-            }
-            return limpio.replace(/[^a-z0-9._-]/g, '');
+        function mostrarMensajeReg(texto, esError) {
+            var el = document.getElementById('reg-msg');
+            el.textContent = texto;
+            el.style.color = esError ? '#f87171' : '#34d399';
+            el.classList.remove('hidden');
         }
 
-        function mostrarErrorLogin(msg) {
-            var errEl = document.getElementById('login-error');
-            if (errEl) {
-                errEl.textContent = msg;
-                errEl.classList.remove('hidden');
-            }
-        }
-
-        function limpiarErrorLogin() {
-            var errEl = document.getElementById('login-error');
-            if (errEl) {
-                errEl.textContent = '';
-                errEl.classList.add('hidden');
-            }
-        }
-
-        function irAAppUsuario(cliente) {
-            sessionStorage.setItem('cliente_en_via', cliente.nombre);
-            sessionStorage.setItem('cliente_id_en_via', cliente.id);
-            if (cliente.usuario) {
-                sessionStorage.setItem('cliente_usuario_en_via', cliente.usuario);
-            }
-            window.location.replace('./app.html');
-        }
-
-        async function buscarClienteParaLogin(db, entradaRaw) {
-            var usuarioNorm = normalizarUsuario(entradaRaw);
-            var nombreLimpio = String(entradaRaw || '').trim();
-
-            if (db && typeof db.from === 'function') {
-                if (usuarioNorm) {
-                    var resUser = await db.from('clientes')
-                        .select('*')
-                        .ilike('usuario', usuarioNorm)
-                        .limit(1);
-                    if (!resUser.error && resUser.data && resUser.data.length > 0) {
-                        return resUser.data[0];
-                    }
-                }
-                if (nombreLimpio) {
-                    var resNom = await db.from('clientes')
-                        .select('*')
-                        .ilike('nombre', nombreLimpio)
-                        .limit(1);
-                    if (!resNom.error && resNom.data && resNom.data.length > 0) {
-                        return resNom.data[0];
-                    }
-                }
-            }
-
-            var baseRest = SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/clientes';
-            var filtro = usuarioNorm
-                ? ('?select=*&usuario=ilike.' + encodeURIComponent(usuarioNorm) + '&limit=1')
-                : ('?select=*&nombre=ilike.' + encodeURIComponent(nombreLimpio) + '&limit=1');
-            var resp = await window.fetch(baseRest + filtro, {
-                method: 'GET',
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (resp.ok) {
-                var rows = await resp.json().catch(function () { return []; });
-                if (Array.isArray(rows) && rows.length > 0) return rows[0];
-            }
-            return null;
-        }
-
-        async function ingresarUsuario() {
-            limpiarErrorLogin();
-            var btn = document.getElementById('btn-entrar-portal');
-            var entradaRaw = (document.getElementById('login-usuario').value || '').trim();
-            var claveInput = document.getElementById('login-clave').value || '';
+        async function registrarUsuario() {
+            var btn = document.getElementById('btn-registrar-usuario');
+            var nombre = document.getElementById('reg-nombre').value.trim();
+            var userInput = document.getElementById('reg-usuario');
+            var usuario = (userInput.value.trim() || generarUsuarioBase(nombre)).toLowerCase();
+            var telefono = document.getElementById('reg-telefono').value.trim();
+            var clave = document.getElementById('reg-clave').value || '';
             var db = getDb();
 
-            if (entradaRaw === '' && claveInput === '') {
-                mostrarErrorLogin('Los campos de usuario y clave están vacíos.');
+            if (!nombre || !usuario || !telefono || !clave) {
+                mostrarMensajeReg('Completa nombre, usuario, teléfono y clave de acceso.', true);
                 return;
             }
-            if (entradaRaw === '') {
-                mostrarErrorLogin('El campo de usuario está vacío.');
+            if (clave.length < 6) {
+                mostrarMensajeReg('La clave debe tener al menos 6 caracteres.', true);
                 return;
             }
-            if (claveInput === '') {
-                mostrarErrorLogin('El campo de clave está vacío.');
+            if (!db) {
+                mostrarMensajeReg('No hay conexión disponible con Supabase.', true);
                 return;
             }
 
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = 'Verificando...';
-            }
+            btn.disabled = true;
+            btn.textContent = 'Registrando...';
 
             try {
-                var cli = await buscarClienteParaLogin(db, entradaRaw);
-                if (!cli) {
-                    mostrarErrorLogin('Usuario o clave incorrectos.');
+                if (userInput.dataset.manual !== '1') {
+                    usuario = await resolverUsuarioDisponible(usuario);
+                    userInput.value = usuario;
+                }
+
+                var claveHash = await generarHashClave(clave);
+                var payload = {
+                    nombre: nombre,
+                    usuario: usuario,
+                    telefono: telefono,
+                    clave_hash: claveHash,
+                    activo: true
+                };
+
+                var res = await db.from('clientes').insert([payload]).select().maybeSingle();
+                if (res.error) {
+                    mostrarMensajeReg('Error al registrar: ' + res.error.message, true);
                     return;
                 }
 
-                var hashSha = await generarHashClave(claveInput);
-                var hashSimple = hashFallbackSimple(claveInput);
-                var guardado = (cli.clave_hash || '').trim();
-                var coincide = guardado !== '' && (
-                    guardado.toLowerCase() === hashSha.toLowerCase() ||
-                    guardado === hashSimple ||
-                    guardado === claveInput
-                );
-
-                if (!coincide) {
-                    mostrarErrorLogin('Usuario o clave incorrectos.');
-                    return;
-                }
-
-                if (cli.activo !== true) {
-                    mostrarErrorLogin('Tu cuenta de usuario aún no está activa.');
-                    return;
-                }
-
-                irAAppUsuario(cli);
+                mostrarMensajeReg('¡Registro completado! Tu usuario asignado es: ' + usuario + '. Redirigiendo...', false);
+                setTimeout(function () {
+                    window.location.replace('./index.html');
+                }, 1200);
             } catch (e) {
-                mostrarErrorLogin('Error al verificar tus credenciales.');
+                mostrarMensajeReg('No se pudo completar el registro.', true);
             } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = 'Entrar al Portal';
-                }
+                btn.disabled = false;
+                btn.textContent = 'Registrarme';
             }
         }
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                ingresarUsuario();
-            }
-        });
     </script>
 </body>
 </html>

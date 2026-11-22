@@ -107,12 +107,12 @@
 
             <div style="margin-bottom:8px;">
                 <label for="login-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Usuario o Nombre</label>
-                <input type="text" id="login-usuario" class="input-oscuro" placeholder="Ej. mperez o María Pérez" autocomplete="username" autocapitalize="none">
+                <input type="text" id="login-usuario" name="usuario_acceso_envia" class="input-oscuro" placeholder="Ej. lmendoza o Laura Mendoza" autocomplete="off" autocapitalize="none">
             </div>
 
             <div style="margin-bottom:8px;">
                 <label for="login-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
-                <input type="password" id="login-clave" class="input-oscuro" placeholder="Tu clave de acceso" autocomplete="current-password">
+                <input type="password" id="login-clave" name="clave_acceso_envia" class="input-oscuro" placeholder="Tu clave de acceso" autocomplete="new-password">
             </div>
 
             <div id="login-error" style="color:#f87171; font-size:12px; margin-bottom:8px;" class="hidden"></div>
@@ -127,6 +127,30 @@
     </div>
 
     <script>
+        function reiniciarCamposLoginVacios() {
+            var userEl = document.getElementById('login-usuario');
+            var passEl = document.getElementById('login-clave');
+            var usuarioInicial = '';
+            var claveInicial = '';
+
+            if (userEl) {
+                userEl.value = usuarioInicial;
+                if (userEl.value !== '') userEl.value = '';
+            }
+            if (passEl) {
+                passEl.value = claveInicial;
+                if (passEl.value !== '') passEl.value = '';
+            }
+            limpiarErrorLogin();
+        }
+
+        document.addEventListener('DOMContentLoaded', reiniciarCamposLoginVacios);
+        window.addEventListener('load', function () {
+            reiniciarCamposLoginVacios();
+            setTimeout(reiniciarCamposLoginVacios, 120);
+        });
+        window.addEventListener('pageshow', reiniciarCamposLoginVacios);
+
         function hashFallbackSimple(texto) {
             var h1 = 0xdeadbeef ^ texto.length;
             var h2 = 0x41c6ce57 ^ texto.length;
@@ -238,12 +262,20 @@
         async function ingresarUsuario() {
             limpiarErrorLogin();
             var btn = document.getElementById('btn-entrar-portal');
-            var entradaRaw = document.getElementById('login-usuario').value || '';
+            var entradaRaw = (document.getElementById('login-usuario').value || '').trim();
             var claveInput = document.getElementById('login-clave').value || '';
             var db = getDb();
 
-            if (!entradaRaw.trim() || !claveInput) {
-                mostrarErrorLogin('Ingresa tu usuario y clave de acceso.');
+            if (entradaRaw === '' && claveInput === '') {
+                mostrarErrorLogin('Los campos de usuario y clave están vacíos.');
+                return;
+            }
+            if (entradaRaw === '') {
+                mostrarErrorLogin('El campo de usuario está vacío.');
+                return;
+            }
+            if (claveInput === '') {
+                mostrarErrorLogin('El campo de clave está vacío.');
                 return;
             }
 

@@ -4,77 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Registro de Conductor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="./js/supabaseClient.js"></script>
     <style>
         input, select, textarea { font-size: 16px !important; }
         @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
+        .caja-registro-chofer {
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px;
+            background-color: #0f172a;
+            margin-bottom: 12px;
+        }
+        .campo-grupo-registro {
+            margin-bottom: 10px;
+        }
+        .etiqueta-campo-registro {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .mensaje-exito-registro {
+            color: #34d399;
+            border: 1px solid #10b981;
+            background-color: #064e3b;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        .mensaje-error-registro {
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+            background-color: #451a1a;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6">
-
-    <div class="max-w-2xl mx-auto space-y-6">
-        <header class="flex justify-between items-center border-b border-[#222222] pb-4">
-            <div>
-                <h1 class="text-xl font-extrabold text-emerald-500 tracking-tight">EN-VIA - Registro de Conductor</h1>
-                <p class="text-slate-400 text-xs">Completa tus datos de acceso, contacto y cobro</p>
+<body>
+    <div id="registro-container" class="max-w-2xl">
+        <header>
+            <h1>EN-VIA - Registro de Conductor</h1>
+            <p>Completa tus datos de acceso, contacto y cobro</p>
+            <div style="margin-top: 8px;">
+                <a href="./index.html">← Ir al Acceso</a>
             </div>
-            <a href="./index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
-                ← Ir al Acceso
-            </a>
         </header>
 
-        <form id="form-registro-conductor" onsubmit="registrarConductor(event)" class="bg-[#111111] border border-[#222222] p-4 sm:p-6 rounded-2xl shadow-xl space-y-5">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Datos Personales y Acceso</h2>
+        <form id="form-registro-conductor" onsubmit="registrarConductor(event)" class="caja-registro-chofer">
+            <h2 style="color:#34d399; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Personales y Acceso</h2>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Nombre Completo *</label>
-                    <input type="text" id="nombre" required placeholder="Ej. Carlos Pérez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+            <div class="campo-grupo-registro">
+                <label for="nombre" class="etiqueta-campo-registro">Nombre Completo *</label>
+                <input type="text" id="nombre" required placeholder="Ej. Carlos Pérez" style="width:100%;">
+            </div>
+
+            <div class="campo-grupo-registro">
+                <label for="telefono" class="etiqueta-campo-registro">Teléfono Personal *</label>
+                <input type="text" id="telefono" required placeholder="Ej. 0414-1234567" style="width:100%;">
+            </div>
+
+            <div class="campo-grupo-registro">
+                <label for="usuario" class="etiqueta-campo-registro">Usuario de Acceso *</label>
+                <input type="text" id="usuario" required placeholder="Ej. cperez" autocapitalize="none" style="width:100%;">
+            </div>
+
+            <div class="campo-grupo-registro">
+                <label for="clave" class="etiqueta-campo-registro">Clave de Acceso *</label>
+                <input type="password" id="clave" required minlength="6" placeholder="Mínimo 6 caracteres" style="width:100%;">
+            </div>
+
+            <div style="border-top:1px solid #1e293b; padding-top:12px; margin-top:12px;">
+                <h2 style="color:#fbbf24; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Bancarios y Código QR</h2>
+
+                <div class="campo-grupo-registro">
+                    <label for="banco" class="etiqueta-campo-registro">Banco</label>
+                    <input type="text" id="banco" placeholder="Ej. Banesco" style="width:100%;">
                 </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono Personal *</label>
-                    <input type="text" id="telefono" required placeholder="Ej. 0414-1234567" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+
+                <div class="campo-grupo-registro">
+                    <label for="banco-telefono" class="etiqueta-campo-registro">Teléfono (Pago Móvil)</label>
+                    <input type="text" id="banco-telefono" placeholder="Ej. 04121234567" style="width:100%;">
                 </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Usuario de Acceso *</label>
-                    <input type="text" id="usuario" required placeholder="Ej. cperez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+
+                <div class="campo-grupo-registro">
+                    <label for="banco-cedula" class="etiqueta-campo-registro">Cédula / RIF</label>
+                    <input type="text" id="banco-cedula" placeholder="Ej. V12345678" style="width:100%;">
                 </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Clave de Acceso *</label>
-                    <input type="password" id="clave" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
+
+                <div class="campo-grupo-registro">
+                    <label for="qr-file" class="etiqueta-campo-registro">Imagen del QR del Banco (Subir archivo)</label>
+                    <input type="file" id="qr-file" accept="image/*" style="width:100%;">
+                    <p style="font-size:11px; color:#94a3b8; margin:4px 0 0 0;">Sube la foto del QR del banco; se guardará automáticamente en la nube.</p>
                 </div>
             </div>
 
-            <div class="space-y-3 pt-4 border-t border-[#222222]">
-                <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Datos Bancarios y Código QR</h2>
+            <div id="mensaje-estado" class="hidden"></div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Banco</label>
-                        <input type="text" id="banco" placeholder="Ej. Banesco" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono (Pago Móvil)</label>
-                        <input type="text" id="banco-telefono" placeholder="Ej. 04121234567" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Cédula / RIF</label>
-                        <input type="text" id="banco-cedula" placeholder="Ej. V12345678" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Imagen del QR del Banco (Subir archivo)</label>
-                    <input type="file" id="qr-file" accept="image/*" class="w-full bg-[#161616] border border-[#2e2e2e] rounded-xl p-2 text-xs text-slate-300 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer">
-                    <p class="text-[10px] text-slate-500 mt-1">Sube la foto del QR del banco; se guardará automáticamente en la nube.</p>
-                </div>
-            </div>
-
-            <div id="mensaje-estado" class="hidden text-xs rounded-xl p-3 border"></div>
-
-            <button type="submit" id="btn-registrar" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+            <button type="submit" id="btn-registrar" style="width:100%; background-color:#10b981; color:#000000; font-weight:700; margin-top:6px;">
                 Completar Registro
             </button>
         </form>
@@ -178,11 +212,11 @@
 
         function mostrarMensaje(texto, tipo) {
             var box = document.getElementById('mensaje-estado');
-            box.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30', 'bg-red-500/10', 'text-red-300', 'border-red-500/30');
+            box.classList.remove('hidden', 'mensaje-exito-registro', 'mensaje-error-registro');
             if (tipo === 'exito') {
-                box.classList.add('bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30');
+                box.classList.add('mensaje-exito-registro');
             } else {
-                box.classList.add('bg-red-500/10', 'text-red-300', 'border-red-500/30');
+                box.classList.add('mensaje-error-registro');
             }
             box.textContent = texto;
         }

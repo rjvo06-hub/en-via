@@ -419,14 +419,70 @@
             var input = document.getElementById('unified-input');
             var btnOrigin = document.getElementById('btn-mode-origin');
             var btnDest = document.getElementById('btn-mode-dest');
+            var suggestionsBox = document.getElementById('unified-suggestions');
 
             if (btnOrigin) btnOrigin.classList.add('activo');
             if (btnDest) btnDest.classList.remove('activo');
             if (searchLabel) searchLabel.textContent = "Escribiendo Dirección de Origen...";
+            if (suggestionsBox) {
+                suggestionsBox.classList.add('hidden');
+                suggestionsBox.innerHTML = '';
+            }
             if (input) {
                 input.value = '';
                 input.placeholder = "Escribe dirección de origen...";
                 setTimeout(function () { input.focus(); }, 100);
+            }
+        }
+
+        function limpiarCamposYEnfocarOrigen() {
+            origenCoords = null;
+            destCoords = null;
+            costoCalculado = 0;
+            distanciaCalculada = "";
+
+            if (originMarker) {
+                originMarker.setMap(null);
+                originMarker = null;
+            }
+            if (destMarker) {
+                destMarker.setMap(null);
+                destMarker = null;
+            }
+            if (window.currentRoutePolyline) {
+                window.currentRoutePolyline.setMap(null);
+                window.currentRoutePolyline = null;
+            }
+
+            document.getElementById('campo-libre-origen').value = '';
+            document.getElementById('campo-libre-destino').value = '';
+
+            var originStatus = document.getElementById('origin-status');
+            var destStatus = document.getElementById('dest-status');
+            if (originStatus) {
+                originStatus.textContent = 'Pendiente';
+                originStatus.style.color = '#fbbf24';
+            }
+            if (destStatus) {
+                destStatus.textContent = 'Pendiente';
+                destStatus.style.color = '#fbbf24';
+            }
+
+            document.getElementById('origin-lat').textContent = '-';
+            document.getElementById('origin-lon').textContent = '-';
+            document.getElementById('dest-lat').textContent = '-';
+            document.getElementById('dest-lon').textContent = '-';
+            document.getElementById('route-distance').textContent = '-';
+            document.getElementById('route-duration').textContent = '-';
+            document.getElementById('route-cost').textContent = '-';
+            document.getElementById('status-msg').textContent = 'Selecciona origen y destino.';
+            document.getElementById('btn-solicitar').classList.add('hidden');
+
+            prepararModoOrigenInicial();
+
+            if (map) {
+                map.setCenter(maracaiboCenter);
+                map.setZoom(13);
             }
         }
 
@@ -461,7 +517,7 @@
                     } else {
                         sessionStorage.removeItem('carrera_activa_id');
                         document.getElementById('vista-formulario').classList.remove('hidden');
-                        prepararModoOrigenInicial();
+                        limpiarCamposYEnfocarOrigen();
                         inicializarMapaFormulario();
                     }
                 });
@@ -932,7 +988,7 @@
                 sessionStorage.removeItem('carrera_activa_id');
                 document.getElementById('vista-estado').classList.add('hidden');
                 document.getElementById('vista-formulario').classList.remove('hidden');
-                prepararModoOrigenInicial();
+                limpiarCamposYEnfocarOrigen();
                 inicializarMapaFormulario();
             });
         }

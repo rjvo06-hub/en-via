@@ -224,10 +224,21 @@
             return { notFound: true };
         }
 
+        function resolverUrlAppConductor() {
+            var rutaActual = window.location.pathname || '/';
+            if (/\/conductor\/?$/i.test(rutaActual)) {
+                return './app.html';
+            }
+            if (/\/conductor\/[^/]*$/i.test(rutaActual)) {
+                return './app.html';
+            }
+            return '/conductor/app.html';
+        }
+
         function irAAppConductor(cond) {
             sessionStorage.setItem('conductor_en_via', cond.nombre);
             sessionStorage.setItem('conductor_id_en_via', cond.id);
-            window.location.replace('./app.html');
+            window.location.replace(resolverUrlAppConductor());
         }
 
         async function ingresarAlPortal() {

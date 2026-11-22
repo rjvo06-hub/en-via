@@ -6,7 +6,7 @@
     <title>EN-VIA - Portal de Chofer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../js/supabaseClient.js"></script>
+    <script src="./js/supabaseClient.js"></script>
     <style>
         input, select, textarea { font-size: 16px !important; }
         @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
@@ -20,8 +20,7 @@
             <p class="text-slate-400 text-xs">Inicia sesión con tu usuario o regístrate para comenzar</p>
         </header>
 
-        <!-- Selector inicial: Iniciar sesión o Registrarse -->
-        <div class="bg-[#111111] border border-[#222222] p-5 sm:p-6 rounded-2xl shadow-xl space-y-5">
+        <div id="tarjeta-acceso" class="bg-[#111111] border border-[#222222] p-5 sm:p-6 rounded-2xl shadow-xl space-y-5">
             <form id="form-login-conductor" onsubmit="iniciarSesionConductor(event)" class="space-y-4">
                 <div>
                     <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Usuario del Conductor</label>
@@ -48,14 +47,13 @@
             </div>
         </div>
 
-        <!-- Panel del conductor una vez autenticado (mantén aquí tu lógica actual de carreras) -->
         <div id="panel-conductor" class="hidden bg-[#111111] border border-[#222222] p-5 rounded-2xl shadow-xl space-y-4">
             <div class="flex items-center justify-between border-b border-[#222222] pb-3">
                 <div>
                     <p class="text-xs text-slate-400">Conductor conectado</p>
                     <h2 id="conductor-nombre-activo" class="text-base font-bold text-emerald-400"></h2>
                 </div>
-                <button onclick="cerrarSesionConductor()" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs rounded-xl cursor-pointer">
+                <button type="button" onclick="cerrarSesionConductor()" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs rounded-xl cursor-pointer">
                     Salir
                 </button>
             </div>
@@ -70,8 +68,26 @@
     </div>
 
     <script>
-        function mostrarMensajeLogin(texto, tipo = 'error') {
-            const box = document.getElementById('mensaje-login');
+        var DIRECT_SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
+        var DIRECT_SUPABASE_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+
+        function obtenerClienteSupabase() {
+            if (window.supabaseClient) {
+                return window.supabaseClient;
+            }
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+                return supabaseClient;
+            }
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                window.supabaseClient = window.supabase.createClient(DIRECT_SUPABASE_URL, DIRECT_SUPABASE_KEY);
+                return window.supabaseClient;
+            }
+            throw new Error('No se pudo inicializar el cliente de Supabase.');
+        }
+
+        function mostrarMensajeLogin(texto, tipo) {
+            var box = document.getElementById('mensaje-login');
             box.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30', 'bg-red-500/10', 'text-red-300', 'border-red-500/30');
             if (tipo === 'exito') {
                 box.classList.add('bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30');
@@ -81,20 +97,62 @@
             box.textContent = texto;
         }
 
+        function hashFallbackSimple(texto) {
+            var h1 = 0xdeadbeef ^ texto.length;
+            var h2 = 0x41c6ce57 ^ texto.length;
+            for (var i = 0; i < texto.length; i++) {
+                var ch = texto.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+        }
+
         async function generarHashClave(clave) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(clave);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            try {
+                if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+                    var encoder = new TextEncoder();
+                    var data = encoder.encode(clave);
+                    var hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+                    var hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+                }
+            } catch (e) {}
+            return hashFallbackSimple(clave);
+        }
+
+        async function buscarConductorPorUsuario(db, usuario) {
+            if (db && typeof db.from === 'function') {
+                return await db
+                    .from('conductores')
+                    .select('id, nombre, usuario, clave_hash, activo')
+                    .eq('usuario', usuario)
+                    .maybeSingle();
+            }
+
+            var endpoint = DIRECT_SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/conductores?select=id,nombre,usuario,clave_hash,activo&usuario=eq.' + encodeURIComponent(usuario) + '&limit=1';
+            var resp = await window.fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                    'apikey': DIRECT_SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + DIRECT_SUPABASE_KEY
+                }
+            });
+            var json = await resp.json().catch(function () { return null; });
+            if (!resp.ok) {
+                return { data: null, error: { message: (json && json.message) || resp.statusText } };
+            }
+            return { data: Array.isArray(json) ? (json[0] || null) : json, error: null };
         }
 
         async function iniciarSesionConductor(event) {
             event.preventDefault();
 
-            const btn = document.getElementById('btn-login');
-            const usuario = document.getElementById('login-usuario').value.trim().toLowerCase();
-            const clave = document.getElementById('login-clave').value;
+            var btn = document.getElementById('btn-login');
+            var usuario = document.getElementById('login-usuario').value.trim().toLowerCase();
+            var clave = document.getElementById('login-clave').value;
 
             if (!usuario || !clave) {
                 mostrarMensajeLogin('Ingresa tu usuario y clave de acceso.', 'error');
@@ -105,18 +163,15 @@
             btn.textContent = 'Verificando...';
 
             try {
-                const claveHash = await generarHashClave(clave);
+                var db = obtenerClienteSupabase();
+                var claveHash = await generarHashClave(clave);
+                var res = await buscarConductorPorUsuario(db, usuario);
 
-                const { data, error } = await supabaseClient
-                    .from('conductores')
-                    .select('id, nombre, usuario, clave_hash, activo')
-                    .eq('usuario', usuario)
-                    .maybeSingle();
-
-                if (error) {
-                    throw new Error('Error al consultar el conductor: ' + error.message);
+                if (res.error) {
+                    throw new Error('Error al consultar el conductor: ' + res.error.message);
                 }
 
+                var data = res.data;
                 if (!data || data.clave_hash !== claveHash) {
                     mostrarMensajeLogin('Usuario o clave incorrectos.', 'error');
                     return;
@@ -127,13 +182,16 @@
                     return;
                 }
 
-                sessionStorage.setItem('conductor_activo', JSON.stringify({
-                    id: data.id,
-                    nombre: data.nombre,
-                    usuario: data.usuario
-                }));
+                try {
+                    window.sessionStorage.setItem('conductor_activo', JSON.stringify({
+                        id: data.id,
+                        nombre: data.nombre,
+                        usuario: data.usuario
+                    }));
+                    window.sessionStorage.setItem('conductor_id_en_via', data.id);
+                } catch (e) {}
 
-                document.getElementById('form-login-conductor').parentElement.classList.add('hidden');
+                document.getElementById('tarjeta-acceso').classList.add('hidden');
                 document.getElementById('conductor-nombre-activo').textContent = data.nombre;
                 document.getElementById('panel-conductor').classList.remove('hidden');
             } catch (err) {
@@ -145,10 +203,13 @@
         }
 
         function cerrarSesionConductor() {
-            sessionStorage.removeItem('conductor_activo');
+            try {
+                window.sessionStorage.removeItem('conductor_activo');
+                window.sessionStorage.removeItem('conductor_id_en_via');
+            } catch (e) {}
             document.getElementById('panel-conductor').classList.add('hidden');
             document.getElementById('form-login-conductor').reset();
-            document.getElementById('form-login-conductor').parentElement.classList.remove('hidden');
+            document.getElementById('tarjeta-acceso').classList.remove('hidden');
         }
     </script>
 </body>

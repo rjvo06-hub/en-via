@@ -67,6 +67,10 @@
             border-radius: 6px !important;
             padding: 8px 10px !important;
         }
+        .campo-usuario-auto {
+            color: #34d399 !important;
+            font-weight: 700 !important;
+        }
         .btn-morado-principal {
             width: 100%;
             background-color: #9333ea !important;
@@ -108,12 +112,13 @@
 
             <div style="margin-bottom:8px;">
                 <label for="reg-nombre" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Nombre Completo</label>
-                <input type="text" id="reg-nombre" class="input-oscuro" placeholder="Ej. María Pérez" oninput="actualizarVistaUsuario()">
+                <input type="text" id="reg-nombre" class="input-oscuro" placeholder="Ej. María Pérez" oninput="actualizarVistaUsuario()" onchange="actualizarVistaUsuario()">
             </div>
 
             <div style="margin-bottom:8px;">
-                <label for="reg-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Usuario Asignado</label>
-                <input type="text" id="reg-usuario" class="input-oscuro" placeholder="Se genera automáticamente (Ej. mperez)" autocapitalize="none">
+                <label for="reg-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#34d399; margin-bottom:4px;">Usuario Asignado</label>
+                <input type="text" id="reg-usuario" class="input-oscuro campo-usuario-auto" placeholder="Se asigna automáticamente al escribir el nombre" autocapitalize="none">
+                <p id="reg-usuario-aviso" style="font-size:11px; color:#94a3b8; margin:4px 0 0 0;">Generado automáticamente a partir de tu nombre completo.</p>
             </div>
 
             <div style="margin-bottom:8px;">
@@ -135,6 +140,8 @@
     </div>
 
     <script>
+        var timerDisponibilidadUsuario = null;
+
         function generarUsuarioBase(nombre) {
             var limpio = String(nombre || '').trim().toLowerCase()
                 .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -144,16 +151,62 @@
             return (partes[0].charAt(0) + partes[partes.length - 1]).replace(/[^a-z0-9]/g, '');
         }
 
+        async function resolverUsuarioDisponible(baseUsuario) {
+            if (!baseUsuario) return '';
+            var db = getDb();
+            if (!db) return baseUsuario;
+
+            try {
+                var existente = await db.from('clientes').select('id').ilike('usuario', baseUsuario).limit(1);
+                if (!existente.error && existente.data && existente.data.length > 0) {
+                    var candidato = '';
+                    for (var i = 0; i < 5; i++) {
+                        candidato = baseUsuario + Math.floor(10 + Math.random() * 89);
+                        var check = await db.from('clientes').select('id').ilike('usuario', candidato).limit(1);
+                        if (!check.error && (!check.data || check.data.length === 0)) {
+                            return candidato;
+                        }
+                    }
+                }
+            } catch (e) {}
+            return baseUsuario;
+        }
+
         function actualizarVistaUsuario() {
             var nombre = document.getElementById('reg-nombre').value;
             var userInput = document.getElementById('reg-usuario');
-            if (!userInput.dataset.manual) {
-                userInput.value = generarUsuarioBase(nombre);
-            }
+            var aviso = document.getElementById('reg-usuario-aviso');
+
+            if (userInput.dataset.manual === '1') return;
+
+            var base = generarUsuarioBase(nombre);
+            userInput.value = base;
+            aviso.textContent = base
+                ? 'Usuario asignado: ' + base
+                : 'Generado automáticamente a partir de tu nombre completo.';
+
+            clearTimeout(timerDisponibilidadUsuario);
+            if (!base) return;
+
+            timerDisponibilidadUsuario = setTimeout(async function () {
+                if (userInput.dataset.manual === '1') return;
+                var disponible = await resolverUsuarioDisponible(base);
+                if (userInput.dataset.manual === '1') return;
+                userInput.value = disponible;
+                aviso.textContent = disponible !== base
+                    ? 'El usuario "' + base + '" ya existía; se asignó: ' + disponible
+                    : 'Usuario asignado: ' + disponible;
+            }, 300);
         }
 
         document.getElementById('reg-usuario').addEventListener('input', function () {
-            this.dataset.manual = this.value.trim() ? '1' : '';
+            var limpio = this.value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+            this.value = limpio;
+            this.dataset.manual = limpio ? '1' : '';
+            var aviso = document.getElementById('reg-usuario-aviso');
+            aviso.textContent = limpio
+                ? 'Usuario personalizado: ' + limpio
+                : 'Generado automáticamente a partir de tu nombre completo.';
         });
 
         function hashFallbackSimple(texto) {
@@ -192,13 +245,14 @@
         async function registrarUsuario() {
             var btn = document.getElementById('btn-registrar-usuario');
             var nombre = document.getElementById('reg-nombre').value.trim();
-            var usuario = (document.getElementById('reg-usuario').value.trim() || generarUsuarioBase(nombre)).toLowerCase();
+            var userInput = document.getElementById('reg-usuario');
+            var usuario = (userInput.value.trim() || generarUsuarioBase(nombre)).toLowerCase();
             var telefono = document.getElementById('reg-telefono').value.trim();
             var clave = document.getElementById('reg-clave').value || '';
             var db = getDb();
 
-            if (!nombre || !usuario || !clave) {
-                mostrarMensajeReg('Completa nombre, usuario y clave de acceso.', true);
+            if (!nombre || !usuario || !telefono || !clave) {
+                mostrarMensajeReg('Completa nombre, usuario, teléfono y clave de acceso.', true);
                 return;
             }
             if (clave.length < 4) {
@@ -214,9 +268,9 @@
             btn.textContent = 'Registrando...';
 
             try {
-                var existente = await db.from('clientes').select('id').ilike('usuario', usuario).limit(1);
-                if (!existente.error && existente.data && existente.data.length > 0) {
-                    usuario = usuario + Math.floor(10 + Math.random() * 89);
+                if (userInput.dataset.manual !== '1') {
+                    usuario = await resolverUsuarioDisponible(usuario);
+                    userInput.value = usuario;
                 }
 
                 var claveHash = await generarHashClave(clave);
@@ -234,7 +288,7 @@
                     return;
                 }
 
-                mostrarMensajeReg('¡Registro completado! Tu usuario es: ' + usuario + '. Redirigiendo...', false);
+                mostrarMensajeReg('¡Registro completado! Tu usuario asignado es: ' + usuario + '. Redirigiendo...', false);
                 setTimeout(function () {
                     window.location.replace('./index.html');
                 }, 1200);

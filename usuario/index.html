@@ -140,109 +140,220 @@
           window.supabaseClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       }
     </script>
+    <style>
+        body {
+            background-color: #07090f;
+            color: #e2e8f0;
+        }
+        input, select, textarea { font-size: 16px !important; }
+        @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
+
+        .encabezado-cliente {
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .subtitulo-portal-cliente {
+            display: block;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .btn-menu-principal {
+            display: inline-block;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #e2e8f0;
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        .tarjeta-panel-oscuro {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .input-oscuro {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #475569 !important;
+            border-radius: 6px !important;
+            padding: 8px 10px !important;
+        }
+        .btn-morado-principal {
+            background-color: #9333ea !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            padding: 9px 14px !important;
+            cursor: pointer;
+        }
+        .btn-secundario-oscuro {
+            background-color: #1e293b !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #475569 !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            padding: 8px 12px !important;
+            cursor: pointer;
+            width: auto !important;
+        }
+        .btn-modo-activo {
+            background-color: #9333ea !important;
+            color: #ffffff !important;
+            border: 1px solid #c084fc !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            padding: 8px 12px !important;
+            cursor: pointer;
+            width: auto !important;
+        }
+        .caja-punto-ruta {
+            background-color: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .badge-estado-carrera {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            background-color: #1e293b;
+            color: #c084fc;
+            border: 1px solid #9333ea;
+            margin-bottom: 8px;
+        }
+        #map, #map-seguimiento {
+            width: 100%;
+            height: 260px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+    </style>
 </head>
 <body>
     <div class="max-w-4xl">
-        <header>
-            <h1>EN-VIA - Portal de Usuario</h1>
-            <p>Calcula tu ruta y solicita tu servicio</p>
-            <div style="margin-top: 10px;">
-                <a href="../index.html" style="display:inline-block; padding:6px 12px; font-size:12px;">← Menú Principal</a>
-            </div>
+        <header class="encabezado-cliente">
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-portal-cliente">Portal de Usuario</span>
+            </h1>
+            <p style="color:#94a3b8; font-size:12px; margin:4px 0 0 0;">Calcula tu ruta y solicita tu servicio</p>
+            <a href="../index.html" class="btn-menu-principal">← Menú Principal</a>
         </header>
 
-        <div id="identificacion-container">
-            <label style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#34d399;">Identificación del Cliente</label>
-            <div>
-                <select id="select-cliente">
+        <div id="identificacion-container" class="tarjeta-panel-oscuro">
+            <label for="select-cliente" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#c084fc; margin-bottom:6px;">Identificación del Cliente</label>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <select id="select-cliente" class="input-oscuro" style="flex:1; min-width:200px;">
                     <option value="">Cargando clientes registrados...</option>
                 </select>
-                <button type="button" onclick="fijarCliente()">Continuar</button>
+                <button type="button" onclick="fijarCliente()" class="btn-morado-principal" style="width:auto;">Continuar</button>
             </div>
-            <div id="cliente-error" style="color:#f87171; font-size:12px;" class="hidden">Por favor, selecciona tu nombre de la lista.</div>
+            <div id="cliente-error" style="color:#f87171; font-size:12px; margin-top:6px;" class="hidden">Por favor, selecciona tu nombre de la lista.</div>
         </div>
 
         <div id="vista-formulario" class="hidden">
-            <div>
-                <div>
-                    <span>Cliente activo: <strong id="cliente-actual-display"></strong></span>
-                    <button type="button" onclick="cambiarCliente()" style="margin-left:8px; padding:4px 10px; font-size:11px;">Cambiar</button>
+            <div class="tarjeta-panel-oscuro">
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                    <span>Cliente activo: <strong id="cliente-actual-display" style="color:#34d399;"></strong></span>
+                    <button type="button" onclick="cambiarCliente()" class="btn-secundario-oscuro" style="padding:5px 10px; font-size:11px;">Cambiar</button>
                 </div>
 
-                <div style="margin-top:10px;">
-                    <button type="button" id="btn-mode-origin" onclick="setMode('origin')">1. Buscar Origen</button>
-                    <button type="button" id="btn-mode-dest" onclick="setMode('dest')">2. Buscar Destino</button>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+                    <button type="button" id="btn-mode-origin" onclick="setMode('origin')" class="btn-modo-activo">1. Buscar Origen</button>
+                    <button type="button" id="btn-mode-dest" onclick="setMode('dest')" class="btn-secundario-oscuro">2. Buscar Destino</button>
                 </div>
 
-                <div style="margin-top:10px; position:relative;">
-                    <label id="search-label" style="display:block; font-size:10px; text-transform:uppercase; font-weight:700; color:#34d399;">Escribiendo Dirección de Origen...</label>
-                    <input type="text" id="unified-input" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
+                <div style="margin-top:12px; position:relative;">
+                    <label id="search-label" for="unified-input" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#34d399; margin-bottom:4px;">Escribiendo Dirección de Origen...</label>
+                    <input type="text" id="unified-input" class="input-oscuro" placeholder="Ej. Centro Comercial Sambil..." autocomplete="off">
                     <div id="unified-suggestions" class="custom-suggestions-list hidden"></div>
                 </div>
 
                 <div style="margin-top:12px;">
-                    <div onclick="setMode('origin')" style="cursor:pointer;">
-                        <div>
-                            <span>📍 Origen (Clic para editar):</span>
-                            <span id="origin-status" style="margin-left:8px; color:#f59e0b;">Pendiente</span>
+                    <div onclick="setMode('origin')" class="caja-punto-ruta">
+                        <div style="margin-bottom:4px;">
+                            <span style="font-weight:700;">📍 Origen (Clic para editar):</span>
+                            <span id="origin-status" style="margin-left:8px; color:#fbbf24; font-weight:600;">Pendiente</span>
                         </div>
-                        <input type="text" id="campo-libre-origen" placeholder="Sin seleccionar..." readonly>
-                        <div>
+                        <input type="text" id="campo-libre-origen" class="input-oscuro" placeholder="Sin seleccionar..." readonly>
+                        <div style="margin-top:6px; font-size:12px; color:#94a3b8;">
                             <span>Lat: <span id="origin-lat">-</span> | Lon: <span id="origin-lon">-</span></span>
-                            <button type="button" onclick="event.stopPropagation(); copyCoords('origin')" id="btn-copy-origin" class="hidden" style="margin-left:8px; padding:4px 8px; font-size:11px;">Copiar</button>
+                            <button type="button" onclick="event.stopPropagation(); copyCoords('origin')" id="btn-copy-origin" class="btn-secundario-oscuro hidden" style="margin-left:8px; padding:4px 8px; font-size:11px;">Copiar</button>
                         </div>
                     </div>
 
-                    <div onclick="setMode('dest')" style="cursor:pointer; margin-top:10px;">
-                        <div>
-                            <span>🏁 Destino (Clic para editar):</span>
-                            <span id="dest-status" style="margin-left:8px; color:#f59e0b;">Pendiente</span>
+                    <div onclick="setMode('dest')" class="caja-punto-ruta" style="margin-top:10px;">
+                        <div style="margin-bottom:4px;">
+                            <span style="font-weight:700;">🏁 Destino (Clic para editar):</span>
+                            <span id="dest-status" style="margin-left:8px; color:#fbbf24; font-weight:600;">Pendiente</span>
                         </div>
-                        <input type="text" id="campo-libre-destino" placeholder="Sin seleccionar..." readonly>
-                        <div>
+                        <input type="text" id="campo-libre-destino" class="input-oscuro" placeholder="Sin seleccionar..." readonly>
+                        <div style="margin-top:6px; font-size:12px; color:#94a3b8;">
                             <span>Lat: <span id="dest-lat">-</span> | Lon: <span id="dest-lon">-</span></span>
-                            <button type="button" onclick="event.stopPropagation(); copyCoords('dest')" id="btn-copy-dest" class="hidden" style="margin-left:8px; padding:4px 8px; font-size:11px;">Copiar</button>
+                            <button type="button" onclick="event.stopPropagation(); copyCoords('dest')" id="btn-copy-dest" class="btn-secundario-oscuro hidden" style="margin-left:8px; padding:4px 8px; font-size:11px;">Copiar</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div style="margin-top:12px;">
-                <p>Distancia por carretera: <strong id="route-distance">-</strong></p>
-                <p>Tiempo estimado de viaje: <strong id="route-duration">-</strong></p>
-                <p>Costo estimado: <strong id="route-cost">-</strong></p>
-                <p id="status-msg" style="font-style:italic; margin-top:6px;">Selecciona origen y destino.</p>
-                <button type="button" onclick="solicitarCarrera()" id="btn-solicitar" class="hidden" style="width:100%; margin-top:10px;">🚀 Solicitar Carrera Ahora</button>
+            <div class="tarjeta-panel-oscuro">
+                <p style="margin:4px 0;">Distancia por carretera: <strong id="route-distance" style="color:#f8fafc;">-</strong></p>
+                <p style="margin:4px 0;">Tiempo estimado de viaje: <strong id="route-duration" style="color:#f8fafc;">-</strong></p>
+                <p style="margin:4px 0;">Costo estimado: <strong id="route-cost" style="color:#34d399;">-</strong></p>
+                <p id="status-msg" style="font-style:italic; color:#94a3b8; margin-top:8px;">Selecciona origen y destino.</p>
+                <button type="button" onclick="solicitarCarrera()" id="btn-solicitar" class="btn-morado-principal hidden" style="width:100%; margin-top:10px;">🚀 Solicitar Carrera Ahora</button>
             </div>
 
-            <div style="margin-top:12px;">
+            <div class="tarjeta-panel-oscuro">
                 <div id="map"></div>
             </div>
         </div>
 
         <div id="vista-estado" class="hidden">
-            <div>
-                <div id="badge-estado">🔍 Buscando Conductor...</div>
-                <h2>Estado de tu Solicitud</h2>
-                <p>Cliente: <strong id="estado-cliente">-</strong></p>
-                <p>Costo de la carrera: <strong id="estado-precio">-</strong></p>
-                <p>📍 Origen: <span id="estado-origen"></span></p>
-                <p>🏁 Destino: <span id="estado-destino"></span></p>
-                <p>Distancia: <strong id="estado-distancia">-</strong></p>
-                <p>Conductor Asignado: <strong id="estado-conductor">Esperando asignación...</strong></p>
-                <div id="seccion-llegada" class="hidden">
-                    <p>Estado del servicio: <span id="estado-llegada">Calculando...</span></p>
+            <div class="tarjeta-panel-oscuro">
+                <div id="badge-estado" class="badge-estado-carrera">🔍 Buscando Conductor...</div>
+                <h2 style="color:#c084fc; margin:6px 0 10px 0; font-size:16px;">Estado de tu Solicitud</h2>
+                <p style="margin:4px 0;">Cliente: <strong id="estado-cliente" style="color:#34d399;">-</strong></p>
+                <p style="margin:4px 0;">Costo de la carrera: <strong id="estado-precio" style="color:#34d399;">-</strong></p>
+                <p style="margin:4px 0;">📍 Origen: <span id="estado-origen"></span></p>
+                <p style="margin:4px 0;">🏁 Destino: <span id="estado-destino"></span></p>
+                <p style="margin:4px 0;">Distancia: <strong id="estado-distancia">-</strong></p>
+                <p style="margin:4px 0;">Conductor Asignado: <strong id="estado-conductor" style="color:#c084fc;">Esperando asignación...</strong></p>
+                <div id="seccion-llegada" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px solid #1e293b;">
+                    <p style="margin:0;">Estado del servicio: <span id="estado-llegada" style="color:#34d399; font-weight:700;">Calculando...</span></p>
                 </div>
             </div>
 
-            <div id="seccion-cobro-cliente" class="hidden"></div>
+            <div id="seccion-cobro-cliente" class="tarjeta-panel-oscuro hidden"></div>
 
-            <div id="contenedor-mapa-seguimiento" class="hidden">
+            <div id="contenedor-mapa-seguimiento" class="tarjeta-panel-oscuro hidden">
                 <div id="map-seguimiento"></div>
             </div>
 
-            <div id="contenedor-boton-cancelar">
-                <button type="button" onclick="cancelarOReiniciarSolicitud()" style="width:100%; background-color:#262626;">Cancelar Solicitud</button>
+            <div id="contenedor-boton-cancelar" class="tarjeta-panel-oscuro">
+                <button type="button" onclick="cancelarOReiniciarSolicitud()" style="width:100%; background-color:#dc2626 !important; color:#ffffff !important; font-weight:700 !important; border:1px solid #f87171 !important; border-radius:6px !important; padding:10px 14px !important; cursor:pointer;">Cancelar Solicitud</button>
             </div>
         </div>
     </div>
@@ -392,30 +503,50 @@
             location.reload();
         }
 
+        function esperarGoogleMaps(callback, intentos) {
+            var maxIntentos = typeof intentos === 'number' ? intentos : 30;
+            if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
+                callback();
+                return;
+            }
+            if (maxIntentos <= 0) return;
+            setTimeout(function () {
+                esperarGoogleMaps(callback, maxIntentos - 1);
+            }, 200);
+        }
+
         function inicializarMapaFormulario() {
-            if (map || typeof google === 'undefined' || !google.maps) return;
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: maracaiboCenter,
-                zoom: 13,
-                mapTypeControl: false,
-                streetViewControl: false
+            esperarGoogleMaps(function () {
+                if (map) return;
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: maracaiboCenter,
+                    zoom: 13,
+                    mapTypeControl: false,
+                    streetViewControl: false
+                });
+                setupUnifiedAutocomplete();
             });
-            setupUnifiedAutocomplete();
         }
 
         function setMode(mode) {
             currentMode = mode;
             var searchLabel = document.getElementById('search-label');
             var input = document.getElementById('unified-input');
+            var btnOrigin = document.getElementById('btn-mode-origin');
+            var btnDest = document.getElementById('btn-mode-dest');
 
             input.value = '';
             document.getElementById('unified-suggestions').classList.add('hidden');
 
             if (mode === 'origin') {
+                btnOrigin.className = 'btn-modo-activo';
+                btnDest.className = 'btn-secundario-oscuro';
                 searchLabel.textContent = "Escribiendo Dirección de Origen...";
                 searchLabel.style.color = "#34d399";
                 input.placeholder = "Ej. Centro Comercial Sambil...";
             } else {
+                btnDest.className = 'btn-modo-activo';
+                btnOrigin.className = 'btn-secundario-oscuro';
                 searchLabel.textContent = "Escribiendo Dirección de Destino...";
                 searchLabel.style.color = "#fbbf24";
                 input.placeholder = "Ej. Vereda del Lago...";
@@ -487,7 +618,7 @@
                                         document.getElementById('origin-lon').textContent = lng.toFixed(6);
                                         document.getElementById('btn-copy-origin').classList.remove('hidden');
                                         document.getElementById('origin-status').textContent = "Listo";
-                                        document.getElementById('origin-status').style.color = "#10b981";
+                                        document.getElementById('origin-status').style.color = "#34d399";
                                         updateMarker('origin', coords);
                                         setMode('dest');
                                     } else {
@@ -497,7 +628,7 @@
                                         document.getElementById('dest-lon').textContent = lng.toFixed(6);
                                         document.getElementById('btn-copy-dest').classList.remove('hidden');
                                         document.getElementById('dest-status').textContent = "Listo";
-                                        document.getElementById('dest-status').style.color = "#10b981";
+                                        document.getElementById('dest-status').style.color = "#34d399";
                                         updateMarker('dest', coords);
                                     }
 
@@ -580,8 +711,8 @@
                     window.currentRoutePolyline = new google.maps.Polyline({
                         path: decodedPath,
                         geodesic: true,
-                        strokeColor: '#10b981',
-                        strokeOpacity: 0.8,
+                        strokeColor: '#9333ea',
+                        strokeOpacity: 0.9,
                         strokeWeight: 5
                     });
                     window.currentRoutePolyline.setMap(map);
@@ -686,14 +817,14 @@
                     seccionCobroCliente.classList.remove('hidden');
                     seccionCobroCliente.innerHTML =
                         '<div>' +
-                            '<p><strong>💳 Datos de Pago - ' + bancoNombre + '</strong></p>' +
-                            '<p style="font-size:24px; font-weight:800; color:#fbbf24;">' + (precio || '$0.00') + '</p>' +
-                            '<p><strong>Banco:</strong> ' + bancoNombre + '</p>' +
-                            '<p><strong>Teléfono (Pago Móvil):</strong> ' + bancoTlf + '</p>' +
-                            '<p><strong>Cédula / RIF:</strong> ' + bancoCedula + '</p>' +
-                            (qrImageUrl ? '<div style="background:#fff; padding:8px; display:inline-block; margin:8px 0;"><img src="' + qrImageUrl + '" alt="QR de Pago" style="width:140px; height:140px; object-fit:contain;"></div>' : '') +
-                            '<div>' +
-                                '<button type="button" onclick="copiarDatosPago(\'' + bancoNombre + '\', \'' + bancoTlf + '\', \'' + bancoCedula + '\', \'' + precio + '\')">📋 Copiar Datos</button>' +
+                            '<p style="margin:0 0 6px 0; color:#c084fc;"><strong>💳 Datos de Pago - ' + bancoNombre + '</strong></p>' +
+                            '<p style="font-size:24px; font-weight:800; color:#34d399; margin:4px 0;">' + (precio || '$0.00') + '</p>' +
+                            '<p style="margin:3px 0;"><strong>Banco:</strong> ' + bancoNombre + '</p>' +
+                            '<p style="margin:3px 0;"><strong>Teléfono (Pago Móvil):</strong> ' + bancoTlf + '</p>' +
+                            '<p style="margin:3px 0;"><strong>Cédula / RIF:</strong> ' + bancoCedula + '</p>' +
+                            (qrImageUrl ? '<div style="background:#fff; padding:8px; border-radius:6px; display:inline-block; margin:8px 0;"><img src="' + qrImageUrl + '" alt="QR de Pago" style="width:140px; height:140px; object-fit:contain;"></div>' : '') +
+                            '<div style="margin-top:8px;">' +
+                                '<button type="button" class="btn-morado-principal" onclick="copiarDatosPago(\'' + bancoNombre + '\', \'' + bancoTlf + '\', \'' + bancoCedula + '\', \'' + precio + '\')">📋 Copiar Datos</button>' +
                             '</div>' +
                         '</div>';
                 });
@@ -755,87 +886,92 @@
         }
 
         function inicializarMapaSeguimiento(origenTexto) {
-            if (typeof google === 'undefined' || !google.maps) return;
-            if (!mapSeguimiento) {
-                mapSeguimiento = new google.maps.Map(document.getElementById('map-seguimiento'), {
-                    center: baseCoords,
-                    zoom: 13,
-                    mapTypeControl: false,
-                    streetViewControl: false
-                });
-            }
-
-            new google.maps.Marker({
-                position: baseCoords,
-                map: mapSeguimiento,
-                title: "Base del Conductor",
-                icon: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png"
-            });
-
-            var geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: origenTexto }, function (results, status) {
-                if (status === 'OK' && results[0]) {
-                    var origenClienteCoords = results[0].geometry.location;
-
-                    new google.maps.Marker({
-                        position: origenClienteCoords,
-                        map: mapSeguimiento,
-                        title: "Tu Ubicación (Origen)",
-                        icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-                    });
-
-                    fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Goog-Api-Key': apiKey,
-                            'X-Goog-FieldMask': 'routes.polyline.encodedPolyline'
-                        },
-                        body: JSON.stringify({
-                            origin: { location: { latLng: { latitude: baseCoords.lat, longitude: baseCoords.lng } } },
-                            destination: { location: { latLng: { latitude: origenClienteCoords.lat(), longitude: origenClienteCoords.lng() } } },
-                            travelMode: "DRIVE",
-                            routingPreference: "TRAFFIC_UNAWARE"
-                        })
-                    })
-                    .then(function (r) { return r.json(); })
-                    .then(function (data) {
-                        if (data.routes && data.routes.length > 0) {
-                            var decodedPath = google.maps.geometry.encoding.decodePath(data.routes[0].polyline.encodedPolyline);
-                            if (window.seguimientoPolyline) window.seguimientoPolyline.setMap(null);
-                            window.seguimientoPolyline = new google.maps.Polyline({
-                                path: decodedPath,
-                                geodesic: true,
-                                strokeColor: '#10b981',
-                                strokeOpacity: 0.8,
-                                strokeWeight: 5
-                            });
-                            window.seguimientoPolyline.setMap(mapSeguimiento);
-
-                            var bounds = new google.maps.LatLngBounds();
-                            bounds.extend(baseCoords);
-                            bounds.extend(origenClienteCoords);
-                            mapSeguimiento.fitBounds(bounds);
-                        }
-                    })
-                    .catch(function (err) {
-                        console.error("Error ruta seguimiento:", err);
+            esperarGoogleMaps(function () {
+                if (!mapSeguimiento) {
+                    mapSeguimiento = new google.maps.Map(document.getElementById('map-seguimiento'), {
+                        center: baseCoords,
+                        zoom: 13,
+                        mapTypeControl: false,
+                        streetViewControl: false
                     });
                 }
+
+                new google.maps.Marker({
+                    position: baseCoords,
+                    map: mapSeguimiento,
+                    title: "Base del Conductor",
+                    icon: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png"
+                });
+
+                var geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ address: origenTexto }, function (results, status) {
+                    if (status === 'OK' && results[0]) {
+                        var origenClienteCoords = results[0].geometry.location;
+
+                        new google.maps.Marker({
+                            position: origenClienteCoords,
+                            map: mapSeguimiento,
+                            title: "Tu Ubicación (Origen)",
+                            icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                        });
+
+                        fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Goog-Api-Key': apiKey,
+                                'X-Goog-FieldMask': 'routes.polyline.encodedPolyline'
+                            },
+                            body: JSON.stringify({
+                                origin: { location: { latLng: { latitude: baseCoords.lat, longitude: baseCoords.lng } } },
+                                destination: { location: { latLng: { latitude: origenClienteCoords.lat(), longitude: origenClienteCoords.lng() } } },
+                                travelMode: "DRIVE",
+                                routingPreference: "TRAFFIC_UNAWARE"
+                            })
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.routes && data.routes.length > 0) {
+                                var decodedPath = google.maps.geometry.encoding.decodePath(data.routes[0].polyline.encodedPolyline);
+                                if (window.seguimientoPolyline) window.seguimientoPolyline.setMap(null);
+                                window.seguimientoPolyline = new google.maps.Polyline({
+                                    path: decodedPath,
+                                    geodesic: true,
+                                    strokeColor: '#9333ea',
+                                    strokeOpacity: 0.9,
+                                    strokeWeight: 5
+                                });
+                                window.seguimientoPolyline.setMap(mapSeguimiento);
+
+                                var bounds = new google.maps.LatLngBounds();
+                                bounds.extend(baseCoords);
+                                bounds.extend(origenClienteCoords);
+                                mapSeguimiento.fitBounds(bounds);
+                            }
+                        })
+                        .catch(function (err) {
+                            console.error("Error ruta seguimiento:", err);
+                        });
+                    }
+                });
             });
         }
 
         function cancelarOReiniciarSolicitud() {
             var db = getDb();
+            if (timerClientInterval) clearInterval(timerClientInterval);
+            if (pollEstadoInterval) clearInterval(pollEstadoInterval);
+
             var promesa = idCarreraActiva
                 ? db.from('carreras').update({ estado: 'cancelada' }).eq('id', idCarreraActiva)
                 : Promise.resolve();
 
             promesa.then(function () {
+                idCarreraActiva = null;
                 sessionStorage.removeItem('carrera_activa_id');
-                if (timerClientInterval) clearInterval(timerClientInterval);
-                if (pollEstadoInterval) clearInterval(pollEstadoInterval);
-                location.reload();
+                document.getElementById('vista-estado').classList.add('hidden');
+                document.getElementById('vista-formulario').classList.remove('hidden');
+                inicializarMapaFormulario();
             });
         }
 

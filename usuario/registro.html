@@ -112,23 +112,23 @@
 
             <div style="margin-bottom:8px;">
                 <label for="reg-nombre" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Nombre Completo</label>
-                <input type="text" id="reg-nombre" class="input-oscuro" placeholder="Ej. María Pérez" oninput="actualizarVistaUsuario()" onchange="actualizarVistaUsuario()">
+                <input type="text" id="reg-nombre" name="nombre_completo_cliente" class="input-oscuro" placeholder="Ej. Ramiro Vidales" autocomplete="off" oninput="actualizarVistaUsuario()" onchange="actualizarVistaUsuario()">
             </div>
 
             <div style="margin-bottom:8px;">
                 <label for="reg-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#34d399; margin-bottom:4px;">Usuario Asignado</label>
-                <input type="text" id="reg-usuario" class="input-oscuro campo-usuario-auto" placeholder="Se asigna automáticamente al escribir el nombre" autocapitalize="none">
+                <input type="text" id="reg-usuario" name="nuevo_usuario_envia" class="input-oscuro campo-usuario-auto" placeholder="Se asigna automáticamente al escribir el nombre" autocomplete="off" autocapitalize="none">
                 <p id="reg-usuario-aviso" style="font-size:11px; color:#94a3b8; margin:4px 0 0 0;">Generado automáticamente a partir de tu nombre completo.</p>
             </div>
 
             <div style="margin-bottom:8px;">
                 <label for="reg-telefono" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Teléfono</label>
-                <input type="text" id="reg-telefono" class="input-oscuro" placeholder="Ej. 04141234567">
+                <input type="text" id="reg-telefono" name="telefono_cliente" class="input-oscuro" placeholder="Ej. 04141234567" autocomplete="off">
             </div>
 
             <div style="margin-bottom:8px;">
                 <label for="reg-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
-                <input type="password" id="reg-clave" class="input-oscuro" placeholder="Mínimo 4 caracteres">
+                <input type="password" id="reg-clave" name="nueva_clave_cliente" class="input-oscuro" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
             </div>
 
             <div id="reg-msg" style="font-size:12px; margin-bottom:8px;" class="hidden"></div>
@@ -196,17 +196,38 @@
                 aviso.textContent = disponible !== base
                     ? 'El usuario "' + base + '" ya existía; se asignó: ' + disponible
                     : 'Usuario asignado: ' + disponible;
-            }, 300);
+            }, 250);
         }
 
-        document.getElementById('reg-usuario').addEventListener('input', function () {
+        var campoUsuarioEl = document.getElementById('reg-usuario');
+        campoUsuarioEl.addEventListener('keydown', function () {
+            this.dataset.manual = '1';
+        });
+        campoUsuarioEl.addEventListener('input', function () {
             var limpio = this.value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
             this.value = limpio;
-            this.dataset.manual = limpio ? '1' : '';
             var aviso = document.getElementById('reg-usuario-aviso');
-            aviso.textContent = limpio
-                ? 'Usuario personalizado: ' + limpio
-                : 'Generado automáticamente a partir de tu nombre completo.';
+            if (!limpio) {
+                this.dataset.manual = '';
+                actualizarVistaUsuario();
+                return;
+            }
+            if (this.dataset.manual === '1') {
+                aviso.textContent = 'Usuario personalizado: ' + limpio;
+            }
+        });
+
+        window.addEventListener('load', function () {
+            var userInput = document.getElementById('reg-usuario');
+            var nombreVal = document.getElementById('reg-nombre').value.trim();
+            if (!nombreVal) {
+                userInput.value = '';
+                userInput.dataset.manual = '';
+                document.getElementById('reg-usuario-aviso').textContent = 'Generado automáticamente a partir de tu nombre completo.';
+            } else {
+                userInput.dataset.manual = '';
+                actualizarVistaUsuario();
+            }
         });
 
         function hashFallbackSimple(texto) {

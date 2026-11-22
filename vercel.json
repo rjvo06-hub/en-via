@@ -1,0 +1,44 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "driver.en-via.werksolutions.de"
+        }
+      ],
+      "destination": "/conductor/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "driver.en-via.werksolutions.de"
+        }
+      ],
+      "destination": "/conductor/$1"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "user.en-via.werksolutions.de"
+        }
+      ],
+      "destination": "/usuario/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "user.en-via.werksolutions.de"
+        }
+      ],
+      "destination": "/usuario/$1"
+    }
+  ]
+}

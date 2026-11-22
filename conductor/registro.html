@@ -103,27 +103,27 @@
             </div>
         </header>
 
-        <form id="form-registro-conductor" onsubmit="registrarConductor(event)" class="caja-registro-chofer">
+        <form id="form-registro-conductor" onsubmit="registrarConductor(event)" autocomplete="off" class="caja-registro-chofer">
             <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Personales y Acceso</h2>
 
             <div class="campo-grupo-registro">
                 <label for="nombre" class="etiqueta-campo-registro">Nombre Completo *</label>
-                <input type="text" id="nombre" required placeholder="Ej. Carlos Pérez" oninput="actualizarUsuarioAutomatico()" style="width:100%;">
+                <input type="text" id="nombre" name="nombre_conductor_envia" required autocomplete="off" placeholder="Ej. Carlos Pérez" oninput="actualizarUsuarioAutomatico()" style="width:100%;">
             </div>
 
             <div class="campo-grupo-registro">
                 <label for="telefono" class="etiqueta-campo-registro">Teléfono Personal *</label>
-                <input type="text" id="telefono" required placeholder="Ej. 0414-1234567" style="width:100%;">
+                <input type="text" id="telefono" name="telefono_contacto_envia" required autocomplete="off" data-lpignore="true" data-form-type="other" placeholder="Ej. 0414-1234567" style="width:100%;">
             </div>
 
             <div class="campo-grupo-registro">
                 <label for="usuario" class="etiqueta-campo-registro">Usuario de Acceso (Asignado automáticamente) *</label>
-                <input type="text" id="usuario" required readonly tabindex="-1" placeholder="Se generará con tu nombre" class="input-solo-lectura" style="width:100%;">
+                <input type="text" id="usuario" name="username" required readonly tabindex="-1" autocomplete="username" placeholder="Se generará con tu nombre" class="input-solo-lectura" style="width:100%;">
             </div>
 
             <div class="campo-grupo-registro">
                 <label for="clave" class="etiqueta-campo-registro">Clave de Acceso *</label>
-                <input type="password" id="clave" required minlength="6" placeholder="Mínimo 6 caracteres" style="width:100%;">
+                <input type="password" id="clave" name="password" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres" style="width:100%;">
             </div>
 
             <div style="border-top:1px solid #1e293b; padding-top:12px; margin-top:12px;">
@@ -131,17 +131,17 @@
 
                 <div class="campo-grupo-registro">
                     <label for="banco" class="etiqueta-campo-registro">Banco</label>
-                    <input type="text" id="banco" placeholder="Ej. Banesco" style="width:100%;">
+                    <input type="text" id="banco" name="banco_conductor_envia" autocomplete="off" placeholder="Ej. Banesco" style="width:100%;">
                 </div>
 
                 <div class="campo-grupo-registro">
                     <label for="banco-telefono" class="etiqueta-campo-registro">Teléfono (Pago Móvil)</label>
-                    <input type="text" id="banco-telefono" placeholder="Ej. 04121234567" style="width:100%;">
+                    <input type="text" id="banco-telefono" name="pago_movil_envia" autocomplete="off" data-lpignore="true" placeholder="Ej. 04121234567" style="width:100%;">
                 </div>
 
                 <div class="campo-grupo-registro">
                     <label for="banco-cedula" class="etiqueta-campo-registro">Cédula / RIF</label>
-                    <input type="text" id="banco-cedula" placeholder="Ej. V12345678" style="width:100%;">
+                    <input type="text" id="banco-cedula" name="cedula_rif_envia" autocomplete="off" placeholder="Ej. V12345678" style="width:100%;">
                 </div>
 
                 <div class="campo-grupo-registro">

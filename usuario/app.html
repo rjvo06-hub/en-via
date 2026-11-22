@@ -261,6 +261,24 @@
             border: 1px solid #334155;
             overflow: hidden;
         }
+        /* Evita que estilos globales pinten de negro los controles internos de Google Maps */
+        #map button, #map a, #map-seguimiento button, #map-seguimiento a {
+            background-color: transparent !important;
+            color: #1e293b !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: auto !important;
+            min-width: 0 !important;
+            height: auto !important;
+        }
+        #map .gm-style-cc, #map .gmnoprint,
+        #map-seguimiento .gm-style-cc, #map-seguimiento .gmnoprint {
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            color: #0f172a !important;
+            border-radius: 4px !important;
+        }
     </style>
 </head>
 <body>
@@ -468,7 +486,8 @@
                     center: maracaiboCenter,
                     zoom: 13,
                     mapTypeControl: false,
-                    streetViewControl: false
+                    streetViewControl: false,
+                    fullscreenControl: false
                 });
                 setupUnifiedAutocomplete();
             });
@@ -833,7 +852,8 @@
                         center: baseCoords,
                         zoom: 13,
                         mapTypeControl: false,
-                        streetViewControl: false
+                        streetViewControl: false,
+                        fullscreenControl: false
                     });
                 }
 

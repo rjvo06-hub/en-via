@@ -81,12 +81,16 @@
     </div>
 
     <script>
-        var DIRECT_SUPABASE_URL = 'https://sgpwdejwfbqsswoibohu.supabase.co';
-        var DIRECT_SUPABASE_KEY = 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+        var DIRECT_SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
+        var DIRECT_SUPABASE_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
 
         function obtenerDb() {
             if (window.supabaseClient) {
                 return window.supabaseClient;
+            }
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+                return supabaseClient;
             }
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 window.supabaseClient = window.supabase.createClient(DIRECT_SUPABASE_URL, DIRECT_SUPABASE_KEY);
@@ -131,7 +135,6 @@
                 return pubRes && pubRes.data ? pubRes.data.publicUrl : '';
             }
 
-            // Respaldo directo vía Storage REST API para WebViews sin SDK Storage
             var uploadUrl = DIRECT_SUPABASE_URL.replace(/\/+$/, '') + '/storage/v1/object/qr-codes/' + encodeURIComponent(fileName);
             var resp = await window.fetch(uploadUrl, {
                 method: 'POST',

@@ -128,6 +128,33 @@
             margin-bottom: 10px;
             background-color: #0f172a;
         }
+        .tarjeta-cliente-contacto {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 8px 0 10px 0;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background-color: #1e293b;
+            border: 1px solid #334155;
+        }
+        .btn-llamar-cliente {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background-color: #10b981 !important;
+            color: #052e16 !important;
+            border: 1px solid #34d399 !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            text-decoration: none !important;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+        }
         .tarjeta-carrera-pendiente {
             position: relative;
             border: 1px solid #334155;
@@ -286,6 +313,7 @@
         var sonidoAlertaNativo = "alerta_envia_1";
         var canalAlertaCreado = false;
         var intervaloSondeoMs = 1200;
+        var cacheClientesTelefono = {};
 
         var alarmaInterval = null;
         var alarmaActiva = false;
@@ -884,6 +912,100 @@
                 });
         }
 
+        function limpiarTelefonoLlamada(tel) {
+            if (!tel) return '';
+            return String(tel).replace(/[^+\d]/g, '');
+        }
+
+        function construirBloqueContactoCliente(carrera) {
+            var nombreCliente = carrera.cliente_nombre || 'Cliente';
+            var idUnico = String(carrera.id).replace(/[^a-zA-Z0-9_-]/g, '');
+            var telDirecto = carrera.cliente_telefono || '';
+            var telLimpio = limpiarTelefonoLlamada(telDirecto);
+
+            var botonHtml = telLimpio
+                ? '<a id="btn-llamar-cliente-' + idUnico + '" href="tel:' + telLimpio + '" aria-label="Llamar al cliente" class="btn-llamar-cliente" title="Llamar a ' + nombreCliente + ' (' + telDirecto + ')">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                        '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>' +
+                    '</svg>' +
+                    '<span>Llamar</span>' +
+                  '</a>'
+                : '<a id="btn-llamar-cliente-' + idUnico + '" href="#" aria-label="Llamar al cliente" class="btn-llamar-cliente hidden">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                        '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>' +
+                    '</svg>' +
+                    '<span>Llamar</span>' +
+                  '</a>';
+
+            return (
+                '<div class="tarjeta-cliente-contacto">' +
+                    '<div style="min-width:0;">' +
+                        '<div style="font-size:13px; font-weight:700; color:#f8fafc;">👤 Cliente: ' + nombreCliente + '</div>' +
+                        '<div id="tel-cliente-display-' + idUnico + '" style="font-size:12px; color:#34d399; margin-top:2px;">' + (telDirecto ? ('📞 ' + telDirecto) : 'Buscando teléfono...') + '</div>' +
+                    '</div>' +
+                    botonHtml +
+                '</div>'
+            );
+        }
+
+        function resolverTelefonoCliente(carrera) {
+            var idUnico = String(carrera.id).replace(/[^a-zA-Z0-9_-]/g, '');
+            var btnEl = document.getElementById('btn-llamar-cliente-' + idUnico);
+            var telEl = document.getElementById('tel-cliente-display-' + idUnico);
+            if (!btnEl || !telEl) return;
+
+            function aplicarTelefono(rawTel) {
+                var limpio = limpiarTelefonoLlamada(rawTel);
+                if (limpio) {
+                    btnEl.href = 'tel:' + limpio;
+                    btnEl.title = 'Llamar a ' + (carrera.cliente_nombre || 'cliente') + ' (' + rawTel + ')';
+                    btnEl.classList.remove('hidden');
+                    telEl.textContent = '📞 ' + rawTel;
+                } else {
+                    btnEl.classList.add('hidden');
+                    btnEl.removeAttribute('href');
+                    telEl.textContent = 'Teléfono no registrado';
+                }
+            }
+
+            if (carrera.cliente_telefono) {
+                aplicarTelefono(carrera.cliente_telefono);
+                return;
+            }
+
+            var cacheKey = carrera.cliente_id ? ('id:' + carrera.cliente_id) : (carrera.cliente_nombre ? ('nom:' + carrera.cliente_nombre) : '');
+            if (!cacheKey) {
+                aplicarTelefono('');
+                return;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(cacheClientesTelefono, cacheKey)) {
+                aplicarTelefono(cacheClientesTelefono[cacheKey]);
+                return;
+            }
+
+            var db = getDb();
+            if (!db) {
+                aplicarTelefono('');
+                return;
+            }
+
+            var query = db.from('clientes').select('id, nombre, telefono').limit(1);
+            if (carrera.cliente_id) {
+                query = query.eq('id', carrera.cliente_id);
+            } else {
+                query = query.eq('nombre', carrera.cliente_nombre);
+            }
+
+            query.maybeSingle().then(function (res) {
+                var tel = (res && res.data && res.data.telefono) ? res.data.telefono : '';
+                cacheClientesTelefono[cacheKey] = tel;
+                aplicarTelefono(tel);
+            }).catch(function () {
+                aplicarTelefono('');
+            });
+        }
+
         function renderizarAsignada(asignadas) {
             var seccionAsignada = document.getElementById('seccion-asignada');
             var contenedor = document.getElementById('carrera-asignada-container');
@@ -931,12 +1053,14 @@
                 contenedor.innerHTML +=
                     '<div class="tarjeta-carrera-asignada">' +
                         '<p style="margin:0 0 4px 0;"><strong style="color:#34d399;">✅ Asignada a ti — ' + (c.precio || '$0.00') + '</strong></p>' +
-                        '<p style="margin:3px 0;">👤 Cliente: ' + (c.cliente_nombre || 'N/A') + '</p>' +
+                        construirBloqueContactoCliente(c) +
                         '<p style="margin:3px 0;">📍 Origen: ' + c.origen + '</p>' +
                         '<p style="margin:3px 0;">🏁 Destino: ' + c.destino + '</p>' +
                         '<p style="margin:3px 0;">Distancia: ' + (c.distancia || 'N/A') + '</p>' +
                         contenidoAcciones +
                     '</div>';
+
+                resolverTelefonoCliente(c);
 
                 if (yaLlego && !carreraIniciada) {
                     iniciarCronometro(tiempos.llegada_conductor_at, 'cronometro-conductor');

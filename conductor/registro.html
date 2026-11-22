@@ -3,88 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EN-VIA - Registro de Conductor</title>
+    <title>EN-VIA - Acceso de Conductor</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="./js/supabaseClient.js"></script>
+    <script>
+        var DIRECT_SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
+        var DIRECT_SUPABASE_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+
+        if (!window.supabaseClient) {
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+            } else if (window.supabase && typeof window.supabase.createClient === 'function') {
+                window.supabaseClient = window.supabase.createClient(DIRECT_SUPABASE_URL, DIRECT_SUPABASE_KEY);
+                window.supabaseIsRealtime = true;
+            }
+        }
+    </script>
     <style>
         input, select, textarea { font-size: 16px !important; }
         @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
     </style>
 </head>
-<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6">
-
-    <div class="max-w-2xl mx-auto space-y-6">
+<body class="bg-black min-h-screen text-slate-100 antialiased p-3 sm:p-6 flex items-center justify-center">
+    <div class="w-full max-w-md space-y-6">
         <header class="flex justify-between items-center border-b border-[#222222] pb-4">
             <div>
-                <h1 class="text-xl font-extrabold text-emerald-500 tracking-tight">EN-VIA - Registro de Conductor</h1>
-                <p class="text-slate-400 text-xs">Completa tus datos de acceso, contacto y cobro</p>
+                <h1 class="text-xl font-extrabold text-emerald-500 tracking-tight">EN-VIA - Portal de Chofer</h1>
+                <p class="text-slate-400 text-xs">Ingresa con tu usuario de conductor (ej. rdiaz) y clave</p>
             </div>
-            <a href="./index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
-                ← Ir al Portal
+            <a href="../index.html" class="px-3 py-1.5 bg-[#161616] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-medium rounded-xl transition">
+                ← Menú
             </a>
         </header>
 
-        <form id="form-registro-conductor" onsubmit="registrarConductor(event)" class="bg-[#111111] border border-[#222222] p-4 sm:p-6 rounded-2xl shadow-xl space-y-5">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Datos Personales y Acceso</h2>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Nombre Completo *</label>
-                    <input type="text" id="nombre" required placeholder="Ej. Carlos Pérez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono Personal *</label>
-                    <input type="text" id="telefono" required placeholder="Ej. 0414-1234567" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Usuario de Acceso *</label>
-                    <input type="text" id="usuario" required placeholder="Ej. cperez" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Clave de Acceso *</label>
-                    <input type="password" id="clave" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                </div>
+        <form id="form-login-conductor" onsubmit="ingresarAlPortal(event)" class="bg-[#111111] border border-[#222222] p-4 sm:p-6 rounded-2xl shadow-xl space-y-4">
+            <div>
+                <label for="login-nombre" class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Usuario del Conductor *</label>
+                <input type="text" id="login-nombre" required placeholder="Ej. rdiaz" autocomplete="username" autocapitalize="none" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
             </div>
 
-            <div class="space-y-3 pt-4 border-t border-[#222222]">
-                <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Datos Bancarios y Código QR</h2>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Banco</label>
-                        <input type="text" id="banco" placeholder="Ej. Banesco" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Teléfono (Pago Móvil)</label>
-                        <input type="text" id="banco-telefono" placeholder="Ej. 04121234567" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Cédula / RIF</label>
-                        <input type="text" id="banco-cedula" placeholder="Ej. V12345678" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Imagen del QR del Banco (Subir archivo)</label>
-                    <input type="file" id="qr-file" accept="image/*" class="w-full bg-[#161616] border border-[#2e2e2e] rounded-xl p-2 text-xs text-slate-300 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer">
-                    <p class="text-[10px] text-slate-500 mt-1">Sube la foto del QR del banco; se guardará automáticamente en la nube.</p>
-                </div>
+            <div>
+                <label for="login-clave" class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Clave de Acceso *</label>
+                <input type="password" id="login-clave" required placeholder="Tu clave de acceso" autocomplete="current-password" class="w-full bg-[#161616] border border-[#2e2e2e] focus:border-emerald-500 rounded-xl px-3 py-2 text-white outline-none">
             </div>
 
-            <div id="mensaje-estado" class="hidden text-xs rounded-xl p-3 border"></div>
+            <div id="login-error" class="hidden text-xs rounded-xl p-3 border bg-red-500/10 text-red-300 border-red-500/30"></div>
 
-            <button type="submit" id="btn-registrar" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
-                Completar Registro
+            <button type="submit" id="btn-entrar-portal" class="w-full py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition shadow-lg cursor-pointer">
+                Entrar al Portal
             </button>
+
+            <div class="pt-3 border-t border-[#222222] text-center space-y-2">
+                <p class="text-xs text-slate-400">¿Aún no tienes cuenta de conductor?</p>
+                <a href="./registro.html" class="inline-block w-full py-2.5 bg-[#161616] hover:bg-[#222222] border border-emerald-500/40 text-emerald-400 font-bold text-xs rounded-xl transition">
+                    Registrar Nuevo Conductor
+                </a>
+            </div>
         </form>
     </div>
 
     <script>
-        var DIRECT_SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
-        var DIRECT_SUPABASE_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
-
-        function obtenerDb() {
+        function getDb() {
             if (window.supabaseClient) {
                 return window.supabaseClient;
             }
@@ -94,9 +74,10 @@
             }
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 window.supabaseClient = window.supabase.createClient(DIRECT_SUPABASE_URL, DIRECT_SUPABASE_KEY);
+                window.supabaseIsRealtime = true;
                 return window.supabaseClient;
             }
-            throw new Error('No hay conexión disponible con Supabase en este dispositivo.');
+            return null;
         }
 
         function hashFallbackSimple(texto) {
@@ -112,7 +93,7 @@
             return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
         }
 
-        async function generarHashClave(clave) {
+        async function generarHashClaveLogin(clave) {
             try {
                 if (window.crypto && window.crypto.subtle && window.TextEncoder) {
                     var encoder = new TextEncoder();
@@ -125,130 +106,159 @@
             return hashFallbackSimple(clave);
         }
 
-        async function subirQrConRespaldo(db, file, fileName) {
-            if (db && db.storage && typeof db.storage.from === 'function') {
-                var upRes = await db.storage.from('qr-codes').upload(fileName, file);
-                if (upRes.error) {
-                    throw new Error('Error al subir el QR: ' + upRes.error.message);
-                }
-                var pubRes = db.storage.from('qr-codes').getPublicUrl(fileName);
-                return pubRes && pubRes.data ? pubRes.data.publicUrl : '';
+        function normalizarUsuarioEntrada(valor) {
+            if (!valor) return '';
+            var limpio = String(valor).replace(/^\s+|\s+$/g, '').toLowerCase();
+            if (limpio.indexOf(' ') !== -1 && window.EnviaAuth && typeof window.EnviaAuth.generarUsuarioDesdeNombre === 'function') {
+                return window.EnviaAuth.generarUsuarioDesdeNombre(limpio);
             }
-
-            var uploadUrl = DIRECT_SUPABASE_URL.replace(/\/+$/, '') + '/storage/v1/object/qr-codes/' + encodeURIComponent(fileName);
-            var resp = await window.fetch(uploadUrl, {
-                method: 'POST',
-                headers: {
-                    'apikey': DIRECT_SUPABASE_KEY,
-                    'Authorization': 'Bearer ' + DIRECT_SUPABASE_KEY,
-                    'Content-Type': file.type || 'application/octet-stream',
-                    'x-upsert': 'true'
-                },
-                body: file
-            });
-            if (!resp.ok) {
-                var errJson = await resp.json().catch(function () { return {}; });
-                throw new Error('Error al subir el QR: ' + (errJson.message || resp.statusText));
-            }
-            return DIRECT_SUPABASE_URL.replace(/\/+$/, '') + '/storage/v1/object/public/qr-codes/' + encodeURIComponent(fileName);
+            return limpio.replace(/\s+/g, '');
         }
 
-        async function insertarConductorConRespaldo(db, payload) {
+        function mostrarErrorLogin(msg) {
+            var errEl = document.getElementById('login-error');
+            if (errEl) {
+                errEl.textContent = msg;
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        function limpiarErrorLogin() {
+            var errEl = document.getElementById('login-error');
+            if (errEl) {
+                errEl.textContent = '';
+                errEl.classList.add('hidden');
+            }
+        }
+
+        async function consultarConductorDirecto(db, usuarioInput, claveInput) {
+            var hashSha = await generarHashClaveLogin(claveInput);
+            var hashSimple = hashFallbackSimple(claveInput);
+
             if (db && typeof db.from === 'function') {
-                return await db.from('conductores').insert([payload]);
+                var res = await db.from('conductores')
+                    .select('id, nombre, usuario, clave_hash, activo')
+                    .ilike('usuario', usuarioInput)
+                    .limit(1);
+
+                if (!res.error && res.data && res.data.length > 0) {
+                    var cond = res.data[0];
+                    var guardado = (cond.clave_hash || '').trim();
+                    var coincide = guardado !== '' && (
+                        guardado.toLowerCase() === hashSha.toLowerCase() ||
+                        guardado === hashSimple ||
+                        guardado === claveInput
+                    );
+                    if (!coincide) {
+                        return { errorMsg: 'Usuario o clave incorrectos.' };
+                    }
+                    if (cond.activo !== true) {
+                        return { errorMsg: 'Tu cuenta de conductor aún no está activa. Contacta al administrador.' };
+                    }
+                    return { conductor: cond };
+                }
             }
 
-            var restUrl = DIRECT_SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/conductores';
+            var restUrl = DIRECT_SUPABASE_URL.replace(/\/+$/, '') +
+                '/rest/v1/conductores?select=id,nombre,usuario,clave_hash,activo&usuario=ilike.' +
+                encodeURIComponent(usuarioInput) + '&limit=1';
             var resp = await window.fetch(restUrl, {
-                method: 'POST',
+                method: 'GET',
                 headers: {
                     'apikey': DIRECT_SUPABASE_KEY,
                     'Authorization': 'Bearer ' + DIRECT_SUPABASE_KEY,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify([payload])
+                    'Content-Type': 'application/json'
+                }
             });
-            var json = await resp.json().catch(function () { return null; });
-            if (!resp.ok) {
-                return { data: null, error: { message: (json && json.message) || resp.statusText } };
+            if (resp.ok) {
+                var rows = await resp.json().catch(function () { return []; });
+                if (Array.isArray(rows) && rows.length > 0) {
+                    var condRest = rows[0];
+                    var guardadoRest = (condRest.clave_hash || '').trim();
+                    var coincideRest = guardadoRest !== '' && (
+                        guardadoRest.toLowerCase() === hashSha.toLowerCase() ||
+                        guardadoRest === hashSimple ||
+                        guardadoRest === claveInput
+                    );
+                    if (!coincideRest) {
+                        return { errorMsg: 'Usuario o clave incorrectos.' };
+                    }
+                    if (condRest.activo !== true) {
+                        return { errorMsg: 'Tu cuenta de conductor aún no está activa. Contacta al administrador.' };
+                    }
+                    return { conductor: condRest };
+                }
             }
-            return { data: json, error: null };
+
+            return { notFound: true };
         }
 
-        function mostrarMensaje(texto, tipo) {
-            var box = document.getElementById('mensaje-estado');
-            box.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30', 'bg-red-500/10', 'text-red-300', 'border-red-500/30');
-            if (tipo === 'exito') {
-                box.classList.add('bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30');
-            } else {
-                box.classList.add('bg-red-500/10', 'text-red-300', 'border-red-500/30');
-            }
-            box.textContent = texto;
+        function irAAppConductor(cond) {
+            sessionStorage.setItem('conductor_en_via', cond.nombre);
+            sessionStorage.setItem('conductor_id_en_via', cond.id);
+            window.location.replace('./app.html');
         }
 
-        async function registrarConductor(event) {
-            event.preventDefault();
+        window.addEventListener('load', function () {
+            var sesionGuardada = sessionStorage.getItem('conductor_en_via');
+            var sesionIdGuardada = sessionStorage.getItem('conductor_id_en_via');
+            if (sesionGuardada && sesionIdGuardada) {
+                window.location.replace('./app.html');
+            }
+        });
 
-            var btn = document.getElementById('btn-registrar');
-            var nombre = document.getElementById('nombre').value.trim();
-            var telefono = document.getElementById('telefono').value.trim();
-            var usuario = document.getElementById('usuario').value.trim().toLowerCase();
-            var clave = document.getElementById('clave').value;
-            var banco = document.getElementById('banco').value.trim();
-            var bancoTelefono = document.getElementById('banco-telefono').value.trim();
-            var bancoCedula = document.getElementById('banco-cedula').value.trim();
-            var fileInput = document.getElementById('qr-file');
+        async function ingresarAlPortal(event) {
+            if (event) event.preventDefault();
+            limpiarErrorLogin();
 
-            if (!nombre || !telefono || !usuario || !clave) {
-                mostrarMensaje('Por favor completa nombre, teléfono, usuario y clave.', 'error');
+            var btn = document.getElementById('btn-entrar-portal');
+            var usuarioInput = normalizarUsuarioEntrada(document.getElementById('login-nombre').value || '');
+            var claveInput = document.getElementById('login-clave').value || '';
+            var db = getDb();
+
+            if (!usuarioInput || !claveInput) {
+                mostrarErrorLogin('Ingresa tu usuario y clave de acceso.');
                 return;
             }
 
-            btn.disabled = true;
-            btn.textContent = 'Enviando registro...';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Verificando...';
+            }
 
             try {
-                var db = obtenerDb();
-                var qrUrl = '';
-
-                if (fileInput.files && fileInput.files[0]) {
-                    var file = fileInput.files[0];
-                    var partesNombre = file.name.split('.');
-                    var fileExt = partesNombre.length > 1 ? partesNombre.pop() : 'png';
-                    var fileName = 'qr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7) + '.' + fileExt;
-                    qrUrl = await subirQrConRespaldo(db, file, fileName);
+                var directo = await consultarConductorDirecto(db, usuarioInput, claveInput);
+                if (directo && directo.conductor) {
+                    irAAppConductor(directo.conductor);
+                    return;
+                }
+                if (directo && directo.errorMsg) {
+                    mostrarErrorLogin(directo.errorMsg);
+                    return;
                 }
 
-                var claveHash = await generarHashClave(clave);
+                if (db && typeof db.rpc === 'function') {
+                    var res = await db.rpc('verificar_login_conductor', {
+                        p_usuario: usuarioInput,
+                        p_clave: claveInput
+                    });
+                    var rows = res ? res.data : null;
+                    var cond = Array.isArray(rows) ? rows[0] : rows;
 
-                var datos_bancarios = {
-                    banco: banco,
-                    telefono: bancoTelefono,
-                    cedula_rif: bancoCedula,
-                    qr_url: qrUrl
-                };
-
-                var resInsert = await insertarConductorConRespaldo(db, {
-                    nombre: nombre,
-                    telefono: telefono,
-                    usuario: usuario,
-                    clave_hash: claveHash,
-                    activo: false,
-                    datos_bancarios: datos_bancarios
-                });
-
-                if (resInsert.error) {
-                    throw new Error('No se pudo guardar el registro: ' + resInsert.error.message);
+                    if (cond && cond.id && cond.activo === true) {
+                        irAAppConductor(cond);
+                        return;
+                    }
                 }
 
-                document.getElementById('form-registro-conductor').reset();
-                mostrarMensaje('¡Registro enviado con éxito! Queda pendiente de activación.', 'exito');
-            } catch (err) {
-                mostrarMensaje(err.message || 'Ocurrió un error al registrar.', 'error');
+                mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
+            } catch (e) {
+                mostrarErrorLogin('Usuario o clave incorrectos, o conductor inactivo.');
             } finally {
-                btn.disabled = false;
-                btn.textContent = 'Completar Registro';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Entrar al Portal';
+                }
             }
         }
     </script>

@@ -342,10 +342,13 @@
                 }
 
                 document.getElementById('form-registro-conductor').reset();
-                mostrarMensaje('¡Registro enviado con éxito! Tu usuario asignado es "' + usuario + '". Queda pendiente de activación.', 'exito');
+                mostrarMensaje('¡Registro enviado con éxito! Tu usuario asignado es "' + usuario + '". Redirigiendo a iniciar sesión...', 'exito');
+
+                setTimeout(function () {
+                    window.location.replace('./index.html');
+                }, 1500);
             } catch (err) {
                 mostrarMensaje(err.message || 'Ocurrió un error al registrar.', 'error');
-            } finally {
                 btn.disabled = false;
                 btn.textContent = 'Completar Registro';
             }

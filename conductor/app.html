@@ -24,20 +24,31 @@
     </script>
     <style>
         body {
-            background-color: #050706;
+            background-color: #07090f;
             color: #e2e8f0;
         }
         input, select { font-size: 16px !important; }
         @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
 
         .encabezado-chofer-app {
-            border-bottom: 1px solid #1e2923;
+            border-bottom: 1px solid #1e293b;
             padding-bottom: 12px;
             margin-bottom: 14px;
         }
-        .titulo-chofer-verde {
-            color: #10b981;
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
             margin: 0;
+        }
+        .subtitulo-portal-chofer {
+            display: block;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 2px;
         }
         .acciones-header-chofer {
             display: flex;
@@ -46,9 +57,9 @@
             margin-top: 10px;
         }
         .btn-historial-header {
-            background-color: #0b1812 !important;
-            color: #34d399 !important;
-            border: 1px solid #10b981 !important;
+            background-color: #1e293b !important;
+            color: #c084fc !important;
+            border: 1px solid #9333ea !important;
             padding: 8px 14px !important;
             font-size: 13px !important;
             font-weight: 700 !important;
@@ -57,9 +68,9 @@
             width: auto !important;
         }
         .btn-desconectar-header {
-            background-color: #141917 !important;
+            background-color: #0f172a !important;
             color: #94a3b8 !important;
-            border: 1px solid #2b3530 !important;
+            border: 1px solid #334155 !important;
             padding: 8px 14px !important;
             font-size: 13px !important;
             font-weight: 600 !important;
@@ -68,12 +79,12 @@
             width: auto !important;
         }
         .panel-historial-carreras {
-            border: 1px solid #1f3a2e;
+            border: 1px solid #334155;
             border-radius: 8px;
             padding: 12px;
             margin-top: 10px;
             margin-bottom: 14px;
-            background-color: #0b120e;
+            background-color: #0f172a;
         }
         .cabecera-panel-historial {
             display: flex;
@@ -90,34 +101,34 @@
             margin-bottom: 10px;
         }
         .input-fecha-historial {
-            background-color: #111915 !important;
+            background-color: #1e293b !important;
             color: #f8fafc !important;
-            border: 1px solid #2a3d34 !important;
+            border: 1px solid #475569 !important;
             border-radius: 6px !important;
             padding: 6px 10px !important;
             width: auto !important;
         }
         .tarjeta-carrera-historial {
-            border: 1px solid #1c2e26;
+            border: 1px solid #1e293b;
             border-radius: 8px;
             padding: 10px 12px;
             margin-top: 8px;
-            background-color: #0e1713;
+            background-color: #111827;
         }
         .tarjeta-carrera-asignada {
-            border: 1px solid #10b981;
+            border: 1px solid #9333ea;
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 10px;
-            background-color: #0b1712;
+            background-color: #0f172a;
         }
         .tarjeta-carrera-pendiente {
             position: relative;
-            border: 1px solid #24332c;
+            border: 1px solid #334155;
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 10px;
-            background-color: #0c120f;
+            background-color: #0f172a;
         }
         .cabecera-pendiente {
             display: flex;
@@ -126,25 +137,25 @@
             gap: 8px;
             margin-bottom: 6px;
         }
-        .btn-tomar-verde {
+        .btn-tomar-morado {
             width: 100%;
-            background-color: #10b981 !important;
-            color: #04130c !important;
+            background-color: #9333ea !important;
+            color: #ffffff !important;
             font-weight: 700 !important;
             border-radius: 6px !important;
             margin-top: 6px;
         }
-        .btn-accion-verde {
-            background-color: #10b981 !important;
-            color: #04130c !important;
+        .btn-accion-morado {
+            background-color: #9333ea !important;
+            color: #ffffff !important;
             font-weight: 700 !important;
             border-radius: 6px !important;
             margin-top: 6px;
         }
         .btn-descartar-mini {
-            background-color: #181c1a !important;
-            color: #94a3b8 !important;
-            border: 1px solid #33413b !important;
+            background-color: #1e293b !important;
+            color: #cbd5e1 !important;
+            border: 1px solid #475569 !important;
             padding: 5px 11px !important;
             font-size: 11px !important;
             font-weight: 700 !important;
@@ -158,9 +169,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background-color: #0c1310 !important;
-            color: #cbd5e1 !important;
-            border: 1px solid #24332c !important;
+            background-color: #0f172a !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #334155 !important;
             border-radius: 8px !important;
             padding: 10px 12px !important;
             font-size: 13px !important;
@@ -169,12 +180,12 @@
             margin-top: 14px;
         }
         .tarjeta-carrera-descartada {
-            border: 1px dashed #2c3e35;
+            border: 1px dashed #475569;
             border-radius: 8px;
             padding: 12px;
             margin-top: 8px;
             margin-bottom: 10px;
-            background-color: #0a0f0d;
+            background-color: #111827;
         }
         .acciones-descartada {
             display: flex;
@@ -182,9 +193,9 @@
             margin-top: 8px;
         }
         .btn-restaurar-mini {
-            background-color: #121c17 !important;
+            background-color: #1e293b !important;
             color: #34d399 !important;
-            border: 1px solid #264637 !important;
+            border: 1px solid #10b981 !important;
             padding: 8px 12px !important;
             font-size: 12px !important;
             font-weight: 600 !important;
@@ -202,8 +213,11 @@
 
     <div id="portal-container" class="max-w-3xl">
         <header class="encabezado-chofer-app">
-            <h1 class="titulo-chofer-verde">EN-VIA - Panel de Chofer</h1>
-            <p style="color:#94a3b8; margin:4px 0 0 0;">Conectado como: <strong id="driver-name-display" style="color:#34d399;"></strong></p>
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-portal-chofer">Panel de Chofer</span>
+            </h1>
+            <p style="color:#94a3b8; margin:6px 0 0 0;">Conectado como: <strong id="driver-name-display" style="color:#34d399;"></strong></p>
             <div class="acciones-header-chofer">
                 <button type="button" id="btn-ver-historial" class="btn-historial-header" onclick="alternarHistorialCarreras()">📋 Historial de Carreras</button>
                 <button type="button" id="btn-desconectar" class="btn-desconectar-header" onclick="cerrarSesion()">Desconectar</button>
@@ -212,7 +226,7 @@
 
         <div id="panel-historial" class="panel-historial-carreras hidden">
             <div class="cabecera-panel-historial">
-                <h2 style="color:#34d399; margin:0; font-size:15px;">Historial de Carreras (<span id="contador-historial">0</span>)</h2>
+                <h2 style="color:#c084fc; margin:0; font-size:15px;">Historial de Carreras (<span id="contador-historial">0</span>)</h2>
                 <button type="button" class="btn-restaurar-mini" onclick="alternarHistorialCarreras()">Cerrar ✕</button>
             </div>
             <div class="barra-filtro-historial">
@@ -227,12 +241,12 @@
         </div>
 
         <div id="seccion-asignada" class="hidden">
-            <h2 style="color:#34d399; margin-bottom:8px; font-size:15px;">Tu Carrera en Curso</h2>
+            <h2 style="color:#c084fc; margin-bottom:8px; font-size:15px;">Tu Carrera en Curso</h2>
             <div id="carrera-asignada-container"></div>
         </div>
 
         <div style="margin-top:16px;">
-            <h2 style="color:#a7f3d0; margin-bottom:8px; font-size:15px;">Carreras Pendientes para Tomar</h2>
+            <h2 style="color:#c084fc; margin-bottom:8px; font-size:15px;">Carreras Pendientes para Tomar</h2>
             <div id="lista-carreras">
                 <div style="color:#94a3b8; font-size:13px;">Buscando carreras...</div>
             </div>
@@ -892,20 +906,20 @@
                 if (!yaLlego) {
                     contenidoAcciones =
                         '<a href="' + urlNavegacionBase + '" target="_blank">🧭 Navegar desde Base al Origen</a>' +
-                        '<button type="button" class="btn-accion-verde" onclick=\'conductorLlego("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>📍 Ya estoy en el lugar</button>';
+                        '<button type="button" class="btn-accion-morado" onclick=\'conductorLlego("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>📍 Ya estoy en el lugar</button>';
                 } else if (!carreraIniciada) {
                     contenidoAcciones =
                         '<p>⏱️ Tiempo de espera: <strong id="cronometro-conductor" style="color:#34d399;">00:00</strong></p>' +
-                        '<button type="button" class="btn-accion-verde" onclick=\'iniciarCarrera("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>🚀 Iniciar Carrera</button>';
+                        '<button type="button" class="btn-accion-morado" onclick=\'iniciarCarrera("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>🚀 Iniciar Carrera</button>';
                 } else if (!recorridoFinalizado) {
                     contenidoAcciones =
                         '<p>⏱️ Tiempo de viaje: <strong id="cronometro-viaje" style="color:#34d399;">00:00</strong></p>' +
                         '<a href="' + urlNavegacionDestino + '" target="_blank">🗺️ Navegar al destino</a>' +
-                        '<button type="button" class="btn-accion-verde" onclick=\'finalizarRecorrido("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>📍 Finalizar Recorrido (Llegamos al Destino)</button>';
+                        '<button type="button" class="btn-accion-morado" onclick=\'finalizarRecorrido("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>📍 Finalizar Recorrido (Llegamos al Destino)</button>';
                 } else {
                     contenidoAcciones =
                         '<p><strong>💳 Confirmación de Pago: <span style="color:#34d399;">' + (c.precio || '$0.00') + '</span></strong></p>' +
-                        '<button type="button" class="btn-accion-verde" onclick=\'confirmarPagoYFinalizar("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>✅ Confirmar Pago y Finalizar Servicio</button>';
+                        '<button type="button" class="btn-accion-morado" onclick=\'confirmarPagoYFinalizar("' + c.id + '", ' + JSON.stringify(tiempos) + ')\'>✅ Confirmar Pago y Finalizar Servicio</button>';
                 }
 
                 contenedor.innerHTML +=
@@ -1005,7 +1019,7 @@
                         '<p style="margin:3px 0;">📍 Origen: ' + c.origen + '</p>' +
                         '<p style="margin:3px 0;">🏁 Destino: ' + c.destino + '</p>' +
                         '<p style="margin:3px 0;">Distancia: ' + (c.distancia || 'N/A') + '</p>' +
-                        '<button type="button" class="btn-tomar-verde" onclick="tomarCarrera(\'' + c.id + '\')">🙋‍♂️ Tomar esta Carrera</button>' +
+                        '<button type="button" class="btn-tomar-morado" onclick="tomarCarrera(\'' + c.id + '\')">🙋‍♂️ Tomar esta Carrera</button>' +
                     '</div>';
             });
         }
@@ -1035,7 +1049,7 @@
                         '<p style="margin:3px 0;">🏁 Destino: ' + c.destino + '</p>' +
                         '<p style="margin:3px 0;">Distancia: ' + (c.distancia || 'N/A') + '</p>' +
                         '<div class="acciones-descartada">' +
-                            '<button type="button" class="btn-tomar-verde" style="flex:1;" onclick="tomarCarrera(\'' + c.id + '\')">🙋‍♂️ Tomar esta Carrera</button>' +
+                            '<button type="button" class="btn-tomar-morado" style="flex:1;" onclick="tomarCarrera(\'' + c.id + '\')">🙋‍♂️ Tomar esta Carrera</button>' +
                             '<button type="button" class="btn-restaurar-mini" onclick="restaurarCarreraDescartada(\'' + c.id + '\')">Restaurar</button>' +
                         '</div>' +
                     '</div>';

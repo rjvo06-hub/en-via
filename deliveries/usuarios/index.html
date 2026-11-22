@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EN-VIA - Portal de Restaurante</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+        var SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
+        var SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+
+        function getDb() {
+            if (window.supabaseClient) return window.supabaseClient;
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+                return supabaseClient;
+            }
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
+    </script>
+    <style>
+        body { background-color: #07090f; color: #e2e8f0; }
+        input, select, textarea { font-size: 16px !important; }
+        @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
+
+        .encabezado-cliente { border-bottom: 1px solid #1e293b; padding-bottom: 12px; margin-bottom: 14px; text-align: center; }
+        .titulo-marca-envia { display: block; color: #9333ea; font-size: 1.5rem; font-weight: 800; line-height: 1.1; margin: 0; }
+        .subtitulo-portal-cliente { display: block; color: #f8fafc; font-size: 1rem; font-weight: 700; margin-top: 2px; }
+        .caja-acceso-cliente { border: 1px solid #334155; border-radius: 8px; padding: 14px; background-color: #0f172a; }
+        .input-oscuro { width: 100%; box-sizing: border-box; background-color: #1e293b !important; color: #f8fafc !important; border: 1px solid #475569 !important; border-radius: 6px !important; padding: 8px 10px !important; }
+        .btn-morado-principal { width: 100%; background-color: #9333ea !important; color: #ffffff !important; font-weight: 700 !important; border-radius: 6px !important; padding: 10px 14px !important; cursor: pointer; }
+        .btn-opcion-registro { display: inline-block; width: 100%; box-sizing: border-box; text-align: center; text-decoration: none; padding: 10px 12px; border-radius: 6px; font-weight: 700; font-size: 13px; background-color: #1e293b; color: #34d399; border: 1px solid #10b981; }
+    </style>
+</head>
+<body>
+    <div id="login-container" class="max-w-xl">
+        <header class="encabezado-cliente">
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-portal-cliente">Portal de Restaurante</span>
+            </h1>
+            <p style="color:#94a3b8; font-size:12px; margin:6px 0 0 0;">Inicia sesión con el usuario de tu punto para solicitar deliveries</p>
+        </header>
+
+        <div id="login-form-box" class="caja-acceso-cliente">
+            <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Iniciar Sesión</h2>
+
+            <div style="margin-bottom:8px;">
+                <label for="login-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Usuario del Punto</label>
+                <input type="text" id="login-usuario" name="usuario_restaurante_envia" class="input-oscuro" placeholder="Ej. bhouse_bellavista" autocomplete="off" autocapitalize="none">
+            </div>
+
+            <div style="margin-bottom:8px;">
+                <label for="login-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
+                <input type="password" id="login-clave" name="clave_restaurante_envia" class="input-oscuro" placeholder="Tu clave de acceso" autocomplete="new-password">
+            </div>
+
+            <div id="login-error" style="color:#f87171; font-size:12px; margin-bottom:8px;" class="hidden"></div>
+
+            <button type="button" id="btn-entrar-portal" onclick="ingresarRestaurante()" class="btn-morado-principal" style="margin-bottom:10px;">Entrar al Portal de Domicilios</button>
+
+            <div style="border-top:1px solid #1e293b; padding-top:10px; text-align:center;">
+                <p style="font-size:12px; color:#94a3b8; margin:0 0 8px 0;">¿Tu restaurante o punto no tiene cuenta todavía?</p>
+                <a href="./restaurante/registro.html" class="btn-opcion-registro">Ir a Registro de Restaurante</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function reiniciarCamposLoginVacios() {
+            var userEl = document.getElementById('login-usuario');
+            var passEl = document.getElementById('login-clave');
+            if (userEl) userEl.value = '';
+            if (passEl) passEl.value = '';
+            limpiarErrorLogin();
+        }
+
+        document.addEventListener('DOMContentLoaded', reiniciarCamposLoginVacios);
+        window.addEventListener('load', function () {
+            reiniciarCamposLoginVacios();
+            setTimeout(reiniciarCamposLoginVacios, 120);
+        });
+        window.addEventListener('pageshow', reiniciarCamposLoginVacios);
+
+        function hashFallbackSimple(texto) {
+            var h1 = 0xdeadbeef ^ texto.length;
+            var h2 = 0x41c6ce57 ^ texto.length;
+            for (var i = 0; i < texto.length; i++) {
+                var ch = texto.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+        }
+
+        async function generarHashClave(clave) {
+            try {
+                if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+                    var encoder = new TextEncoder();
+                    var data = encoder.encode(clave);
+                    var hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+                    var hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+                }
+            } catch (e) {}
+            return hashFallbackSimple(clave);
+        }
+
+        function mostrarErrorLogin(msg) {
+            var errEl = document.getElementById('login-error');
+            if (errEl) {
+                errEl.textContent = msg;
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        function limpiarErrorLogin() {
+            var errEl = document.getElementById('login-error');
+            if (errEl) {
+                errEl.textContent = '';
+                errEl.classList.add('hidden');
+            }
+        }
+
+        function irAAppRestaurante(rest) {
+            var etiquetaPunto = rest.nombre_comercial + ' - ' + rest.punto_sucursal;
+            sessionStorage.setItem('restaurante_en_via', etiquetaPunto);
+            sessionStorage.setItem('restaurante_id_en_via', rest.id);
+            sessionStorage.setItem('restaurante_usuario_en_via', rest.usuario || '');
+            sessionStorage.setItem('restaurante_origen_en_via', rest.direccion_origen || '');
+            sessionStorage.setItem('restaurante_telefono_en_via', rest.telefono || '');
+            window.location.replace('./restaurante/app.html');
+        }
+
+        async function buscarRestauranteParaLogin(db, entradaRaw) {
+            var limpio = String(entradaRaw || '').trim();
+            var usuarioLower = limpio.toLowerCase();
+
+            if (db && typeof db.from === 'function') {
+                var resUser = await db.from('restaurantes')
+                    .select('*')
+                    .ilike('usuario', usuarioLower)
+                    .limit(1);
+                if (!resUser.error && resUser.data && resUser.data.length > 0) {
+                    return resUser.data[0];
+                }
+            }
+
+            var baseRest = SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/restaurantes';
+            var resp = await window.fetch(baseRest + '?select=*&usuario=ilike.' + encodeURIComponent(usuarioLower) + '&limit=1', {
+                method: 'GET',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (resp.ok) {
+                var rows = await resp.json().catch(function () { return []; });
+                if (Array.isArray(rows) && rows.length > 0) return rows[0];
+            }
+            return null;
+        }
+
+        async function ingresarRestaurante() {
+            limpiarErrorLogin();
+            var btn = document.getElementById('btn-entrar-portal');
+            var entradaRaw = (document.getElementById('login-usuario').value || '').trim();
+            var claveInput = document.getElementById('login-clave').value || '';
+            var db = getDb();
+
+            if (!entradaRaw && !claveInput) {
+                mostrarErrorLogin('Los campos de usuario y clave están vacíos.');
+                return;
+            }
+            if (!entradaRaw) {
+                mostrarErrorLogin('El campo de usuario está vacío.');
+                return;
+            }
+            if (!claveInput) {
+                mostrarErrorLogin('El campo de clave está vacío.');
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Verificando...';
+            }
+
+            try {
+                var rest = await buscarRestauranteParaLogin(db, entradaRaw);
+                if (!rest) {
+                    mostrarErrorLogin('Usuario o clave incorrectos.');
+                    return;
+                }
+
+                var hashSha = await generarHashClave(claveInput);
+                var hashSimple = hashFallbackSimple(claveInput);
+                var guardado = (rest.clave_hash || '').trim();
+                var coincide = guardado !== '' && (
+                    guardado.toLowerCase() === hashSha.toLowerCase() ||
+                    guardado === hashSimple ||
+                    guardado === claveInput
+                );
+
+                if (!coincide) {
+                    mostrarErrorLogin('Usuario o clave incorrectos.');
+                    return;
+                }
+
+                if (rest.activo !== true) {
+                    mostrarErrorLogin('Este punto de restaurante aún no está activo.');
+                    return;
+                }
+
+                irAAppRestaurante(rest);
+            } catch (e) {
+                mostrarErrorLogin('Error al verificar las credenciales del restaurante.');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Entrar al Portal de Domicilios';
+                }
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                ingresarRestaurante();
+            }
+        });
+    </script>
+</body>
+</html>

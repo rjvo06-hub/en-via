@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EN-VIA - Panel de Repartidor Delivery</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="./js/supabaseClient.js"></script>
+    <script>
+        var DIRECT_SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
+        var DIRECT_SUPABASE_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+
+        if (!window.supabaseClient) {
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+            } else if (window.supabase && typeof window.supabase.createClient === 'function') {
+                window.supabaseClient = window.supabase.createClient(DIRECT_SUPABASE_URL, DIRECT_SUPABASE_KEY);
+                window.supabaseIsRealtime = true;
+            }
+        } else if (typeof window.supabaseIsRealtime === 'undefined') {
+            window.supabaseIsRealtime = typeof window.supabaseClient.channel === 'function';
+        }
+    </script>
+    <style>
+        body {
+            background-color: #07090f;
+            color: #e2e8f0;
+        }
+        input, select { font-size: 16px !important; }
+        @media (min-width: 640px) { input, select { font-size: 0.85rem !important; } }
+
+        .encabezado-chofer-app {
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .subtitulo-portal-chofer {
+            display: block;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .acciones-header-chofer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn-historial-header {
+            background-color: #1e293b !important;
+            color: #c084fc !important;
+            border: 1px solid #9333ea !important;
+            padding: 8px 14px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+            width: auto !important;
+        }
+        .btn-desconectar-header {
+            background-color: #dc2626 !important;
+            color: #ffffff !important;
+            border: 1px solid #f87171 !important;
+            padding: 8px 14px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+            width: auto !important;
+            margin-left: auto;
+        }
+        .panel-historial-carreras {
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            margin-bottom: 14px;
+            background-color: #0f172a;
+        }
+        .cabecera-panel-historial {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .barra-filtro-historial {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .input-fecha-historial {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #475569 !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+            width: auto !important;
+        }
+        .tarjeta-carrera-historial {
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 8px;
+            background-color: #111827;
+        }
+        .tarjeta-carrera-asignada {
+            border: 1px solid #9333ea;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background-color: #0f172a;
+        }
+        .tarjeta-cliente-contacto {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 8px 0;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background-color: #1e293b;
+            border: 1px solid #334155;
+        }
+        .btn-llamar-cliente {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background-color: #10b981 !important;
+            color: #052e16 !important;
+            border: 1px solid #34d399 !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            text-decoration: none !important;
+            white-space: nowrap;
+        }
+        .tarjeta-carrera-pendiente {
+            position: relative;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background-color: #0f172a;
+        }
+        .cabecera-pendiente {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .btn-tomar-morado {
+            width: 100%;
+            background-color: #9333ea !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            margin-top: 6px;
+        }
+        .btn-accion-morado {
+            background-color: #9333ea !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-radius: 6px !important;
+            margin-top: 6px;
+        }
+        .btn-descartar-mini {
+            background-color: #1e293b !important;
+            color: #cbd5e1 !important;
+            border: 1px solid #475569 !important;
+            padding: 5px 11px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            line-height: 1.2 !important;
+            width: auto !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+        }
+        .seccion-descartadas-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #0f172a !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #334155 !important;
+            border-radius: 8px !important;
+            padding: 10px 12px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            cursor: pointer;
+            margin-top: 14px;
+        }
+        .tarjeta-carrera-descartada {
+            border: 1px dashed #475569;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+            background-color: #111827;
+        }
+        .acciones-descartada {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-restaurar-mini {
+            background-color: #1e293b !important;
+            color: #34d399 !important;
+            border: 1px solid #10b981 !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+            width: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <audio id="alarma-audio" preload="auto" playsinline>
+        <source src="https://en-via.azubiform.de/alerta_envia_1.wav" type="audio/wav">
+        <source src="./alerta_envia_1.wav" type="audio/wav">
+    </audio>
+
+    <div id="portal-container" class="max-w-3xl">
+        <header class="encabezado-chofer-app">
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-portal-chofer">Panel de Conductor Delivery</span>
+            </h1>
+            <p style="color:#94a3b8; margin:6px 0 0 0;">Repartidor conectado: <strong id="driver-name-display" style="color:#34d399;"></strong></p>
+            <div class="acciones-header-chofer">
+                <button type="button" id="btn-ver-historial" class="btn-historial-header" onclick="alternarHistorialDeliveries()">📋 Historial de Deliveries</button>
+                <button type="button" id="btn-desconectar" class="btn-desconectar-header" onclick="cerrarSesion()">Desconectar</button>
+            </div>
+        </header>
+
+        <div id="panel-historial" class="panel-historial-carreras hidden">
+            <div class="cabecera-panel-historial">
+                <h2 style="color:#c084fc; margin:0; font-size:15px;">Historial de Deliveries (<span id="contador-historial">0</span>)</h2>
+                <button type="button" class="btn-restaurar-mini" onclick="alternarHistorialDeliveries()">Cerrar ✕</button>
+            </div>
+            <div class="barra-filtro-historial">
+                <label for="fecha-historial" style="font-size:12px; color:#cbd5e1; font-weight:600;">Fecha:</label>
+                <input type="date" id="fecha-historial" class="input-fecha-historial" onchange="alCambiarFechaHistorial()">
+                <button type="button" class="btn-restaurar-mini" onclick="seleccionarHoyHistorial()">Hoy</button>
+                <button type="button" class="btn-restaurar-mini" onclick="verTodoHistorial()">Ver todos</button>
+            </div>
+            <div id="lista-historial-carreras">
+                <div style="color:#94a3b8; font-size:13px;">Selecciona una fecha para consultar deliveries.</div>
+            </div>
+        </div>
+
+        <div id="seccion-asignada" class="hidden">
+            <h2 style="color:#c084fc; margin-bottom:8px; font-size:15px;">Tu Delivery en Curso</h2>
+            <div id="carrera-asignada-container"></div>
+        </div>
+
+        <div style="margin-top:16px;">
+            <h2 style="color:#c084fc; margin-bottom:8px; font-size:15px;">Deliveries Pendientes de Restaurantes</h2>
+            <div id="lista-carreras">
+                <div style="color:#94a3b8; font-size:13px;">Buscando pedidos...</div>
+            </div>
+        </div>
+
+        <div id="seccion-descartadas-activas">
+            <button type="button" id="btn-toggle-descartadas" class="seccion-descartadas-toggle" onclick="alternarDescartadasActivas()">
+                <span>Deliveries Descartados Activos (<span id="contador-descartadas-activas">0</span>)</span>
+                <span id="icono-toggle-descartadas">▼</span>
+            </button>
+            <div id="lista-descartadas-activas" class="hidden">
+                <div style="margin-top:8px; color:#94a3b8; font-size:13px;">No hay deliveries descartados activos.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var conductorActual = "";
+        var conductorIdActual = null;
+        var timerInterval = null;
+        var pollingInterval = null;
+        var primeraCargaRealizada = false;
+        var idsPendientesConocidos = {};
+        var deliveriesDescartadosIds = [];
+        var descartadasExpandida = false;
+        var historialVisible = false;
+        var mostrarTodoHistorial = false;
+        var audioCtx = null;
+        var audioDesbloqueado = false;
+        var canalAlertaConductorId = "envia_delivery_alerta_v1";
+        var sonidoAlertaNativo = "alerta_envia_1";
+        var canalAlertaCreado = false;
+        var intervaloSondeoMs = 1200;
+
+        var alarmaInterval = null;
+        var alarmaActiva = false;
+        var hayDeliveryNuevoSinVer = false;
+        var ultimaActivacionAlarmaMs = 0;
+
+        var baseLat = "10.670389";
+        var baseLng = "-71.658972";
+
+        function getDb() {
+            if (window.supabaseClient) return window.supabaseClient;
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+                return supabaseClient;
+            }
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                window.supabaseClient = window.supabase.createClient(DIRECT_SUPABASE_URL, DIRECT_SUPABASE_KEY);
+                window.supabaseIsRealtime = true;
+                return window.supabaseClient;
+            }
+            return null;
+        }
+
+        function desbloquearMotorAudio() {
+            try {
+                if (!audioCtx) {
+                    var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) audioCtx = new AudioContextClass();
+                }
+                if (audioCtx && audioCtx.state === 'suspended' && typeof audioCtx.resume === 'function') {
+                    audioCtx.resume().catch(function () {});
+                }
+                if (audioCtx && !audioDesbloqueado) {
+                    var osc = audioCtx.createOscillator();
+                    var gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.02);
+                    audioDesbloqueado = true;
+                }
+            } catch (e) {}
+        }
+
+        async function asegurarCanalSonidoConductor() {
+            if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.LocalNotifications) return;
+            var LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
+            try {
+                if (typeof LocalNotifications.requestPermissions === 'function') {
+                    await LocalNotifications.requestPermissions();
+                }
+                if (!canalAlertaCreado && typeof LocalNotifications.createChannel === 'function') {
+                    await LocalNotifications.createChannel({
+                        id: canalAlertaConductorId,
+                        name: 'Alerta EN-VIA Delivery',
+                        description: 'Sonido de alerta para repartidores delivery',
+                        importance: 5,
+                        visibility: 1,
+                        sound: sonidoAlertaNativo,
+                        vibration: false
+                    });
+                    canalAlertaCreado = true;
+                }
+            } catch (e) {}
+        }
+
+        function notificarNativoNuevoDelivery(cantidadPendientes, deliveryInfo) {
+            var titulo = "EN-VIA Delivery: Nuevo pedido disponible";
+            var detalle = deliveryInfo && deliveryInfo.origen
+                ? ((deliveryInfo.restaurante_nombre ? "[" + deliveryInfo.restaurante_nombre + "] " : "") +
+                    deliveryInfo.origen + " → " + (deliveryInfo.destino || "Destino") + (deliveryInfo.precio ? " (" + deliveryInfo.precio + ")" : ""))
+                : ("Hay " + cantidadPendientes + " delivery(s) pendiente(s) por tomar.");
+            try {
+                if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                    asegurarCanalSonidoConductor().then(function () {
+                        window.Capacitor.Plugins.LocalNotifications.schedule({
+                            notifications: [{
+                                id: Math.floor(Date.now() % 2147483647),
+                                title: titulo,
+                                body: detalle,
+                                channelId: canalAlertaConductorId,
+                                sound: sonidoAlertaNativo,
+                                schedule: { at: new Date(Date.now() + 10) }
+                            }]
+                        }).catch(function () {});
+                    });
+                }
+            } catch (e) {}
+
+            try {
+                if (window.AndroidAlarma && typeof window.AndroidAlarma.dispararAlerta === 'function') {
+                    window.AndroidAlarma.dispararAlerta(titulo, detalle);
+                }
+            } catch (e) {}
+        }
+
+        function reproducirAlerta1Web() {
+            if (!audioCtx) return;
+            var notas = [
+                [1850, 0.14], [0, 0.07], [2200, 0.18], [0, 0.18],
+                [1850, 0.14], [0, 0.07], [2200, 0.22]
+            ];
+            var cursor = audioCtx.currentTime;
+            for (var i = 0; i < notas.length; i++) {
+                var freq = notas[i][0];
+                var dur = notas[i][1];
+                if (freq > 0) {
+                    var osc1 = audioCtx.createOscillator();
+                    var osc2 = audioCtx.createOscillator();
+                    var gain = audioCtx.createGain();
+                    osc1.type = 'sine';
+                    osc2.type = 'sine';
+                    osc1.frequency.setValueAtTime(freq, cursor);
+                    osc2.frequency.setValueAtTime(freq * 2, cursor);
+                    gain.gain.setValueAtTime(0.01, cursor);
+                    gain.gain.linearRampToValueAtTime(0.78, cursor + 0.005);
+                    gain.gain.setValueAtTime(0.78, cursor + Math.max(0.01, dur - 0.005));
+                    gain.gain.linearRampToValueAtTime(0.001, cursor + dur);
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc1.start(cursor);
+                    osc2.start(cursor);
+                    osc1.stop(cursor + dur + 0.01);
+                    osc2.stop(cursor + dur + 0.01);
+                }
+                cursor += dur;
+            }
+        }
+
+        function reproducirTimbreRapido() {
+            try {
+                desbloquearMotorAudio();
+                var audioElement = document.getElementById('alarma-audio');
+                if (audioElement) {
+                    audioElement.muted = false;
+                    audioElement.volume = 1.0;
+                    if (audioElement.readyState >= 2 && !audioElement.error) {
+                        audioElement.currentTime = 0;
+                        var playPromise = audioElement.play();
+                        if (playPromise && typeof playPromise.catch === 'function') {
+                            playPromise.catch(function () { reproducirAlerta1Web(); });
+                        }
+                        return;
+                    }
+                }
+                reproducirAlerta1Web();
+            } catch (e) {}
+        }
+
+        function iniciarAlarmaPersistente(cantidadPendientes, deliveryNuevo) {
+            hayDeliveryNuevoSinVer = true;
+            notificarNativoNuevoDelivery(cantidadPendientes || 1, deliveryNuevo || null);
+            ultimaActivacionAlarmaMs = Date.now();
+            reproducirTimbreRapido();
+
+            if (alarmaActiva) return;
+            alarmaActiva = true;
+
+            alarmaInterval = setInterval(function () {
+                if (!alarmaActiva || !hayDeliveryNuevoSinVer) {
+                    detenerAlarmaPersistente();
+                    return;
+                }
+                reproducirTimbreRapido();
+            }, 2000);
+        }
+
+        function detenerAlarmaPersistente() {
+            alarmaActiva = false;
+            hayDeliveryNuevoSinVer = false;
+            if (alarmaInterval) {
+                clearInterval(alarmaInterval);
+                alarmaInterval = null;
+            }
+            var audioElement = document.getElementById('alarma-audio');
+            if (audioElement) {
+                try {
+                    audioElement.pause();
+                    audioElement.currentTime = 0;
+                } catch (e) {}
+            }
+            try {
+                if (window.AndroidAlarma && typeof window.AndroidAlarma.detenerAlerta === 'function') {
+                    window.AndroidAlarma.detenerAlerta();
+                }
+            } catch (e) {}
+        }
+
+        function manejarToqueEnPantalla() {
+            desbloquearMotorAudio();
+            if (!alarmaActiva) return;
+            if ((Date.now() - ultimaActivacionAlarmaMs) < 200) return;
+            detenerAlarmaPersistente();
+        }
+
+        document.addEventListener('touchstart', manejarToqueEnPantalla, { passive: true });
+        document.addEventListener('pointerdown', manejarToqueEnPantalla, { passive: true });
+
+        function desconectarTemporizadoresYAlertas() {
+            detenerAlarmaPersistente();
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+        }
+
+        function reanudarCicloConductor() {
+            if (!conductorActual) return;
+            asegurarCanalSonidoConductor();
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(cargarDatosDelivery, intervaloSondeoMs);
+            suscripcionRealtime();
+            cargarDatosDelivery();
+        }
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden && conductorActual) reanudarCicloConductor();
+        });
+        window.addEventListener('focus', function () {
+            if (conductorActual) reanudarCicloConductor();
+        });
+
+        window.addEventListener('load', function () {
+            asegurarCanalSonidoConductor();
+            var sesionGuardada = sessionStorage.getItem('conductor_delivery_en_via');
+            var sesionIdGuardada = sessionStorage.getItem('conductor_delivery_id_en_via');
+
+            if (!sesionGuardada) {
+                window.location.replace('./index.html');
+                return;
+            }
+
+            conductorActual = sesionGuardada;
+            conductorIdActual = sesionIdGuardada || null;
+            document.getElementById('driver-name-display').textContent = conductorActual;
+
+            cargarDatosDelivery();
+            suscripcionRealtime();
+
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(cargarDatosDelivery, intervaloSondeoMs);
+        });
+
+        function cerrarSesion() {
+            desconectarTemporizadoresYAlertas();
+            conductorActual = "";
+            conductorIdActual = null;
+            sessionStorage.removeItem('conductor_delivery_en_via');
+            sessionStorage.removeItem('conductor_delivery_id_en_via');
+            window.location.replace('./index.html');
+        }
+
+        function obtenerFechaLocalInput() {
+            var d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function alternarHistorialDeliveries() {
+            historialVisible = !historialVisible;
+            var panelEl = document.getElementById('panel-historial');
+            var fechaInput = document.getElementById('fecha-historial');
+            if (panelEl) {
+                if (historialVisible) {
+                    if (fechaInput && !fechaInput.value && !mostrarTodoHistorial) {
+                        fechaInput.value = obtenerFechaLocalInput();
+                    }
+                    panelEl.classList.remove('hidden');
+                    cargarHistorialDeliveries();
+                } else {
+                    panelEl.classList.add('hidden');
+                }
+            }
+        }
+
+        function alCambiarFechaHistorial() {
+            mostrarTodoHistorial = false;
+            cargarHistorialDeliveries();
+        }
+
+        function seleccionarHoyHistorial() {
+            mostrarTodoHistorial = false;
+            var fechaInput = document.getElementById('fecha-historial');
+            if (fechaInput) fechaInput.value = obtenerFechaLocalInput();
+            cargarHistorialDeliveries();
+        }
+
+        function verTodoHistorial() {
+            mostrarTodoHistorial = true;
+            cargarHistorialDeliveries();
+        }
+
+        function obtenerClaveFechaLocal(isoStr) {
+            if (!isoStr) return '';
+            var d = new Date(isoStr);
+            if (isNaN(d.getTime())) return '';
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function formatearDuracion(tiempos, createdAt) {
+            var t = (typeof tiempos === 'object' && tiempos !== null) ? tiempos : {};
+            var inicioIso = t.inicio_carrera_at || t.llegada_conductor_at || createdAt || null;
+            var finIso = t.fin_recorrido_at || t.fin_carrera_at || null;
+            if (!inicioIso || !finIso) return 'N/D';
+            var msInicio = new Date(inicioIso).getTime();
+            var msFin = new Date(finIso).getTime();
+            if (isNaN(msInicio) || isNaN(msFin) || msFin < msInicio) return 'N/D';
+            var totalSegs = Math.floor((msFin - msInicio) / 1000);
+            var mins = Math.floor(totalSegs / 60);
+            var segs = totalSegs % 60;
+            return mins > 0 ? (mins + ' min ' + String(segs).padStart(2, '0') + ' s') : (segs + ' seg');
+        }
+
+        function formatearFechaCorta(isoStr) {
+            if (!isoStr) return 'Sin fecha';
+            var d = new Date(isoStr);
+            if (isNaN(d.getTime())) return 'Sin fecha';
+            return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear() +
+                ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        }
+
+        function cargarHistorialDeliveries() {
+            var db = getDb();
+            var contenedor = document.getElementById('lista-historial-carreras');
+            var contadorEl = document.getElementById('contador-historial');
+            var fechaInput = document.getElementById('fecha-historial');
+            if (!db || !conductorActual || !contenedor) return;
+
+            var fechaSeleccionada = (!mostrarTodoHistorial && fechaInput) ? (fechaInput.value || '') : '';
+            var limiteConsulta = mostrarTodoHistorial ? 30 : 50;
+
+            db.from('deliveries')
+                .select('*')
+                .eq('estado', 'completada')
+                .eq('conductor_asignado', conductorActual)
+                .order('created_at', { ascending: false })
+                .limit(limiteConsulta)
+                .then(function (res) {
+                    if (res.error) {
+                        contenedor.innerHTML = '<div style="color:#f87171; font-size:13px;">Error al cargar historial: ' + res.error.message + '</div>';
+                        return;
+                    }
+                    var lista = res.data || [];
+                    if (fechaSeleccionada) {
+                        lista = lista.filter(function (c) {
+                            var tiempos = c.tiempos || {};
+                            var refIso = tiempos.fin_carrera_at || tiempos.fin_recorrido_at || c.created_at;
+                            return obtenerClaveFechaLocal(refIso) === fechaSeleccionada;
+                        });
+                    }
+                    if (contadorEl) contadorEl.textContent = String(lista.length);
+                    renderizarHistorialDeliveries(lista, fechaSeleccionada);
+                });
+        }
+
+        function renderizarHistorialDeliveries(lista, fechaSeleccionada) {
+            var contenedor = document.getElementById('lista-historial-carreras');
+            if (!contenedor) return;
+
+            if (!lista || lista.length === 0) {
+                var msgVacio = fechaSeleccionada
+                    ? 'No hay deliveries completados para la fecha ' + fechaSeleccionada + '.'
+                    : 'Aún no tienes deliveries completados registrados.';
+                contenedor.innerHTML = '<div style="color:#94a3b8; font-size:13px;">' + msgVacio + '</div>';
+                return;
+            }
+
+            var html = '';
+            lista.forEach(function (d) {
+                var tiempos = d.tiempos || {};
+                var duracion = formatearDuracion(tiempos, d.created_at);
+                var fechaRef = formatearFechaCorta(tiempos.fin_carrera_at || tiempos.fin_recorrido_at || d.created_at);
+
+                html +=
+                    '<div class="tarjeta-carrera-historial">' +
+                        '<div class="cabecera-pendiente">' +
+                            '<strong style="color:#34d399;">🛵 💰 ' + (d.precio || '$0.00') + '</strong>' +
+                            '<span style="font-size:11px; color:#94a3b8;">' + fechaRef + '</span>' +
+                        '</div>' +
+                        '<p style="margin:3px 0;">🏪 <strong>Restaurante:</strong> ' + (d.restaurante_nombre || 'N/A') + '</p>' +
+                        '<p style="margin:3px 0;">📍 <strong>Retiro:</strong> ' + (d.origen || 'N/A') + '</p>' +
+                        '<p style="margin:3px 0;">🏁 <strong>Entrega:</strong> ' + (d.destino || 'N/A') + '</p>' +
+                        '<p style="margin:3px 0;">⏱️ <strong>Tiempo:</strong> ' + duracion + ' &nbsp;|&nbsp; 📏 <strong>Dist.:</strong> ' + (d.distancia || 'N/A') + '</p>' +
+                    '</div>';
+            });
+            contenedor.innerHTML = html;
+        }
+
+        function descartarDeliveryPendiente(idDelivery) {
+            detenerAlarmaPersistente();
+            var idStr = String(idDelivery);
+            if (deliveriesDescartadosIds.indexOf(idStr) === -1) {
+                deliveriesDescartadosIds.push(idStr);
+            }
+            cargarDatosDelivery();
+        }
+
+        function restaurarDeliveryDescartado(idDelivery) {
+            var idStr = String(idDelivery);
+            deliveriesDescartadosIds = deliveriesDescartadosIds.filter(function (item) {
+                return String(item) !== idStr;
+            });
+            cargarDatosDelivery();
+        }
+
+        function alternarDescartadasActivas() {
+            descartadasExpandida = !descartadasExpandida;
+            var listaEl = document.getElementById('lista-descartadas-activas');
+            var iconoEl = document.getElementById('icono-toggle-descartadas');
+            if (listaEl) listaEl.classList.toggle('hidden', !descartadasExpandida);
+            if (iconoEl) iconoEl.textContent = descartadasExpandida ? '▲' : '▼';
+        }
+
+        function cargarDatosDelivery() {
+            var db = getDb();
+            if (!db || !conductorActual) return;
+
+            db.from('deliveries')
+                .select('*')
+                .eq('estado', 'pendiente')
+                .order('created_at', { ascending: false })
+                .then(function (resPend) {
+                    if (resPend.error) return;
+                    var rawPendData = resPend.data || [];
+                    var pendData = rawPendData.filter(function (d) {
+                        return deliveriesDescartadosIds.indexOf(String(d.id)) === -1;
+                    });
+                    var descartadasActivasData = rawPendData.filter(function (d) {
+                        return deliveriesDescartadosIds.indexOf(String(d.id)) !== -1;
+                    });
+
+                    var mapaActual = {};
+                    var nuevosDeliveries = [];
+                    for (var i = 0; i < pendData.length; i++) {
+                        var item = pendData[i];
+                        var idKey = String(item.id);
+                        mapaActual[idKey] = true;
+                        if (primeraCargaRealizada && !idsPendientesConocidos[idKey]) {
+                            nuevosDeliveries.push(item);
+                        }
+                    }
+
+                    idsPendientesConocidos = mapaActual;
+                    if (!primeraCargaRealizada) {
+                        primeraCargaRealizada = true;
+                    } else if (nuevosDeliveries.length > 0) {
+                        iniciarAlarmaPersistente(pendData.length, nuevosDeliveries[0]);
+                    } else if (pendData.length === 0) {
+                        detenerAlarmaPersistente();
+                    }
+
+                    renderizarPendientes(pendData);
+                    renderizarDescartadasActivas(descartadasActivasData);
+                });
+
+            db.from('deliveries')
+                .select('*')
+                .eq('estado', 'asignada')
+                .eq('conductor_asignado', conductorActual)
+                .then(function (resAsig) {
+                    if (resAsig.error) return;
+                    renderizarAsignados(resAsig.data || []);
+                });
+
+            if (historialVisible) {
+                cargarHistorialDeliveries();
+            }
+        }
+
+        function tomarDelivery(idDelivery) {
+            detenerAlarmaPersistente();
+            var idStr = String(idDelivery);
+            deliveriesDescartadosIds = deliveriesDescartadosIds.filter(function (item) {
+                return String(item) !== idStr;
+            });
+
+            var db = getDb();
+            if (!db) return;
+
+            var payload = {
+                estado: 'asignada',
+                conductor_asignado: conductorActual
+            };
+            if (conductorIdActual) {
+                payload.conductor_id = conductorIdActual;
+            }
+
+            db.from('deliveries')
+                .update(payload)
+                .eq('id', idDelivery)
+                .then(function (res) {
+                    if (res.error) {
+                        alert('Error al tomar el delivery: ' + res.error.message);
+                    } else {
+                        cargarDatosDelivery();
+                    }
+                });
+        }
+
+        function limpiarTelefonoLlamada(tel) {
+            if (!tel) return '';
+            return String(tel).replace(/[^+\d]/g, '');
+        }
+
+        function construirBloquesContactoDelivery(d) {
+            var telRest = limpiarTelefonoLlamada(d.restaurante_telefono);
+            var telDest = limpiarTelefonoLlamada(d.destinatario_telefono);
+
+            var bloqueRest =
+                '<div class="tarjeta-cliente-contacto">' +
+                    '<div style="min-width:0;">' +
+                        '<div style="font-size:13px; font-weight:700; color:#f8fafc;">🏪 Restaurante: ' + (d.restaurante_nombre || 'Restaurante') + '</div>' +
+                        '<div style="font-size:12px; color:#34d399; margin-top:2px;">' + (d.restaurante_telefono ? ('📞 ' + d.restaurante_telefono) : 'Sin teléfono registrado') + '</div>' +
+                    '</div>' +
+                    (telRest ? '<a href="tel:' + telRest + '" class="btn-llamar-cliente">📞 Llamar</a>' : '') +
+                '</div>';
+
+            var bloqueDest = (d.destinatario_nombre || d.destinatario_telefono)
+                ? '<div class="tarjeta-cliente-contacto">' +
+                    '<div style="min-width:0;">' +
+                        '<div style="font-size:13px; font-weight:700; color:#f8fafc;">👤 Cliente que recibe: ' + (d.destinatario_nombre || 'Destinatario') + '</div>' +
+                        '<div style="font-size:12px; color:#34d399; margin-top:2px;">' + (d.destinatario_telefono ? ('📞 ' + d.destinatario_telefono) : 'Sin teléfono') + '</div>' +
+                    '</div>' +
+                    (telDest ? '<a href="tel:' + telDest + '" class="btn-llamar-cliente">📞 Llamar</a>' : '') +
+                  '</div>'
+                : '';
+
+            return bloqueRest + bloqueDest;
+        }
+
+        function renderizarAsignados(asignados) {
+            var seccionAsignada = document.getElementById('seccion-asignada');
+            var contenedor = document.getElementById('carrera-asignada-container');
+
+            if (!asignados || asignados.length === 0) {
+                seccionAsignada.classList.add('hidden');
+                contenedor.innerHTML = '';
+                if (timerInterval) clearInterval(timerInterval);
+                return;
+            }
+
+            seccionAsignada.classList.remove('hidden');
+            contenedor.innerHTML = '';
+
+            asignados.forEach(function (d) {
+                var urlNavegacionRestaurante = 'https://www.google.com/maps/dir/?api=1&origin=' + baseLat + ',' + baseLng + '&destination=' + encodeURIComponent(d.origen) + '&travelmode=driving';
+                var urlNavegacionCliente = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(d.origen) + '&destination=' + encodeURIComponent(d.destino) + '&travelmode=driving';
+
+                var tiempos = d.tiempos || {};
+                var yaLlegoRestaurante = tiempos.llegada_conductor_at != null;
+                var pedidoRetirado = tiempos.inicio_carrera_at != null;
+                var entregaFinalizada = tiempos.fin_recorrido_at != null;
+
+                var contenidoAcciones = '';
+
+                if (!yaLlegoRestaurante) {
+                    contenidoAcciones =
+                        '<a href="' + urlNavegacionRestaurante + '" target="_blank">🧭 Navegar al Restaurante (Retiro)</a>' +
+                        '<button type="button" class="btn-accion-morado" onclick=\'conductorLlegoRestaurante("' + d.id + '", ' + JSON.stringify(tiempos) + ')\'>🏪 Ya estoy en el Restaurante</button>';
+                } else if (!pedidoRetirado) {
+                    contenidoAcciones =
+                        '<p>⏱️ Esperando pedido: <strong id="cronometro-conductor" style="color:#34d399;">00:00</strong></p>' +
+                        '<button type="button" class="btn-accion-morado" onclick=\'pedidoRetiradoEnCamino("' + d.id + '", ' + JSON.stringify(tiempos) + ')\'>🛵 Pedido Retirado (Ir a Entregar)</button>';
+                } else if (!entregaFinalizada) {
+                    contenidoAcciones =
+                        '<p>⏱️ Tiempo de entrega: <strong id="cronometro-viaje" style="color:#34d399;">00:00</strong></p>' +
+                        '<a href="' + urlNavegacionCliente + '" target="_blank">🗺️ Navegar al Cliente (Entrega)</a>' +
+                        '<button type="button" class="btn-accion-morado" onclick=\'llegueAlCliente("' + d.id + '", ' + JSON.stringify(tiempos) + ')\'>📍 Llegué a la Dirección del Cliente</button>';
+                } else {
+                    contenidoAcciones =
+                        '<p><strong>💳 Confirmación de Pago / Entrega: <span style="color:#34d399;">' + (d.precio || '$0.00') + '</span></strong></p>' +
+                        '<button type="button" class="btn-accion-morado" onclick=\'confirmarEntregaYFinalizar("' + d.id + '", ' + JSON.stringify(tiempos) + ')\'>✅ Confirmar Entrega y Finalizar Delivery</button>';
+                }
+
+                contenedor.innerHTML +=
+                    '<div class="tarjeta-carrera-asignada">' +
+                        '<p style="margin:0 0 4px 0;"><strong style="color:#34d399;">🛵 Delivery Asignado — ' + (d.precio || '$0.00') + '</strong></p>' +
+                        construirBloquesContactoDelivery(d) +
+                        (d.detalle_pedido ? '<p style="margin:4px 0; color:#fbbf24;">📦 <strong>Pedido:</strong> ' + d.detalle_pedido + '</p>' : '') +
+                        '<p style="margin:3px 0;">🏪 Retirar en: ' + d.origen + '</p>' +
+                        '<p style="margin:3px 0;">🏠 Entregar en: ' + d.destino + '</p>' +
+                        '<p style="margin:3px 0;">Distancia: ' + (d.distancia || 'N/A') + '</p>' +
+                        contenidoAcciones +
+                    '</div>';
+
+                if (yaLlegoRestaurante && !pedidoRetirado) {
+                    iniciarCronometro(tiempos.llegada_conductor_at, 'cronometro-conductor');
+                } else if (pedidoRetirado && !entregaFinalizada) {
+                    iniciarCronometro(tiempos.inicio_carrera_at, 'cronometro-viaje');
+                }
+            });
+        }
+
+        function actualizarTiemposDelivery(idDelivery, tiemposActuales, campoNuevo, finalizarCompleta) {
+            var db = getDb();
+            if (!db) return;
+
+            var ahora = new Date().toISOString();
+            var nuevosTiempos = Object.assign({}, (typeof tiemposActuales === 'object' && tiemposActuales !== null ? tiemposActuales : {}));
+            nuevosTiempos[campoNuevo] = ahora;
+
+            var updateData = { tiempos: nuevosTiempos };
+            if (finalizarCompleta) {
+                updateData.estado = 'completada';
+            }
+
+            db.from('deliveries').update(updateData).eq('id', idDelivery).then(function (res) {
+                if (res.error) {
+                    alert('Error al actualizar: ' + res.error.message);
+                } else if (finalizarCompleta) {
+                    alert('¡Delivery entregado y finalizado con éxito!');
+                    cargarDatosDelivery();
+                } else {
+                    cargarDatosDelivery();
+                }
+            });
+        }
+
+        function conductorLlegoRestaurante(idDelivery, tiemposActuales) {
+            actualizarTiemposDelivery(idDelivery, tiemposActuales, 'llegada_conductor_at', false);
+        }
+
+        function pedidoRetiradoEnCamino(idDelivery, tiemposActuales) {
+            if (timerInterval) clearInterval(timerInterval);
+            actualizarTiemposDelivery(idDelivery, tiemposActuales, 'inicio_carrera_at', false);
+        }
+
+        function llegueAlCliente(idDelivery, tiemposActuales) {
+            if (timerInterval) clearInterval(timerInterval);
+            actualizarTiemposDelivery(idDelivery, tiemposActuales, 'fin_recorrido_at', false);
+        }
+
+        function confirmarEntregaYFinalizar(idDelivery, tiemposActuales) {
+            if (!confirm('¿Confirmas que entregaste el pedido y recibiste el pago del delivery?')) return;
+            actualizarTiemposDelivery(idDelivery, tiemposActuales, 'fin_carrera_at', true);
+        }
+
+        function iniciarCronometro(isoStringInicio, elementoId) {
+            if (timerInterval) clearInterval(timerInterval);
+            var tiempoInicio = new Date(isoStringInicio).getTime();
+            timerInterval = setInterval(function () {
+                var ahora = new Date().getTime();
+                var diferenciaSecs = Math.floor((ahora - tiempoInicio) / 1000);
+                if (diferenciaSecs >= 0) {
+                    var mins = Math.floor(diferenciaSecs / 60).toString().padStart(2, '0');
+                    var secs = (diferenciaSecs % 60).toString().padStart(2, '0');
+                    var el = document.getElementById(elementoId);
+                    if (el) el.textContent = mins + ':' + secs;
+                }
+            }, 1000);
+        }
+
+        function renderizarPendientes(deliveries) {
+            var contenedor = document.getElementById('lista-carreras');
+            contenedor.innerHTML = '';
+
+            if (!deliveries || deliveries.length === 0) {
+                contenedor.innerHTML = '<div style="color:#94a3b8; font-size:13px;">No hay deliveries pendientes en este momento.</div>';
+                return;
+            }
+
+            deliveries.forEach(function (d) {
+                contenedor.innerHTML +=
+                    '<div class="tarjeta-carrera-pendiente">' +
+                        '<div class="cabecera-pendiente">' +
+                            '<p style="margin:0;"><strong style="color:#34d399;">🛵 Delivery — ' + (d.precio || '$0.00') + '</strong></p>' +
+                            '<button type="button" class="btn-descartar-mini" onclick="descartarDeliveryPendiente(\'' + d.id + '\')">Descartar</button>' +
+                        '</div>' +
+                        '<p style="margin:3px 0;">🏪 <strong>Restaurante:</strong> ' + (d.restaurante_nombre || 'N/A') + '</p>' +
+                        '<p style="margin:3px 0;">📍 <strong>Retiro:</strong> ' + d.origen + '</p>' +
+                        '<p style="margin:3px 0;">🏁 <strong>Entrega:</strong> ' + d.destino + '</p>' +
+                        (d.detalle_pedido ? '<p style="margin:3px 0; color:#fbbf24;">📦 <strong>Pedido:</strong> ' + d.detalle_pedido + '</p>' : '') +
+                        '<p style="margin:3px 0;">Distancia: ' + (d.distancia || 'N/A') + '</p>' +
+                        '<button type="button" class="btn-tomar-morado" onclick="tomarDelivery(\'' + d.id + '\')">🛵 Tomar este Delivery</button>' +
+                    '</div>';
+            });
+        }
+
+        function renderizarDescartadasActivas(deliveriesDescartados) {
+            var contadorEl = document.getElementById('contador-descartadas-activas');
+            var contenedor = document.getElementById('lista-descartadas-activas');
+            var lista = deliveriesDescartados || [];
+
+            if (contadorEl) contadorEl.textContent = String(lista.length);
+            if (!contenedor) return;
+
+            if (lista.length === 0) {
+                contenedor.innerHTML = '<div style="margin-top:8px; color:#94a3b8; font-size:13px;">No hay deliveries descartados activos.</div>';
+                return;
+            }
+
+            var html = '<div style="margin-top:8px;">';
+            lista.forEach(function (d) {
+                html +=
+                    '<div class="tarjeta-carrera-descartada">' +
+                        '<p style="margin:0 0 4px 0;"><strong style="color:#cbd5e1;">Descartado Activo — ' + (d.precio || '$0.00') + '</strong></p>' +
+                        '<p style="margin:3px 0;">🏪 Restaurante: ' + (d.restaurante_nombre || 'N/A') + '</p>' +
+                        '<p style="margin:3px 0;">📍 Retiro: ' + d.origen + '</p>' +
+                        '<p style="margin:3px 0;">🏁 Entrega: ' + d.destino + '</p>' +
+                        '<div class="acciones-descartada">' +
+                            '<button type="button" class="btn-tomar-morado" style="flex:1;" onclick="tomarDelivery(\'' + d.id + '\')">🛵 Tomar este Delivery</button>' +
+                            '<button type="button" class="btn-restaurar-mini" onclick="restaurarDeliveryDescartado(\'' + d.id + '\')">Restaurar</button>' +
+                        '</div>' +
+                    '</div>';
+            });
+            html += '</div>';
+            contenedor.innerHTML = html;
+        }
+
+        function suscripcionRealtime() {
+            var db = getDb();
+            if (db && window.supabaseIsRealtime && typeof db.channel === 'function') {
+                db.channel('cambios-deliveries-conductor')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, function () {
+                        cargarDatosDelivery();
+                    })
+                    .subscribe();
+            }
+        }
+    </script>
+</body>
+</html>

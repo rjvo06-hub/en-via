@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EN-VIA - Registro de Repartidor Delivery</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="./js/supabaseClient.js"></script>
+    <style>
+        body {
+            background-color: #07090f;
+            color: #e2e8f0;
+        }
+        input, select, textarea { font-size: 16px !important; }
+        @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .subtitulo-portal-chofer {
+            display: block;
+            color: #e2e8f0;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .barra-volver-acceso {
+            margin-top: 4px;
+            margin-bottom: 6px;
+        }
+        .enlace-acceso-volver {
+            display: inline-block;
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: auto !important;
+            font-size: 12px;
+            font-weight: 600;
+            color: #c084fc;
+            text-decoration: none;
+        }
+        .enlace-acceso-volver:hover {
+            color: #d8b4fe;
+            text-decoration: underline;
+        }
+        .caja-registro-chofer {
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 14px;
+            background-color: #0f172a;
+            margin-bottom: 12px;
+        }
+        .campo-grupo-registro {
+            margin-bottom: 10px;
+        }
+        .etiqueta-campo-registro {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .mensaje-exito-registro {
+            color: #34d399;
+            border: 1px solid #10b981;
+            background-color: #064e3b;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        .mensaje-error-registro {
+            color: #f87171;
+            border: 1px solid #ef4444;
+            background-color: #451a1a;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="registro-container" class="max-w-2xl">
+        <header>
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-portal-chofer">Registro de Conductor Delivery</span>
+            </h1>
+            <p style="color:#94a3b8; margin-top:4px; margin-bottom:4px;">Completa tus datos de acceso, vehículo, contacto y cobro para deliveries</p>
+            <div class="barra-volver-acceso">
+                <a href="./index.html" class="enlace-acceso-volver">← Ir al Acceso de Delivery</a>
+            </div>
+        </header>
+
+        <form id="form-registro-delivery" onsubmit="registrarConductorDelivery(event)" class="caja-registro-chofer">
+            <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Personales y Acceso</h2>
+
+            <div class="campo-grupo-registro">
+                <label for="nombre" class="etiqueta-campo-registro">Nombre Completo *</label>
+                <input type="text" id="nombre" required placeholder="Ej. Carlos Pérez" style="width:100%;">
+            </div>
+
+            <div class="campo-grupo-registro">
+                <label for="telefono" class="etiqueta-campo-registro">Teléfono Personal *</label>
+                <input type="text" id="telefono" required placeholder="Ej. 0414-1234567" style="width:100%;">
+            </div>
+
+            <div class="campo-grupo-registro">
+                <label for="vehiculo" class="etiqueta-campo-registro">Vehículo / Moto y Placa *</label>
+                <input type="text" id="vehiculo" required placeholder="Ej. Moto Bera SBR - Placa AA1B23C" style="width:100%;">
+            </div>
+
+            <div class="campo-grupo-registro">
+                <label for="usuario" class="etiqueta-campo-registro">Usuario de Acceso *</label>
+                <input type="text" id="usuario" required placeholder="Ej. cperez" autocapitalize="none" style="width:100%;">
+            </div>
+
+            <div class="campo-grupo-registro">
+                <label for="clave" class="etiqueta-campo-registro">Clave de Acceso *</label>
+                <input type="password" id="clave" required minlength="6" placeholder="Mínimo 6 caracteres" style="width:100%;">
+            </div>
+
+            <div style="border-top:1px solid #1e293b; padding-top:12px; margin-top:12px;">
+                <h2 style="color:#34d399; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Bancarios y Código QR</h2>
+
+                <div class="campo-grupo-registro">
+                    <label for="banco" class="etiqueta-campo-registro">Banco</label>
+                    <input type="text" id="banco" placeholder="Ej. Banesco" style="width:100%;">
+                </div>
+
+                <div class="campo-grupo-registro">
+                    <label for="banco-telefono" class="etiqueta-campo-registro">Teléfono (Pago Móvil)</label>
+                    <input type="text" id="banco-telefono" placeholder="Ej. 04121234567" style="width:100%;">
+                </div>
+
+                <div class="campo-grupo-registro">
+                    <label for="banco-cedula" class="etiqueta-campo-registro">Cédula / RIF</label>
+                    <input type="text" id="banco-cedula" placeholder="Ej. V12345678" style="width:100%;">
+                </div>
+
+                <div class="campo-grupo-registro">
+                    <label for="qr-file" class="etiqueta-campo-registro">Imagen del QR del Banco (Subir archivo)</label>
+                    <input type="file" id="qr-file" accept="image/*" style="width:100%;">
+                    <p style="font-size:11px; color:#94a3b8; margin:4px 0 0 0;">Sube la foto del QR del banco; se guardará automáticamente en la nube.</p>
+                </div>
+            </div>
+
+            <div id="mensaje-estado" class="hidden"></div>
+
+            <button type="submit" id="btn-registrar" style="width:100%; background-color:#10b981; color:#0f172a; font-weight:700; margin-top:6px;">
+                Completar Registro de Repartidor
+            </button>
+        </form>
+    </div>
+
+    <script>
+        var DIRECT_SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
+        var DIRECT_SUPABASE_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_891ubyEIooQ7Ik7vdEACZQ_vfXcW37g';
+
+        function obtenerDb() {
+            if (window.supabaseClient) return window.supabaseClient;
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                window.supabaseClient = supabaseClient;
+                return supabaseClient;
+            }
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                window.supabaseClient = window.supabase.createClient(DIRECT_SUPABASE_URL, DIRECT_SUPABASE_KEY);
+                return window.supabaseClient;
+            }
+            throw new Error('No hay conexión disponible con Supabase en este dispositivo.');
+        }
+
+        function hashFallbackSimple(texto) {
+            var h1 = 0xdeadbeef ^ texto.length;
+            var h2 = 0x41c6ce57 ^ texto.length;
+            for (var i = 0; i < texto.length; i++) {
+                var ch = texto.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+        }
+
+        async function generarHashClave(clave) {
+            try {
+                if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+                    var encoder = new TextEncoder();
+                    var data = encoder.encode(clave);
+                    var hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+                    var hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+                }
+            } catch (e) {}
+            return hashFallbackSimple(clave);
+        }
+
+        async function subirQrConRespaldo(db, file, fileName) {
+            if (db && db.storage && typeof db.storage.from === 'function') {
+                var upRes = await db.storage.from('qr-codes').upload(fileName, file);
+                if (upRes.error) {
+                    throw new Error('Error al subir el QR: ' + upRes.error.message);
+                }
+                var pubRes = db.storage.from('qr-codes').getPublicUrl(fileName);
+                return pubRes && pubRes.data ? pubRes.data.publicUrl : '';
+            }
+
+            var uploadUrl = DIRECT_SUPABASE_URL.replace(/\/+$/, '') + '/storage/v1/object/qr-codes/' + encodeURIComponent(fileName);
+            var resp = await window.fetch(uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'apikey': DIRECT_SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + DIRECT_SUPABASE_KEY,
+                    'Content-Type': file.type || 'application/octet-stream',
+                    'x-upsert': 'true'
+                },
+                body: file
+            });
+            if (!resp.ok) {
+                var errJson = await resp.json().catch(function () { return {}; });
+                throw new Error('Error al subir el QR: ' + (errJson.message || resp.statusText));
+            }
+            return DIRECT_SUPABASE_URL.replace(/\/+$/, '') + '/storage/v1/object/public/qr-codes/' + encodeURIComponent(fileName);
+        }
+
+        async function insertarConductorDeliveryConRespaldo(db, payload) {
+            if (db && typeof db.from === 'function') {
+                return await db.from('conductores_delivery').insert([payload]);
+            }
+
+            var restUrl = DIRECT_SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/conductores_delivery';
+            var resp = await window.fetch(restUrl, {
+                method: 'POST',
+                headers: {
+                    'apikey': DIRECT_SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + DIRECT_SUPABASE_KEY,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify([payload])
+            });
+            var json = await resp.json().catch(function () { return null; });
+            if (!resp.ok) {
+                return { data: null, error: { message: (json && json.message) || resp.statusText } };
+            }
+            return { data: json, error: null };
+        }
+
+        function mostrarMensaje(texto, tipo) {
+            var box = document.getElementById('mensaje-estado');
+            box.classList.remove('hidden', 'mensaje-exito-registro', 'mensaje-error-registro');
+            if (tipo === 'exito') {
+                box.classList.add('mensaje-exito-registro');
+            } else {
+                box.classList.add('mensaje-error-registro');
+            }
+            box.textContent = texto;
+        }
+
+        async function registrarConductorDelivery(event) {
+            event.preventDefault();
+
+            var btn = document.getElementById('btn-registrar');
+            var nombre = document.getElementById('nombre').value.trim();
+            var telefono = document.getElementById('telefono').value.trim();
+            var vehiculo = document.getElementById('vehiculo').value.trim();
+            var usuario = document.getElementById('usuario').value.trim().toLowerCase();
+            var clave = document.getElementById('clave').value;
+            var banco = document.getElementById('banco').value.trim();
+            var bancoTelefono = document.getElementById('banco-telefono').value.trim();
+            var bancoCedula = document.getElementById('banco-cedula').value.trim();
+            var fileInput = document.getElementById('qr-file');
+
+            if (!nombre || !telefono || !vehiculo || !usuario || !clave) {
+                mostrarMensaje('Por favor completa nombre, teléfono, vehículo, usuario y clave.', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Enviando registro...';
+
+            try {
+                var db = obtenerDb();
+                var qrUrl = '';
+
+                if (fileInput.files && fileInput.files[0]) {
+                    var file = fileInput.files[0];
+                    var partesNombre = file.name.split('.');
+                    var fileExt = partesNombre.length > 1 ? partesNombre.pop() : 'png';
+                    var fileName = 'qr_delivery_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7) + '.' + fileExt;
+                    qrUrl = await subirQrConRespaldo(db, file, fileName);
+                }
+
+                var claveHash = await generarHashClave(clave);
+
+                var datos_bancarios = {
+                    banco: banco,
+                    telefono: bancoTelefono,
+                    cedula_rif: bancoCedula,
+                    qr_url: qrUrl
+                };
+
+                var resInsert = await insertarConductorDeliveryConRespaldo(db, {
+                    nombre: nombre,
+                    telefono: telefono,
+                    vehiculo: vehiculo,
+                    usuario: usuario,
+                    clave_hash: claveHash,
+                    activo: false,
+                    datos_bancarios: datos_bancarios
+                });
+
+                if (resInsert.error) {
+                    throw new Error('No se pudo guardar el registro: ' + resInsert.error.message);
+                }
+
+                document.getElementById('form-registro-delivery').reset();
+                mostrarMensaje('¡Registro de repartidor enviado con éxito! Queda pendiente de activación.', 'exito');
+            } catch (err) {
+                mostrarMensaje(err.message || 'Ocurrió un error al registrar.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Completar Registro de Repartidor';
+            }
+        }
+    </script>
+</body>
+</html>

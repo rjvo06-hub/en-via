@@ -74,6 +74,10 @@
                       state.filters.push(encodeURIComponent(col) + '=eq.' + encodeURIComponent(val));
                       return qb;
                   },
+                  or: function (expr) {
+                      state.filters.push('or=(' + encodeURIComponent(expr) + ')');
+                      return qb;
+                  },
                   in: function (col, arr) {
                       var encodedVals = (arr || []).map(function (v) { return encodeURIComponent(v); }).join(',');
                       state.filters.push(encodeURIComponent(col) + '=in.(' + encodedVals + ')');
@@ -254,6 +258,36 @@
             border: 1px solid #9333ea;
             margin-bottom: 8px;
         }
+        .tarjeta-conductor-contacto {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background-color: #1e293b;
+            border: 1px solid #475569;
+        }
+        .btn-llamar-conductor {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background-color: #10b981 !important;
+            color: #052e16 !important;
+            border: 1px solid #34d399 !important;
+            border-radius: 8px !important;
+            padding: 9px 14px !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+            text-decoration: none !important;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+        .btn-llamar-conductor:active {
+            transform: scale(0.98);
+        }
         #map, #map-seguimiento {
             width: 100%;
             height: 260px;
@@ -356,7 +390,23 @@
                 <p style="margin:4px 0;">📍 Origen: <span id="estado-origen"></span></p>
                 <p style="margin:4px 0;">🏁 Destino: <span id="estado-destino"></span></p>
                 <p style="margin:4px 0;">Distancia: <strong id="estado-distancia">-</strong></p>
-                <p style="margin:4px 0;">Conductor Asignado: <strong id="estado-conductor" style="color:#c084fc;">Esperando asignación...</strong></p>
+                <p id="fila-conductor-espera" style="margin:4px 0;">Conductor Asignado: <strong id="estado-conductor" style="color:#c084fc;">Esperando asignación...</strong></p>
+
+                <!-- Bloque estratégico visible únicamente cuando el conductor acepta la carrera -->
+                <div id="tarjeta-conductor-asignado" class="tarjeta-conductor-contacto hidden">
+                    <div style="min-width:0;">
+                        <div style="font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8;">Conductor Asignado</div>
+                        <div id="nombre-conductor-activo" style="font-size:15px; font-weight:800; color:#f8fafc; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</div>
+                        <div id="telefono-conductor-texto" style="font-size:12px; color:#34d399; margin-top:2px;"></div>
+                    </div>
+                    <a id="btn-llamar-conductor" href="#" aria-label="Llamar al conductor" class="btn-llamar-conductor hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                        <span>Llamar</span>
+                    </a>
+                </div>
+
                 <div id="seccion-llegada" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px solid #1e293b;">
                     <p style="margin:0;">Estado del servicio: <span id="estado-llegada" style="color:#34d399; font-weight:700;">Calculando...</span></p>
                 </div>
@@ -388,6 +438,7 @@
         var clienteIdActual = null;
         var timerClientInterval = null;
         var pollEstadoInterval = null;
+        var cacheConductoresTelefono = {};
 
         var currentMode = 'origin';
         var maracaiboCenter = { lat: 10.6549, lng: -71.6146 };
@@ -771,6 +822,83 @@
             });
         }
 
+        function limpiarTelefonoLlamada(tel) {
+            if (!tel) return '';
+            return String(tel).replace(/[^+\d]/g, '');
+        }
+
+        function ocultarBloqueContactoConductor() {
+            var filaEspera = document.getElementById('fila-conductor-espera');
+            var tarjeta = document.getElementById('tarjeta-conductor-asignado');
+            var btnLlamar = document.getElementById('btn-llamar-conductor');
+            var telTexto = document.getElementById('telefono-conductor-texto');
+
+            if (filaEspera) filaEspera.classList.remove('hidden');
+            if (tarjeta) tarjeta.classList.add('hidden');
+            if (telTexto) telTexto.textContent = '';
+            if (btnLlamar) {
+                btnLlamar.classList.add('hidden');
+                btnLlamar.removeAttribute('href');
+            }
+        }
+
+        function mostrarBloqueContactoConductor(conductorNombre, conductorId) {
+            var filaEspera = document.getElementById('fila-conductor-espera');
+            var tarjeta = document.getElementById('tarjeta-conductor-asignado');
+            var nombreEl = document.getElementById('nombre-conductor-activo');
+            var telTexto = document.getElementById('telefono-conductor-texto');
+            var btnLlamar = document.getElementById('btn-llamar-conductor');
+            var db = getDb();
+
+            if (!tarjeta) return;
+
+            var tieneConductor = Boolean(conductorId) || Boolean(String(conductorNombre || '').trim());
+            if (!tieneConductor) {
+                ocultarBloqueContactoConductor();
+                return;
+            }
+
+            if (filaEspera) filaEspera.classList.add('hidden');
+            tarjeta.classList.remove('hidden');
+            if (nombreEl) nombreEl.textContent = conductorNombre || 'Conductor asignado';
+
+            var cacheKey = conductorId ? ('id:' + conductorId) : ('nom:' + conductorNombre);
+
+            function aplicarTelefonoEnBoton(telefonoRaw) {
+                var telefonoLimpio = limpiarTelefonoLlamada(telefonoRaw);
+                if (telefonoLimpio && btnLlamar) {
+                    btnLlamar.href = 'tel:' + telefonoLimpio;
+                    btnLlamar.title = 'Llamar a ' + (conductorNombre || 'conductor') + ' (' + telefonoRaw + ')';
+                    btnLlamar.classList.remove('hidden');
+                    if (telTexto) telTexto.textContent = '📞 ' + telefonoRaw;
+                } else if (btnLlamar) {
+                    btnLlamar.classList.add('hidden');
+                    btnLlamar.removeAttribute('href');
+                    if (telTexto) telTexto.textContent = 'Teléfono no disponible';
+                }
+            }
+
+            if (Object.prototype.hasOwnProperty.call(cacheConductoresTelefono, cacheKey)) {
+                aplicarTelefonoEnBoton(cacheConductoresTelefono[cacheKey]);
+                return;
+            }
+
+            var consulta = db.from('conductores').select('id, nombre, telefono').limit(1);
+            if (conductorId) {
+                consulta = consulta.eq('id', conductorId);
+            } else {
+                consulta = consulta.eq('nombre', conductorNombre);
+            }
+
+            consulta.maybeSingle().then(function (res) {
+                var tel = (res && res.data && res.data.telefono) ? res.data.telefono : '';
+                cacheConductoresTelefono[cacheKey] = tel;
+                aplicarTelefonoEnBoton(tel);
+            }).catch(function () {
+                aplicarTelefonoEnBoton('');
+            });
+        }
+
         function mostrarVistaEstado(carrera) {
             document.getElementById('vista-formulario').classList.add('hidden');
             document.getElementById('vista-estado').classList.remove('hidden');
@@ -781,10 +909,17 @@
             document.getElementById('estado-precio').textContent = carrera.precio || '$0.00';
             document.getElementById('estado-distancia').textContent = carrera.distancia || 'N/A';
 
-            actualizarBadgeYConductor(carrera.estado, carrera.conductor_asignado, carrera.origen, carrera.tiempos, carrera.precio);
+            actualizarBadgeYConductor(
+                carrera.estado,
+                carrera.conductor_asignado,
+                carrera.origen,
+                carrera.tiempos,
+                carrera.precio,
+                carrera.conductor_id
+            );
         }
 
-        function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos, precio) {
+        function actualizarBadgeYConductor(estado, conductor, origenTexto, tiempos, precio, conductorId) {
             var badge = document.getElementById('badge-estado');
             var labelConductor = document.getElementById('estado-conductor');
             var contenedorBotonCancelar = document.getElementById('contenedor-boton-cancelar');
@@ -801,6 +936,7 @@
             var finCarreraAt = tiemposObj.fin_carrera_at;
 
             if (finCarreraAt || estado === 'completada') {
+                ocultarBloqueContactoConductor();
                 contenedorBotonCancelar.classList.add('hidden');
                 seccionCobroCliente.classList.add('hidden');
                 badge.textContent = "🏁 ¡Servicio Finalizado y Pagado!";
@@ -813,15 +949,18 @@
                     location.reload();
                 }, 4000);
             } else if (finRecorridoAt || inicioCarreraAt) {
+                mostrarBloqueContactoConductor(conductor, conductorId);
                 contenedorBotonCancelar.classList.add('hidden');
                 badge.textContent = finRecorridoAt ? "💳 Confirmación de Pago" : "🚗 ¡Carrera en Curso (Adelanta tu pago)!";
                 seccionLlegada.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.add('hidden');
                 if (timerClientInterval) clearInterval(timerClientInterval);
 
-                var promesaBancos = conductor
-                    ? db.from('conductores').select('datos_bancarios').eq('nombre', conductor).maybeSingle()
-                    : Promise.resolve({ data: null });
+                var promesaBancos = conductorId
+                    ? db.from('conductores').select('datos_bancarios').eq('id', conductorId).maybeSingle()
+                    : (conductor
+                        ? db.from('conductores').select('datos_bancarios').eq('nombre', conductor).maybeSingle()
+                        : Promise.resolve({ data: null }));
 
                 promesaBancos.then(function (resCond) {
                     var datosBancarios = (resCond.data && resCond.data.datos_bancarios) ? resCond.data.datos_bancarios : {};
@@ -845,6 +984,7 @@
                         '</div>';
                 });
             } else if (estado === 'asignada') {
+                mostrarBloqueContactoConductor(conductor, conductorId);
                 seccionCobroCliente.classList.add('hidden');
                 contenedorMapaSeguimiento.classList.remove('hidden');
                 inicializarMapaSeguimiento(origenTexto);
@@ -862,6 +1002,7 @@
                     labelLlegada.textContent = "En camino al punto de recogida";
                 }
             } else {
+                ocultarBloqueContactoConductor();
                 seccionCobroCliente.classList.add('hidden');
                 badge.textContent = "🔍 Buscando Conductor...";
                 labelConductor.textContent = "Esperando asignación...";
@@ -985,6 +1126,7 @@
 
             promesa.then(function () {
                 idCarreraActiva = null;
+                ocultarBloqueContactoConductor();
                 sessionStorage.removeItem('carrera_activa_id');
                 document.getElementById('vista-estado').classList.add('hidden');
                 document.getElementById('vista-formulario').classList.remove('hidden');
@@ -1004,7 +1146,8 @@
                             carreraActualizada.conductor_asignado,
                             carreraActualizada.origen,
                             carreraActualizada.tiempos,
-                            carreraActualizada.precio
+                            carreraActualizada.precio,
+                            carreraActualizada.conductor_id
                         );
                     })
                     .subscribe();
@@ -1019,7 +1162,14 @@
                     .then(function (res) {
                         if (res.data) {
                             var c = res.data;
-                            actualizarBadgeYConductor(c.estado, c.conductor_asignado, c.origen, c.tiempos, c.precio);
+                            actualizarBadgeYConductor(
+                                c.estado,
+                                c.conductor_asignado,
+                                c.origen,
+                                c.tiempos,
+                                c.precio,
+                                c.conductor_id
+                            );
                         }
                     });
             }, 4000);

@@ -107,36 +107,36 @@
             <p style="color:#94a3b8; font-size:12px; margin:6px 0 0 0;">Crea tu cuenta para solicitar carreras</p>
         </header>
 
-        <div class="tarjeta-registro">
+        <form id="form-registro-usuario" class="tarjeta-registro" autocomplete="on" onsubmit="event.preventDefault(); registrarUsuario();">
             <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Datos del Usuario</h2>
 
             <div style="margin-bottom:8px;">
                 <label for="reg-nombre" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Nombre Completo</label>
-                <input type="text" id="reg-nombre" name="nombre_completo_cliente" class="input-oscuro" placeholder="Ej. Laura Mendoza" autocomplete="off" oninput="actualizarVistaUsuario()" onchange="actualizarVistaUsuario()">
+                <input type="text" id="reg-nombre" name="name" class="input-oscuro" placeholder="Ej. Laura Mendoza" autocomplete="name" oninput="actualizarVistaUsuario()" onchange="actualizarVistaUsuario()">
             </div>
 
             <div style="margin-bottom:8px;">
                 <label for="reg-usuario" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#34d399; margin-bottom:4px;">Usuario Asignado</label>
-                <input type="text" id="reg-usuario" name="nuevo_usuario_envia" class="input-oscuro campo-usuario-auto" placeholder="Ej. lmendoza (automático)" autocomplete="off" autocapitalize="none">
+                <input type="text" id="reg-usuario" name="username" class="input-oscuro campo-usuario-auto" placeholder="Ej. lmendoza (automático)" autocomplete="username" autocapitalize="none">
                 <p id="reg-usuario-aviso" style="font-size:11px; color:#94a3b8; margin:4px 0 0 0;">Generado automáticamente a partir de tu nombre completo.</p>
             </div>
 
             <div style="margin-bottom:8px;">
                 <label for="reg-telefono" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Teléfono</label>
-                <input type="text" id="reg-telefono" name="telefono_cliente" class="input-oscuro" placeholder="Ej. 04141234567" autocomplete="off">
+                <input type="tel" id="reg-telefono" name="tel" class="input-oscuro" placeholder="Ej. 04141234567" autocomplete="tel">
             </div>
 
             <div style="margin-bottom:8px;">
                 <label for="reg-clave" style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:4px;">Clave de Acceso</label>
-                <input type="password" id="reg-clave" name="nueva_clave_cliente" class="input-oscuro" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+                <input type="password" id="reg-clave" name="new-password" class="input-oscuro" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
             </div>
 
             <div id="reg-msg" style="font-size:12px; margin-bottom:8px;" class="hidden"></div>
 
-            <button type="button" id="btn-registrar-usuario" onclick="registrarUsuario()" class="btn-morado-principal">Registrarme</button>
+            <button type="submit" id="btn-registrar-usuario" class="btn-morado-principal">Registrarme</button>
 
             <a href="./index.html" class="btn-volver-login">← Volver a Iniciar Sesión</a>
-        </div>
+        </form>
     </div>
 
     <script>

@@ -1,24 +1,24 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
+      "src": "^/$",
       "has": [
         {
           "type": "host",
           "value": "driver.en-via.werksolutions.de"
         }
       ],
-      "destination": "/conductor/index.html"
+      "dest": "/conductor/index.html"
     },
     {
-      "source": "/(.*)",
+      "src": "^/$",
       "has": [
         {
           "type": "host",
           "value": "user.en-via.werksolutions.de"
         }
       ],
-      "destination": "/usuario/index.html"
+      "dest": "/usuario/index.html"
     }
   ]
 }

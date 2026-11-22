@@ -10,6 +10,21 @@
     <style>
         input, select, textarea { font-size: 16px !important; }
         @media (min-width: 640px) { input, select, textarea { font-size: 0.85rem !important; } }
+        .titulo-marca-envia {
+            display: block;
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .subtitulo-portal-chofer {
+            display: block;
+            color: #e2e8f0;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
         .caja-registro-chofer {
             border: 1px solid #334155;
             border-radius: 8px;
@@ -28,6 +43,16 @@
             color: #94a3b8;
             margin-bottom: 4px;
         }
+        .enlace-acceso-volver {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #c084fc;
+            text-decoration: none;
+        }
+        .enlace-acceso-volver:hover {
+            text-decoration: underline;
+        }
         .mensaje-exito-registro {
             color: #34d399;
             border: 1px solid #10b981;
@@ -38,7 +63,7 @@
             margin-bottom: 10px;
         }
         .mensaje-error-registro {
-            color: #fca5a5;
+            color: #f87171;
             border: 1px solid #ef4444;
             background-color: #451a1a;
             border-radius: 6px;
@@ -51,15 +76,18 @@
 <body>
     <div id="registro-container" class="max-w-2xl">
         <header>
-            <h1>EN-VIA - Registro de Conductor</h1>
-            <p>Completa tus datos de acceso, contacto y cobro</p>
-            <div style="margin-top: 8px;">
-                <a href="./index.html">← Ir al Acceso</a>
+            <h1 style="margin:0;">
+                <span class="titulo-marca-envia">EN-VIA</span>
+                <span class="subtitulo-portal-chofer">Registro de Conductor</span>
+            </h1>
+            <p style="color:#94a3b8; margin-top:4px; margin-bottom:6px;">Completa tus datos de acceso, contacto y cobro</p>
+            <div style="margin-top: 6px;">
+                <a href="./index.html" class="enlace-acceso-volver">← Ir al Acceso</a>
             </div>
         </header>
 
         <form id="form-registro-conductor" onsubmit="registrarConductor(event)" class="caja-registro-chofer">
-            <h2 style="color:#34d399; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Personales y Acceso</h2>
+            <h2 style="color:#c084fc; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Personales y Acceso</h2>
 
             <div class="campo-grupo-registro">
                 <label for="nombre" class="etiqueta-campo-registro">Nombre Completo *</label>
@@ -82,7 +110,7 @@
             </div>
 
             <div style="border-top:1px solid #1e293b; padding-top:12px; margin-top:12px;">
-                <h2 style="color:#fbbf24; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Bancarios y Código QR</h2>
+                <h2 style="color:#34d399; margin-top:0; margin-bottom:10px; font-size:15px;">Datos Bancarios y Código QR</h2>
 
                 <div class="campo-grupo-registro">
                     <label for="banco" class="etiqueta-campo-registro">Banco</label>
@@ -108,7 +136,7 @@
 
             <div id="mensaje-estado" class="hidden"></div>
 
-            <button type="submit" id="btn-registrar" style="width:100%; background-color:#10b981; color:#000000; font-weight:700; margin-top:6px;">
+            <button type="submit" id="btn-registrar" style="width:100%; background-color:#10b981; color:#0f172a; font-weight:700; margin-top:6px;">
                 Completar Registro
             </button>
         </form>

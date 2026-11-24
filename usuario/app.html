@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Solicitar Carrera</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC52Px30bZ9ZqxrN8IO-VWZHLlFvios4_I&libraries=places,geometry" async defer></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script>
@@ -448,6 +448,25 @@
         var COSTO_POR_KM = 1;
         var TARIFA_MINIMA = 3;
 
+        function guardarDatoSesion(clave, valor) {
+            try { sessionStorage.setItem(clave, valor); } catch (e) {}
+            try { localStorage.setItem(clave, valor); } catch (e) {}
+        }
+
+        function obtenerDatoSesion(clave) {
+            var val = null;
+            try { val = sessionStorage.getItem(clave); } catch (e) {}
+            if (!val) {
+                try { val = localStorage.getItem(clave); } catch (e) {}
+            }
+            return val;
+        }
+
+        function eliminarDatoSesion(clave) {
+            try { sessionStorage.removeItem(clave); } catch (e) {}
+            try { localStorage.removeItem(clave); } catch (e) {}
+        }
+
         function getDb() {
             if (window.supabaseClient) return window.supabaseClient;
             window.supabaseClient = createRestFallbackClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -455,13 +474,13 @@
         }
 
         function cerrarSesionUsuario() {
-            sessionStorage.removeItem('cliente_en_via');
-            sessionStorage.removeItem('cliente_id_en_via');
-            sessionStorage.removeItem('cliente_usuario_en_via');
-            sessionStorage.removeItem('carrera_activa_id');
+            eliminarDatoSesion('cliente_en_via');
+            eliminarDatoSesion('cliente_id_en_via');
+            eliminarDatoSesion('cliente_usuario_en_via');
+            eliminarDatoSesion('carrera_activa_id');
             if (timerClientInterval) clearInterval(timerClientInterval);
             if (pollEstadoInterval) clearInterval(pollEstadoInterval);
-            window.location.replace('./index.html');
+            window.location.replace('/usuario/index.html');
         }
 
         function prepararModoOrigenInicial() {
@@ -538,12 +557,12 @@
         }
 
         window.addEventListener('load', function () {
-            var clienteGuardado = sessionStorage.getItem('cliente_en_via');
-            var clienteIdGuardado = sessionStorage.getItem('cliente_id_en_via');
+            var clienteGuardado = obtenerDatoSesion('cliente_en_via');
+            var clienteIdGuardado = obtenerDatoSesion('cliente_id_en_via');
             var db = getDb();
 
             if (!clienteGuardado) {
-                window.location.replace('./index.html');
+                window.location.replace('/usuario/index.html');
                 return;
             }
 
@@ -562,11 +581,11 @@
                     var carreraActiva = res.data;
                     if (carreraActiva) {
                         idCarreraActiva = carreraActiva.id;
-                        sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
+                        guardarDatoSesion('carrera_activa_id', idCarreraActiva);
                         mostrarVistaEstado(carreraActiva);
                         suscripcionRealtime(idCarreraActiva);
                     } else {
-                        sessionStorage.removeItem('carrera_activa_id');
+                        eliminarDatoSesion('carrera_activa_id');
                         document.getElementById('vista-formulario').classList.remove('hidden');
                         limpiarCamposYEnfocarOrigen();
                         inicializarMapaFormulario();
@@ -815,7 +834,7 @@
                     alert('Error al solicitar la carrera: ' + res.error.message);
                 } else if (res.data && res.data.length > 0) {
                     idCarreraActiva = res.data[0].id;
-                    sessionStorage.setItem('carrera_activa_id', idCarreraActiva);
+                    guardarDatoSesion('carrera_activa_id', idCarreraActiva);
                     mostrarVistaEstado(res.data[0]);
                     suscripcionRealtime(idCarreraActiva);
                 }
@@ -945,8 +964,8 @@
                 if (timerClientInterval) clearInterval(timerClientInterval);
                 if (pollEstadoInterval) clearInterval(pollEstadoInterval);
                 setTimeout(function () {
-                    sessionStorage.removeItem('carrera_activa_id');
-                    location.reload();
+                    eliminarDatoSesion('carrera_activa_id');
+                    window.location.replace('/usuario/app.html');
                 }, 4000);
             } else if (finRecorridoAt || inicioCarreraAt) {
                 mostrarBloqueContactoConductor(conductor, conductorId);
@@ -1127,7 +1146,7 @@
             promesa.then(function () {
                 idCarreraActiva = null;
                 ocultarBloqueContactoConductor();
-                sessionStorage.removeItem('carrera_activa_id');
+                eliminarDatoSesion('carrera_activa_id');
                 document.getElementById('vista-estado').classList.add('hidden');
                 document.getElementById('vista-formulario').classList.remove('hidden');
                 limpiarCamposYEnfocarOrigen();

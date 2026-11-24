@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EN-VIA - Portal de Usuario</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script>
         var SUPABASE_URL = window.SUPABASE_URL || 'https://sgpwdejwfbqsswoibohu.supabase.co';
@@ -127,6 +127,20 @@
     </div>
 
     <script>
+        function guardarDatoSesion(clave, valor) {
+            try { sessionStorage.setItem(clave, valor); } catch (e) {}
+            try { localStorage.setItem(clave, valor); } catch (e) {}
+        }
+
+        function obtenerDatoSesion(clave) {
+            var val = null;
+            try { val = sessionStorage.getItem(clave); } catch (e) {}
+            if (!val) {
+                try { val = localStorage.getItem(clave); } catch (e) {}
+            }
+            return val;
+        }
+
         function reiniciarCamposLoginVacios() {
             var userEl = document.getElementById('login-usuario');
             var passEl = document.getElementById('login-clave');
@@ -144,7 +158,14 @@
             limpiarErrorLogin();
         }
 
-        document.addEventListener('DOMContentLoaded', reiniciarCamposLoginVacios);
+        document.addEventListener('DOMContentLoaded', function () {
+            var clienteActivo = obtenerDatoSesion('cliente_en_via');
+            if (clienteActivo) {
+                window.location.replace('/usuario/app.html');
+                return;
+            }
+            reiniciarCamposLoginVacios();
+        });
         window.addEventListener('load', function () {
             reiniciarCamposLoginVacios();
             setTimeout(reiniciarCamposLoginVacios, 120);
@@ -207,12 +228,12 @@
         }
 
         function irAAppUsuario(cliente) {
-            sessionStorage.setItem('cliente_en_via', cliente.nombre);
-            sessionStorage.setItem('cliente_id_en_via', cliente.id);
+            guardarDatoSesion('cliente_en_via', cliente.nombre);
+            guardarDatoSesion('cliente_id_en_via', cliente.id);
             if (cliente.usuario) {
-                sessionStorage.setItem('cliente_usuario_en_via', cliente.usuario);
+                guardarDatoSesion('cliente_usuario_en_via', cliente.usuario);
             }
-            window.location.replace('./app.html');
+            window.location.replace('/usuario/app.html');
         }
 
         async function buscarClienteParaLogin(db, entradaRaw) {
